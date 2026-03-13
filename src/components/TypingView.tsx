@@ -132,6 +132,22 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     return () => document.removeEventListener("click", handleClick);
   }, []);
 
+  // Resume from pause with space or escape
+  useEffect(() => {
+    if (!isPaused) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === " " || e.key === "Escape") {
+        e.preventDefault();
+        resumeFromPause();
+        inputRef.current?.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isPaused, resumeFromPause]);
+
   // Auto-pause detection
   useEffect(() => {
     if (isComplete || isPaused || !stats.startTime) return;
@@ -548,7 +564,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         >
           <span className="text-lg">⏸</span>
           <span className="font-medium">Paused</span>
-          <span className="text-sm opacity-75">— Click anywhere or start typing to resume</span>
+          <span className="text-sm opacity-75">— Press Space, Esc, or click to resume</span>
         </div>
       )}
 
