@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { SavedText, saveText, generateId } from "@/lib/storage";
 
 interface TypingViewProps {
   text: string;
   title: string;
   onReset: () => void;
+  savedData?: SavedText;
 }
 
 interface Stats {
@@ -17,22 +19,26 @@ interface Stats {
   endTime: number | null;
 }
 
-export default function TypingView({ text, title, onReset }: TypingViewProps) {
-  // Parse text into words, preserving punctuation
-  const words = text.split(/\s+/).filter((w) => w.length > 0);
+export default function TypingView({ text, title, onReset, savedData }: TypingViewProps) {
+  const words = useMemo(() => text.split(/\s+/).filter((w) => w.length > 0), [text]);
 
-  const [currentWordIndex, setCurrentWordIndex] = useState(0);
+  const [currentWordIndex, setCurrentWordIndex] = useState(
+    savedData?.progress.currentWordIndex || 0
+  );
   const [currentInput, setCurrentInput] = useState("");
   const [stats, setStats] = useState<Stats>({
-    wordsTyped: 0,
+    wordsTyped: savedData?.progress.wordsTyped || 0,
     totalWords: words.length,
-    correctKeystrokes: 0,
-    totalKeystrokes: 0,
+    correctKeystrokes: savedData?.progress.correctKeystrokes || 0,
+    totalKeystrokes: savedData?.progress.totalKeystrokes || 0,
     startTime: null,
     endTime: null,
   });
+  const [accumulatedTime] = useState(savedData?.progress.totalTime || 0);
   const [isComplete, setIsComplete] = useState(false);
   const [shake, setShake] = useState(false);
+  const [saveId] = useState(savedData?.id || generateId());
+  const [showSaved, setShowSaved] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const textContainerRef = useRef<HTMLDivElement>(null);
@@ -40,6 +46,19 @@ export default function TypingView({ text, title, onReset }: TypingViewProps) {
 
   const currentWord = words[currentWordIndex] || "";
   const progress = (currentWordIndex / words.length) * 100;
+  const isWordComplete = currentInput === currentWord;
+
+  // Build the full text stream for the sliding view
+  const fullTextStream = useMemo(() => words.join(" "), [words]);
+
+  // Calculate the absolute character position in the full text
+  const absolutePosition = useMemo(() => {
+    let pos = 0;
+    for (let i = 0; i < currentWordIndex; i++) {
+      pos += words[i].length + 1; // +1 for space
+    }
+    return pos + currentInput.length;
+  }, [currentWordIndex, currentInput.length, words]);
 
   // Focus input on mount and when clicking anywhere
   useEffect(() => {
@@ -58,28 +77,56 @@ export default function TypingView({ text, title, onReset }: TypingViewProps) {
       const containerRect = container.getBoundingClientRect();
       const wordRect = word.getBoundingClientRect();
 
-      // Check if word is outside the visible area
       if (wordRect.top < containerRect.top || wordRect.bottom > containerRect.bottom) {
         word.scrollIntoView({ behavior: "smooth", block: "center" });
       }
     }
   }, [currentWordIndex]);
 
+  const handleSave = useCallback(() => {
+    const sessionTime = stats.startTime ? Date.now() - stats.startTime : 0;
+    const totalTime = accumulatedTime + sessionTime;
+
+    const savedText: SavedText = {
+      id: saveId,
+      title,
+      text,
+      progress: {
+        currentWordIndex,
+        wordsTyped: stats.wordsTyped,
+        correctKeystrokes: stats.correctKeystrokes,
+        totalKeystrokes: stats.totalKeystrokes,
+        totalTime,
+      },
+      createdAt: savedData?.createdAt || Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    saveText(savedText);
+    setShowSaved(true);
+    setTimeout(() => setShowSaved(false), 2000);
+  }, [
+    saveId,
+    title,
+    text,
+    currentWordIndex,
+    stats,
+    accumulatedTime,
+    savedData?.createdAt,
+  ]);
+
   const handleInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value;
 
-      // Start timer on first keystroke
       if (!stats.startTime) {
         setStats((s) => ({ ...s, startTime: Date.now() }));
       }
 
-      // Check if space was pressed (word submitted)
       if (value.endsWith(" ")) {
         const typedWord = value.trim();
 
         if (typedWord === currentWord) {
-          // Correct word
           setStats((s) => ({
             ...s,
             wordsTyped: s.wordsTyped + 1,
@@ -88,7 +135,6 @@ export default function TypingView({ text, title, onReset }: TypingViewProps) {
           }));
 
           if (currentWordIndex === words.length - 1) {
-            // Completed!
             setIsComplete(true);
             setStats((s) => ({ ...s, endTime: Date.now() }));
           } else {
@@ -96,7 +142,6 @@ export default function TypingView({ text, title, onReset }: TypingViewProps) {
           }
           setCurrentInput("");
         } else {
-          // Wrong word - shake and clear
           setShake(true);
           setTimeout(() => setShake(false), 300);
           setStats((s) => ({
@@ -112,48 +157,110 @@ export default function TypingView({ text, title, onReset }: TypingViewProps) {
     [currentWord, currentWordIndex, words.length, stats.startTime]
   );
 
-  // Calculate WPM
   const calculateWPM = () => {
-    if (!stats.startTime) return 0;
-    const endTime = stats.endTime || Date.now();
-    const minutes = (endTime - stats.startTime) / 60000;
+    const sessionTime = stats.startTime
+      ? (stats.endTime || Date.now()) - stats.startTime
+      : 0;
+    const totalTime = accumulatedTime + sessionTime;
+    const minutes = totalTime / 60000;
     if (minutes < 0.01) return 0;
     return Math.round(stats.wordsTyped / minutes);
   };
 
-  // Calculate accuracy
   const calculateAccuracy = () => {
     if (stats.totalKeystrokes === 0) return 100;
     return Math.round((stats.correctKeystrokes / stats.totalKeystrokes) * 100);
   };
 
-  // Render word with character highlighting
-  const renderCurrentWordInput = () => {
-    const chars = currentWord.split("");
-    const inputChars = currentInput.split("");
+  // Sliding text bar renderer
+  const renderSlidingTextBar = () => {
+    const windowSize = 40; // Total chars to show
+    const centerOffset = 15; // How many chars before cursor
+
+    // Get the window of characters to display
+    const startPos = Math.max(0, absolutePosition - centerOffset);
+    const endPos = Math.min(fullTextStream.length, startPos + windowSize);
+    const visibleText = fullTextStream.slice(startPos, endPos);
+
+    // Calculate position of cursor within the current word
+    const cursorInWord = currentInput.length;
+
+    // Calculate position in the visible window where the current char should be
+    const cursorPosInWindow = absolutePosition - startPos;
 
     return (
-      <div className="flex items-center justify-center mb-8">
+      <div className="mb-8">
         <div
-          className={`text-4xl font-mono tracking-wider ${
+          className={`relative overflow-hidden ${
             shake ? "animate-[shake_0.3s_ease-in-out]" : ""
           }`}
         >
-          {chars.map((char, i) => {
-            let color = "text-[var(--muted)]"; // Not typed yet
-            if (i < inputChars.length) {
-              color =
-                inputChars[i] === char
-                  ? "text-[var(--foreground)]" // Correct
-                  : "text-[var(--error)]"; // Wrong
-            }
-            return (
-              <span key={i} className={`${color} transition-colors duration-75`}>
-                {char}
+          {/* The sliding text container */}
+          <div className="flex justify-center">
+            <div className="font-mono text-3xl tracking-wide whitespace-pre">
+              {visibleText.split("").map((char, i) => {
+                const globalPos = startPos + i;
+                const wordStartPos = absolutePosition - cursorInWord;
+
+                let className = "inline-block transition-all duration-75 ";
+
+                if (globalPos < wordStartPos) {
+                  // Already typed words - faded
+                  className += "text-[var(--muted)]/40";
+                } else if (globalPos < absolutePosition) {
+                  // Currently typing - check if correct
+                  const charIndexInWord = globalPos - wordStartPos;
+                  const isCorrect = currentInput[charIndexInWord] === currentWord[charIndexInWord];
+                  className += isCorrect ? "text-[var(--foreground)]" : "text-[var(--error)]";
+                } else if (globalPos === absolutePosition) {
+                  // Current character to type
+                  className += "text-[var(--foreground)] bg-[var(--foreground)]/10 rounded px-0.5";
+                } else {
+                  // Upcoming characters
+                  const distance = globalPos - absolutePosition;
+                  if (distance < 5) {
+                    className += "text-[var(--foreground)]/70";
+                  } else if (distance < 15) {
+                    className += "text-[var(--foreground)]/40";
+                  } else {
+                    className += "text-[var(--foreground)]/20";
+                  }
+                }
+
+                return (
+                  <span key={`${globalPos}-${char}`} className={className}>
+                    {char === " " ? "\u00A0" : char}
+                  </span>
+                );
+              })}
+              {/* Blinking caret */}
+              <span
+                className="caret text-[var(--accent)] absolute"
+                style={{
+                  left: `${cursorPosInWindow * 0.6}em`,
+                  marginLeft: "0.3em",
+                }}
+              >
+                |
               </span>
-            );
-          })}
-          <span className="caret text-[var(--accent)] ml-px">|</span>
+            </div>
+          </div>
+
+          {/* Gradient fades on edges */}
+          <div className="absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-[var(--background)] to-transparent pointer-events-none" />
+          <div className="absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-[var(--background)] to-transparent pointer-events-none" />
+        </div>
+
+        {/* Spacebar indicator */}
+        <div
+          className={`mt-6 flex items-center justify-center gap-2 transition-opacity duration-150 ${
+            isWordComplete ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          <span className="px-4 py-1.5 bg-[var(--foreground)]/10 rounded-md text-sm font-mono border border-[var(--foreground)]/20">
+            space
+          </span>
+          <span className="text-sm text-[var(--muted)]">to continue</span>
         </div>
       </div>
     );
@@ -165,7 +272,9 @@ export default function TypingView({ text, title, onReset }: TypingViewProps) {
         <div className="text-center max-w-md">
           <div className="text-6xl mb-6">✓</div>
           <h2 className="text-3xl font-bold mb-2">Complete!</h2>
-          <p className="text-[var(--muted)] mb-8">You&apos;ve read &ldquo;{title}&rdquo;</p>
+          <p className="text-[var(--muted)] mb-8">
+            You&apos;ve read &ldquo;{title}&rdquo;
+          </p>
 
           <div className="grid grid-cols-2 gap-6 mb-10">
             <div className="text-center">
@@ -180,7 +289,12 @@ export default function TypingView({ text, title, onReset }: TypingViewProps) {
 
           <div className="text-sm text-[var(--muted)] mb-8">
             {stats.wordsTyped} words in{" "}
-            {Math.round(((stats.endTime || 0) - (stats.startTime || 0)) / 1000)}s
+            {Math.round(
+              (accumulatedTime +
+                ((stats.endTime || 0) - (stats.startTime || 0))) /
+                1000
+            )}
+            s
           </div>
 
           <button
@@ -206,9 +320,21 @@ export default function TypingView({ text, title, onReset }: TypingViewProps) {
             >
               ← Back
             </button>
-            <h1 className="text-sm font-medium truncate max-w-[60%]">{title}</h1>
-            <div className="text-sm text-[var(--muted)]">
-              {calculateWPM()} WPM
+            <h1 className="text-sm font-medium truncate max-w-[40%]">{title}</h1>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={handleSave}
+                className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors flex items-center gap-1"
+              >
+                {showSaved ? (
+                  <span className="text-[var(--success)]">Saved ✓</span>
+                ) : (
+                  "Save"
+                )}
+              </button>
+              <div className="text-sm text-[var(--muted)]">
+                {calculateWPM()} WPM
+              </div>
             </div>
           </div>
           <div className="h-1 bg-[var(--foreground)]/5 rounded-full overflow-hidden">
@@ -222,10 +348,8 @@ export default function TypingView({ text, title, onReset }: TypingViewProps) {
 
       {/* Main typing area */}
       <main className="flex-1 flex flex-col max-w-4xl mx-auto w-full px-6 py-8">
-        {/* Current word to type */}
-        {renderCurrentWordInput()}
+        {renderSlidingTextBar()}
 
-        {/* Hidden input */}
         <input
           ref={inputRef}
           type="text"
@@ -238,7 +362,6 @@ export default function TypingView({ text, title, onReset }: TypingViewProps) {
           spellCheck={false}
         />
 
-        {/* Text display */}
         <div
           ref={textContainerRef}
           className="typing-area flex-1 overflow-y-auto leading-relaxed text-lg"
@@ -247,11 +370,12 @@ export default function TypingView({ text, title, onReset }: TypingViewProps) {
             {words.map((word, index) => {
               let className = "inline ";
               if (index < currentWordIndex) {
-                className += "text-[var(--muted)]"; // Already typed
+                className += "text-[var(--muted)]";
               } else if (index === currentWordIndex) {
-                className += "text-[var(--foreground)] font-semibold bg-[var(--foreground)]/5 px-1 rounded"; // Current
+                className +=
+                  "text-[var(--foreground)] font-semibold bg-[var(--foreground)]/5 px-1 rounded";
               } else {
-                className += "text-[var(--foreground)]/60"; // Upcoming
+                className += "text-[var(--foreground)]/60";
               }
 
               return (
@@ -267,19 +391,26 @@ export default function TypingView({ text, title, onReset }: TypingViewProps) {
           </div>
         </div>
 
-        {/* Stats footer */}
         <div className="mt-6 pt-4 border-t border-[var(--foreground)]/5 flex justify-center gap-8 text-sm text-[var(--muted)]">
-          <span>{currentWordIndex} / {words.length} words</span>
+          <span>
+            {currentWordIndex} / {words.length} words
+          </span>
           <span>{calculateAccuracy()}% accuracy</span>
         </div>
       </main>
 
-      {/* Shake animation */}
       <style jsx>{`
         @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          25% { transform: translateX(-4px); }
-          75% { transform: translateX(4px); }
+          0%,
+          100% {
+            transform: translateX(0);
+          }
+          25% {
+            transform: translateX(-4px);
+          }
+          75% {
+            transform: translateX(4px);
+          }
         }
       `}</style>
     </div>
