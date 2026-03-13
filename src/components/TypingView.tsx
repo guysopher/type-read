@@ -46,7 +46,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
 
   const currentWord = words[currentWordIndex] || "";
   const progress = (currentWordIndex / words.length) * 100;
-  const isWordComplete = currentInput === currentWord;
+  const isWordComplete = currentInput.toLowerCase() === currentWord.toLowerCase();
 
   // Build the full text stream for the sliding view
   const fullTextStream = useMemo(() => words.join(" "), [words]);
@@ -126,7 +126,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
       if (value.endsWith(" ")) {
         const typedWord = value.trim();
 
-        if (typedWord === currentWord) {
+        if (typedWord.toLowerCase() === currentWord.toLowerCase()) {
           setStats((s) => ({
             ...s,
             wordsTyped: s.wordsTyped + 1,
@@ -174,8 +174,8 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
 
   // Sliding text bar renderer
   const renderSlidingTextBar = () => {
-    const windowSize = 40; // Total chars to show
-    const centerOffset = 15; // How many chars before cursor
+    const windowSize = 50; // Total chars to show
+    const centerOffset = 20; // How many chars before cursor
 
     // Get the window of characters to display
     const startPos = Math.max(0, absolutePosition - centerOffset);
@@ -189,15 +189,15 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     const cursorPosInWindow = absolutePosition - startPos;
 
     return (
-      <div className="mb-8">
+      <div className="mb-8 py-8">
         <div
-          className={`relative overflow-hidden ${
+          className={`relative overflow-hidden py-4 ${
             shake ? "animate-[shake_0.3s_ease-in-out]" : ""
           }`}
         >
           {/* The sliding text container */}
-          <div className="flex justify-center">
-            <div className="font-mono text-3xl tracking-wide whitespace-pre">
+          <div className="flex justify-center items-center">
+            <div className="font-mono text-4xl tracking-wide whitespace-pre">
               {visibleText.split("").map((char, i) => {
                 const globalPos = startPos + i;
                 const wordStartPos = absolutePosition - cursorInWord;
@@ -210,11 +210,14 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                 } else if (globalPos < absolutePosition) {
                   // Currently typing - check if correct
                   const charIndexInWord = globalPos - wordStartPos;
-                  const isCorrect = currentInput[charIndexInWord] === currentWord[charIndexInWord];
+                  const isCorrect = currentInput[charIndexInWord]?.toLowerCase() === currentWord[charIndexInWord]?.toLowerCase();
                   className += isCorrect ? "text-[var(--foreground)]" : "text-[var(--error)]";
-                } else if (globalPos === absolutePosition) {
-                  // Current character to type
+                } else if (globalPos === absolutePosition && !isWordComplete) {
+                  // Current character to type (not when word is complete - waiting for space)
                   className += "text-[var(--foreground)] bg-[var(--foreground)]/10 rounded px-0.5";
+                } else if (globalPos === absolutePosition && isWordComplete) {
+                  // Space after completed word - subtle indication
+                  className += "text-[var(--foreground)]/30";
                 } else {
                   // Upcoming characters
                   const distance = globalPos - absolutePosition;
