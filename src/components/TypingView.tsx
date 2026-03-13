@@ -23,6 +23,7 @@ interface Stats {
 
 const AUTO_PAUSE_DELAY = 5000; // 5 seconds
 const WPM_SAMPLE_INTERVAL = 3000; // Sample WPM every 3 seconds
+const AUTO_SAVE_INTERVAL = 10000; // Auto-save every 10 seconds
 
 export default function TypingView({ text, title, onReset, savedData }: TypingViewProps) {
   const words = useMemo(() => text.split(/\s+/).filter((w) => w.length > 0), [text]);
@@ -216,6 +217,50 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
       }
     }
   }, [currentWordIndex]);
+
+  // Auto-save
+  useEffect(() => {
+    if (isComplete || !stats.startTime) return;
+
+    const autoSave = setInterval(() => {
+      const sessionTime = stats.startTime ? Date.now() - stats.startTime : 0;
+      const totalTime = accumulatedTime + sessionTime;
+
+      const savedText: SavedText = {
+        id: saveId,
+        title,
+        text,
+        progress: {
+          currentWordIndex,
+          wordsTyped: stats.wordsTyped,
+          correctKeystrokes: stats.correctKeystrokes,
+          totalKeystrokes: stats.totalKeystrokes,
+          totalTime,
+        },
+        detailedStats: {
+          ...detailedStats,
+          totalActiveTime: getActiveTime(),
+        },
+        createdAt: savedData?.createdAt || Date.now(),
+        updatedAt: Date.now(),
+      };
+
+      saveText(savedText);
+    }, AUTO_SAVE_INTERVAL);
+
+    return () => clearInterval(autoSave);
+  }, [
+    isComplete,
+    stats,
+    accumulatedTime,
+    saveId,
+    title,
+    text,
+    currentWordIndex,
+    detailedStats,
+    getActiveTime,
+    savedData?.createdAt,
+  ]);
 
   const resumeFromPause = useCallback(() => {
     if (pauseStartRef.current) {
