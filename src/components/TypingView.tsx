@@ -246,9 +246,13 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
             </div>
           </div>
 
-          {/* Gradient fades on edges */}
-          <div className="absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-[var(--background)] to-transparent pointer-events-none" />
-          <div className="absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-[var(--background)] to-transparent pointer-events-none" />
+          {/* Gradient fades on edges - only show when there's hidden content */}
+          {startPos > 0 && (
+            <div className="absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-[var(--background)] to-transparent pointer-events-none" />
+          )}
+          {endPos < fullTextStream.length && (
+            <div className="absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-[var(--background)] to-transparent pointer-events-none" />
+          )}
         </div>
 
       </div>
