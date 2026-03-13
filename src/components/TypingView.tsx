@@ -68,7 +68,8 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   const progress = (currentWordIndex / words.length) * 100;
 
   const stripPunctuation = useCallback((s: string) => {
-    return ignorePunctuation ? s.replace(/[.,!?;:'"()-]/g, "") : s;
+    // Remove all non-alphanumeric characters (keeps letters and numbers only)
+    return ignorePunctuation ? s.replace(/[^a-zA-Z0-9]/g, "") : s;
   }, [ignorePunctuation]);
 
   const compareStrings = useCallback((a: string, b: string) => {
@@ -125,13 +126,11 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     inputRef.current?.focus();
 
     const handleClick = () => {
-      if (!isPaused) {
-        inputRef.current?.focus();
-      }
+      inputRef.current?.focus();
     };
     document.addEventListener("click", handleClick);
     return () => document.removeEventListener("click", handleClick);
-  }, [isPaused]);
+  }, []);
 
   // Auto-pause detection
   useEffect(() => {
@@ -327,6 +326,11 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
       const value = e.target.value;
       lastActivityRef.current = Date.now();
 
+      // Resume from pause if paused
+      if (isPaused) {
+        resumeFromPause();
+      }
+
       if (!stats.startTime) {
         const now = Date.now();
         setStats((s) => ({ ...s, startTime: now }));
@@ -382,7 +386,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         if (newCharIndex >= 0 && newCharIndex < currentWord.length) {
           const newChar = value[newCharIndex];
           const expectedChar = currentWord[newCharIndex];
-          const isPunc = /[.,!?;:'"()-]/.test(expectedChar);
+          const isPunc = /[^a-zA-Z0-9]/.test(expectedChar);
           let isCorrect: boolean;
           if (ignorePunctuation && isPunc) {
             // Skip punctuation check - always correct if we're ignoring punctuation
@@ -404,7 +408,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         setCurrentInput(value);
       }
     },
-    [currentWord, currentWordIndex, words.length, stats.startTime, compareStrings, ignoreCase, ignorePunctuation, muted, getActiveTime]
+    [currentWord, currentWordIndex, words.length, stats.startTime, compareStrings, ignoreCase, ignorePunctuation, muted, getActiveTime, isPaused, resumeFromPause]
   );
 
   // Sliding text bar renderer
@@ -439,7 +443,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                   const charIndexInWord = globalPos - wordStartPos;
                   const inputChar = currentInput[charIndexInWord] || "";
                   const targetChar = currentWord[charIndexInWord] || "";
-                  const isPunc = /[.,!?;:'"()-]/.test(targetChar);
+                  const isPunc = /[^a-zA-Z0-9]/.test(targetChar);
                   let isCorrect: boolean;
                   if (ignorePunctuation && isPunc) {
                     isCorrect = true;
@@ -483,57 +487,6 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
       </div>
     );
   };
-
-  // Pause overlay
-  if (isPaused && !isComplete) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-8">
-        <div className="text-center max-w-md">
-          <div className="text-6xl mb-6">⏸</div>
-          <h2 className="text-3xl font-bold mb-2">Paused</h2>
-          <p className="text-[var(--muted)] mb-8">
-            Auto-paused after 5 seconds of inactivity
-          </p>
-
-          <div className="grid grid-cols-2 gap-6 mb-10">
-            <div className="text-center">
-              <div className="text-4xl font-bold">{calculateWPM()}</div>
-              <div className="text-sm text-[var(--muted)]">WPM</div>
-            </div>
-            <div className="text-center">
-              <div className="text-4xl font-bold">{calculateAccuracy()}%</div>
-              <div className="text-sm text-[var(--muted)]">Accuracy</div>
-            </div>
-          </div>
-
-          <div className="flex gap-4 justify-center">
-            <button
-              onClick={resumeFromPause}
-              className="px-8 py-3 bg-[var(--foreground)] text-[var(--background)] rounded-xl font-medium hover:opacity-90 transition-opacity"
-            >
-              Resume Typing
-            </button>
-            <button
-              onClick={() => setShowStats(true)}
-              className="px-8 py-3 border border-[var(--foreground)]/20 rounded-xl font-medium hover:bg-[var(--foreground)]/5 transition-colors"
-            >
-              View Stats
-            </button>
-          </div>
-        </div>
-
-        {showStats && (
-          <StatsView
-            stats={detailedStats}
-            wordsTyped={stats.wordsTyped}
-            totalWords={stats.totalWords}
-            accuracy={calculateAccuracy()}
-            onClose={() => setShowStats(false)}
-          />
-        )}
-      </div>
-    );
-  }
 
   if (isComplete) {
     return (
@@ -587,8 +540,20 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
 
   return (
     <div className="min-h-screen flex flex-col">
+      {/* Pause banner */}
+      {isPaused && (
+        <div
+          className="sticky top-0 z-20 bg-[var(--foreground)] text-[var(--background)] py-3 px-6 flex items-center justify-center gap-4 cursor-pointer hover:opacity-90 transition-opacity"
+          onClick={resumeFromPause}
+        >
+          <span className="text-lg">⏸</span>
+          <span className="font-medium">Paused</span>
+          <span className="text-sm opacity-75">— Click anywhere or start typing to resume</span>
+        </div>
+      )}
+
       {/* Header with progress */}
-      <header className="sticky top-0 bg-[var(--background)] border-b border-[var(--foreground)]/5 z-10">
+      <header className="sticky top-0 bg-[var(--background)] border-b border-[var(--foreground)]/5 z-10" style={{ top: isPaused ? '52px' : '0' }}>
         <div className="max-w-4xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between mb-3">
             <button
@@ -598,11 +563,13 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
               ← Back
             </button>
             <h1 className="text-sm font-medium truncate max-w-[40%]">{title}</h1>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => setIgnoreCase(!ignoreCase)}
-                className={`text-sm transition-colors flex items-center gap-1 ${
-                  ignoreCase ? "text-[var(--foreground)]" : "text-[var(--muted)]"
+                className={`px-2 py-1 text-xs font-medium rounded transition-all ${
+                  ignoreCase
+                    ? "bg-[var(--foreground)] text-[var(--background)]"
+                    : "bg-[var(--foreground)]/10 text-[var(--muted)] hover:bg-[var(--foreground)]/20"
                 }`}
                 title={ignoreCase ? "Case insensitive (click to toggle)" : "Case sensitive (click to toggle)"}
               >
@@ -610,17 +577,21 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
               </button>
               <button
                 onClick={() => setIgnorePunctuation(!ignorePunctuation)}
-                className={`text-sm transition-colors flex items-center gap-1 ${
-                  ignorePunctuation ? "text-[var(--foreground)]" : "text-[var(--muted)]"
+                className={`px-2 py-1 text-xs font-medium rounded transition-all ${
+                  ignorePunctuation
+                    ? "bg-[var(--foreground)] text-[var(--background)]"
+                    : "bg-[var(--foreground)]/10 text-[var(--muted)] hover:bg-[var(--foreground)]/20"
                 }`}
                 title={ignorePunctuation ? "Ignoring punctuation (click to toggle)" : "Strict punctuation (click to toggle)"}
               >
-                .,
+                #$
               </button>
               <button
                 onClick={() => setMuted(!muted)}
-                className={`text-sm transition-colors ${
-                  muted ? "text-[var(--muted)]" : "text-[var(--foreground)]"
+                className={`px-2 py-1 text-xs rounded transition-all ${
+                  muted
+                    ? "bg-[var(--foreground)]/10 text-[var(--muted)] hover:bg-[var(--foreground)]/20"
+                    : "bg-[var(--foreground)] text-[var(--background)]"
                 }`}
                 title={muted ? "Sound off (click to unmute)" : "Sound on (click to mute)"}
               >
@@ -628,23 +599,23 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
               </button>
               <button
                 onClick={() => setShowStats(true)}
-                className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
+                className="px-2 py-1 text-xs rounded bg-[var(--foreground)]/10 text-[var(--muted)] hover:bg-[var(--foreground)]/20 transition-all"
                 title="View statistics"
               >
                 📊
               </button>
               <button
                 onClick={handleSave}
-                className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors flex items-center gap-1"
+                className="px-2 py-1 text-xs rounded bg-[var(--foreground)]/10 text-[var(--muted)] hover:bg-[var(--foreground)]/20 transition-all"
               >
                 {showSaved ? (
                   <span className="text-[var(--success)]">Saved ✓</span>
                 ) : (
-                  "Save"
+                  "💾"
                 )}
               </button>
-              <div className="text-sm text-[var(--muted)]">
-                {calculateWPM()} WPM
+              <div className="text-sm font-medium text-[var(--muted)] ml-2">
+                {calculateWPM()} <span className="text-xs">WPM</span>
               </div>
             </div>
           </div>
