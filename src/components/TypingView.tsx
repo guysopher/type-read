@@ -213,8 +213,8 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                   // Current character to type (not when word is complete - waiting for space)
                   className += "text-[var(--foreground)] bg-[var(--accent)]/20 border-b-2 border-[var(--foreground)]";
                 } else if (globalPos === absolutePosition && isWordComplete) {
-                  // Space after completed word - subtle indication
-                  className += "text-[var(--foreground)]/30";
+                  // Space after completed word - highlight the space
+                  className += "bg-[var(--accent)]/20 border-b-2 border-[var(--foreground)]";
                 } else {
                   // Upcoming characters
                   const distance = globalPos - absolutePosition;
@@ -241,17 +241,6 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           <div className="absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-[var(--background)] to-transparent pointer-events-none" />
         </div>
 
-        {/* Spacebar indicator */}
-        <div
-          className={`mt-6 flex items-center justify-center gap-2 transition-opacity duration-150 ${
-            isWordComplete ? "opacity-100" : "opacity-0"
-          }`}
-        >
-          <span className="px-4 py-1.5 bg-[var(--foreground)]/10 rounded-md text-sm font-mono border border-[var(--foreground)]/20">
-            space
-          </span>
-          <span className="text-sm text-[var(--muted)]">to continue</span>
-        </div>
       </div>
     );
   };
