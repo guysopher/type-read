@@ -544,11 +544,11 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="h-screen flex flex-col overflow-hidden">
       {/* Pause banner */}
       {isPaused && (
         <div
-          className="sticky top-0 z-20 bg-[var(--foreground)] text-[var(--background)] py-3 px-6 flex items-center justify-center gap-4 cursor-pointer hover:opacity-90 transition-opacity"
+          className="flex-shrink-0 bg-[var(--foreground)] text-[var(--background)] py-3 px-6 flex items-center justify-center gap-4 cursor-pointer hover:opacity-90 transition-opacity"
           onClick={resumeFromPause}
         >
           <span className="text-lg">⏸</span>
@@ -558,7 +558,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
       )}
 
       {/* Header with progress */}
-      <header className="sticky top-0 bg-[var(--background)] border-b border-[var(--foreground)]/5 z-10" style={{ top: isPaused ? '52px' : '0' }}>
+      <header className="flex-shrink-0 bg-[var(--background)] border-b border-[var(--foreground)]/5 z-10">
         <div className="max-w-4xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between mb-3">
             <button
@@ -623,12 +623,12 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
       </header>
 
       {/* Sliding text bar - full width */}
-      <div className="w-full px-4 py-8">
+      <div className="flex-shrink-0 w-full px-4 py-8">
         {renderSlidingTextBar()}
       </div>
 
       {/* Main typing area */}
-      <main className="flex-1 flex flex-col max-w-4xl mx-auto w-full px-6">
+      <main className="flex-1 flex flex-col max-w-4xl mx-auto w-full px-6 min-h-0">
         <input
           ref={inputRef}
           type="text"
@@ -643,9 +643,9 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
 
         <div
           ref={textContainerRef}
-          className="typing-area flex-1 overflow-y-auto leading-relaxed text-lg"
+          className="typing-area flex-1 overflow-y-auto leading-relaxed text-lg min-h-0 py-8"
         >
-          <div className="max-w-2xl mx-auto">
+          <div className="max-w-2xl mx-auto py-[30vh]">
             {words.map((word, index) => {
               let className = "inline ";
               if (index < currentWordIndex) {
@@ -670,7 +670,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           </div>
         </div>
 
-        <div className="mt-6 pt-4 border-t border-[var(--foreground)]/5 flex justify-center gap-8 text-sm text-[var(--muted)]">
+        <div className="flex-shrink-0 mt-6 pt-4 border-t border-[var(--foreground)]/5 flex justify-center gap-8 text-sm text-[var(--muted)]">
           <span>
             {currentWordIndex} / {words.length} words
           </span>
