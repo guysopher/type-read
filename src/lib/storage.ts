@@ -1,3 +1,25 @@
+export interface WPMSample {
+  timestamp: number; // ms since start
+  wpm: number;
+  wordsTyped: number;
+}
+
+export interface PauseEvent {
+  startTime: number; // ms since start
+  endTime: number | null; // null if still paused
+  duration: number; // ms
+}
+
+export interface DetailedStats {
+  wpmSamples: WPMSample[];
+  pauses: PauseEvent[];
+  peakWpm: number;
+  averageWpm: number;
+  totalActiveTime: number; // excluding pauses
+  totalPauseTime: number;
+  wordsPerMinuteByMinute: { minute: number; wpm: number }[];
+}
+
 export interface SavedText {
   id: string;
   title: string;
@@ -9,6 +31,7 @@ export interface SavedText {
     totalKeystrokes: number;
     totalTime: number; // accumulated time in ms
   };
+  detailedStats?: DetailedStats;
   createdAt: number;
   updatedAt: number;
 }
@@ -45,4 +68,16 @@ export function deleteText(id: string): void {
 
 export function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
+
+export function createEmptyDetailedStats(): DetailedStats {
+  return {
+    wpmSamples: [],
+    pauses: [],
+    peakWpm: 0,
+    averageWpm: 0,
+    totalActiveTime: 0,
+    totalPauseTime: 0,
+    wordsPerMinuteByMinute: [],
+  };
 }

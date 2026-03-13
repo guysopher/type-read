@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { SavedText, saveText, generateId } from "@/lib/storage";
+import { SavedText, saveText, generateId, DetailedStats, WPMSample, PauseEvent, createEmptyDetailedStats } from "@/lib/storage";
 import { playCorrectSound, playErrorSound, playWordCompleteSound, playPunctuationSound } from "@/lib/sounds";
+import StatsView from "./StatsView";
 
 interface TypingViewProps {
   text: string;
@@ -20,6 +21,9 @@ interface Stats {
   endTime: number | null;
 }
 
+const AUTO_PAUSE_DELAY = 5000; // 5 seconds
+const WPM_SAMPLE_INTERVAL = 3000; // Sample WPM every 3 seconds
+
 export default function TypingView({ text, title, onReset, savedData }: TypingViewProps) {
   const words = useMemo(() => text.split(/\s+/).filter((w) => w.length > 0), [text]);
 
@@ -35,7 +39,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     startTime: null,
     endTime: null,
   });
-  const [accumulatedTime] = useState(savedData?.progress.totalTime || 0);
+  const [accumulatedTime, setAccumulatedTime] = useState(savedData?.progress.totalTime || 0);
   const [isComplete, setIsComplete] = useState(false);
   const [shake, setShake] = useState(false);
   const [saveId] = useState(savedData?.id || generateId());
@@ -43,9 +47,20 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   const [ignoreCase, setIgnoreCase] = useState(true);
   const [muted, setMuted] = useState(false);
 
+  // Auto-pause and detailed stats
+  const [isPaused, setIsPaused] = useState(false);
+  const [showStats, setShowStats] = useState(false);
+  const [detailedStats, setDetailedStats] = useState<DetailedStats>(
+    savedData?.detailedStats || createEmptyDetailedStats()
+  );
+
   const inputRef = useRef<HTMLInputElement>(null);
   const textContainerRef = useRef<HTMLDivElement>(null);
   const currentWordRef = useRef<HTMLSpanElement>(null);
+  const lastActivityRef = useRef<number>(Date.now());
+  const pauseStartRef = useRef<number | null>(null);
+  const sessionStartRef = useRef<number | null>(null);
+  const wordsAtLastSampleRef = useRef<number>(savedData?.progress.wordsTyped || 0);
 
   const currentWord = words[currentWordIndex] || "";
   const progress = (currentWordIndex / words.length) * 100;
@@ -63,19 +78,119 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   const absolutePosition = useMemo(() => {
     let pos = 0;
     for (let i = 0; i < currentWordIndex; i++) {
-      pos += words[i].length + 1; // +1 for space
+      pos += words[i].length + 1;
     }
     return pos + currentInput.length;
   }, [currentWordIndex, currentInput.length, words]);
+
+  // Calculate current WPM
+  const calculateWPM = useCallback(() => {
+    if (!stats.startTime) return 0;
+    const sessionTime = stats.startTime
+      ? (stats.endTime || Date.now()) - stats.startTime
+      : 0;
+    const totalTime = accumulatedTime + sessionTime - detailedStats.totalPauseTime;
+    const minutes = totalTime / 60000;
+    if (minutes < 0.01) return 0;
+    return Math.round(stats.wordsTyped / minutes);
+  }, [stats, accumulatedTime, detailedStats.totalPauseTime]);
+
+  const calculateAccuracy = useCallback(() => {
+    if (stats.totalKeystrokes === 0) return 100;
+    return Math.round((stats.correctKeystrokes / stats.totalKeystrokes) * 100);
+  }, [stats]);
+
+  // Get elapsed time since session start (excluding pauses)
+  const getActiveTime = useCallback(() => {
+    if (!sessionStartRef.current) return accumulatedTime;
+    const now = Date.now();
+    const sessionTime = now - sessionStartRef.current;
+    return accumulatedTime + sessionTime - detailedStats.totalPauseTime;
+  }, [accumulatedTime, detailedStats.totalPauseTime]);
 
   // Focus input on mount and when clicking anywhere
   useEffect(() => {
     inputRef.current?.focus();
 
-    const handleClick = () => inputRef.current?.focus();
+    const handleClick = () => {
+      if (!isPaused) {
+        inputRef.current?.focus();
+      }
+    };
     document.addEventListener("click", handleClick);
     return () => document.removeEventListener("click", handleClick);
-  }, []);
+  }, [isPaused]);
+
+  // Auto-pause detection
+  useEffect(() => {
+    if (isComplete || isPaused || !stats.startTime) return;
+
+    const checkActivity = setInterval(() => {
+      const timeSinceActivity = Date.now() - lastActivityRef.current;
+      if (timeSinceActivity >= AUTO_PAUSE_DELAY) {
+        // Auto-pause
+        setIsPaused(true);
+        pauseStartRef.current = Date.now();
+      }
+    }, 1000);
+
+    return () => clearInterval(checkActivity);
+  }, [isComplete, isPaused, stats.startTime]);
+
+  // WPM sampling
+  useEffect(() => {
+    if (isComplete || isPaused || !stats.startTime) return;
+
+    const sampleWPM = setInterval(() => {
+      const activeTime = getActiveTime();
+      const currentWpm = calculateWPM();
+
+      if (currentWpm > 0) {
+        setDetailedStats((prev) => {
+          const newSample: WPMSample = {
+            timestamp: activeTime,
+            wpm: currentWpm,
+            wordsTyped: stats.wordsTyped,
+          };
+
+          const newPeakWpm = Math.max(prev.peakWpm, currentWpm);
+          const newSamples = [...prev.wpmSamples, newSample];
+          const avgWpm = Math.round(
+            newSamples.reduce((sum, s) => sum + s.wpm, 0) / newSamples.length
+          );
+
+          // Calculate words per minute by minute
+          const minuteMap = new Map<number, { words: number; samples: number }>();
+          newSamples.forEach((s) => {
+            const minute = Math.floor(s.timestamp / 60000);
+            const existing = minuteMap.get(minute) || { words: 0, samples: 0 };
+            minuteMap.set(minute, {
+              words: existing.words + s.wpm,
+              samples: existing.samples + 1,
+            });
+          });
+
+          const wordsPerMinuteByMinute = Array.from(minuteMap.entries())
+            .sort((a, b) => a[0] - b[0])
+            .map(([minute, data]) => ({
+              minute,
+              wpm: Math.round(data.words / data.samples),
+            }));
+
+          return {
+            ...prev,
+            wpmSamples: newSamples,
+            peakWpm: newPeakWpm,
+            averageWpm: avgWpm,
+            totalActiveTime: activeTime,
+            wordsPerMinuteByMinute,
+          };
+        });
+      }
+    }, WPM_SAMPLE_INTERVAL);
+
+    return () => clearInterval(sampleWPM);
+  }, [isComplete, isPaused, stats.startTime, stats.wordsTyped, getActiveTime, calculateWPM]);
 
   // Scroll current word into view
   useEffect(() => {
@@ -90,6 +205,28 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
       }
     }
   }, [currentWordIndex]);
+
+  const resumeFromPause = useCallback(() => {
+    if (pauseStartRef.current) {
+      const pauseDuration = Date.now() - pauseStartRef.current;
+      const newPause: PauseEvent = {
+        startTime: getActiveTime(),
+        endTime: getActiveTime() + pauseDuration,
+        duration: pauseDuration,
+      };
+
+      setDetailedStats((prev) => ({
+        ...prev,
+        pauses: [...prev.pauses, newPause],
+        totalPauseTime: prev.totalPauseTime + pauseDuration,
+      }));
+    }
+
+    setIsPaused(false);
+    pauseStartRef.current = null;
+    lastActivityRef.current = Date.now();
+    inputRef.current?.focus();
+  }, [getActiveTime]);
 
   const handleSave = useCallback(() => {
     const sessionTime = stats.startTime ? Date.now() - stats.startTime : 0;
@@ -106,6 +243,10 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         totalKeystrokes: stats.totalKeystrokes,
         totalTime,
       },
+      detailedStats: {
+        ...detailedStats,
+        totalActiveTime: getActiveTime(),
+      },
       createdAt: savedData?.createdAt || Date.now(),
       updatedAt: Date.now(),
     };
@@ -121,21 +262,25 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     stats,
     accumulatedTime,
     savedData?.createdAt,
+    detailedStats,
+    getActiveTime,
   ]);
 
   const handleInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value;
+      lastActivityRef.current = Date.now();
 
       if (!stats.startTime) {
-        setStats((s) => ({ ...s, startTime: Date.now() }));
+        const now = Date.now();
+        setStats((s) => ({ ...s, startTime: now }));
+        sessionStartRef.current = now;
       }
 
       if (value.endsWith(" ")) {
         const typedWord = value.trim();
 
         if (compareStrings(typedWord, currentWord)) {
-          // Check if word ends with punctuation
           const lastChar = currentWord[currentWord.length - 1];
           const hasPunctuation = /[.,!?;:]/.test(lastChar);
 
@@ -157,6 +302,11 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           if (currentWordIndex === words.length - 1) {
             setIsComplete(true);
             setStats((s) => ({ ...s, endTime: Date.now() }));
+            // Final stats update
+            setDetailedStats((prev) => ({
+              ...prev,
+              totalActiveTime: getActiveTime(),
+            }));
           } else {
             setCurrentWordIndex((i) => i + 1);
           }
@@ -172,7 +322,6 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           setCurrentInput("");
         }
       } else {
-        // Check if the last typed character is correct
         const newCharIndex = value.length - 1;
         if (newCharIndex >= 0 && newCharIndex < currentWord.length) {
           const newChar = value[newCharIndex];
@@ -192,35 +341,18 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         setCurrentInput(value);
       }
     },
-    [currentWord, currentWordIndex, words.length, stats.startTime, compareStrings, ignoreCase, muted]
+    [currentWord, currentWordIndex, words.length, stats.startTime, compareStrings, ignoreCase, muted, getActiveTime]
   );
-
-  const calculateWPM = () => {
-    const sessionTime = stats.startTime
-      ? (stats.endTime || Date.now()) - stats.startTime
-      : 0;
-    const totalTime = accumulatedTime + sessionTime;
-    const minutes = totalTime / 60000;
-    if (minutes < 0.01) return 0;
-    return Math.round(stats.wordsTyped / minutes);
-  };
-
-  const calculateAccuracy = () => {
-    if (stats.totalKeystrokes === 0) return 100;
-    return Math.round((stats.correctKeystrokes / stats.totalKeystrokes) * 100);
-  };
 
   // Sliding text bar renderer
   const renderSlidingTextBar = () => {
-    const windowSize = 50; // Total chars to show
-    const centerOffset = 20; // How many chars before cursor
+    const windowSize = 50;
+    const centerOffset = 20;
 
-    // Get the window of characters to display
     const startPos = Math.max(0, absolutePosition - centerOffset);
     const endPos = Math.min(fullTextStream.length, startPos + windowSize);
     const visibleText = fullTextStream.slice(startPos, endPos);
 
-    // Calculate position of cursor within the current word
     const cursorInWord = currentInput.length;
 
     return (
@@ -230,7 +362,6 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
             shake ? "animate-[shake_0.3s_ease-in-out]" : ""
           }`}
         >
-          {/* The sliding text container */}
           <div className="flex justify-center items-center">
             <div className="font-mono text-4xl tracking-wide whitespace-pre">
               {visibleText.split("").map((char, i) => {
@@ -240,10 +371,8 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                 let className = "inline-block transition-all duration-75 ";
 
                 if (globalPos < wordStartPos) {
-                  // Already typed words - faded
                   className += "text-[var(--muted)]/40";
                 } else if (globalPos < absolutePosition) {
-                  // Currently typing - check if correct
                   const charIndexInWord = globalPos - wordStartPos;
                   const inputChar = currentInput[charIndexInWord] || "";
                   const targetChar = currentWord[charIndexInWord] || "";
@@ -252,13 +381,10 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                     : inputChar === targetChar;
                   className += isCorrect ? "text-[var(--foreground)]" : "text-[var(--error)]";
                 } else if (globalPos === absolutePosition && !isWordComplete) {
-                  // Current character to type (not when word is complete - waiting for space)
                   className += "text-[var(--foreground)] bg-[var(--accent)]/20 border-b-2 border-[var(--foreground)]";
                 } else if (globalPos === absolutePosition && isWordComplete) {
-                  // Space after completed word - highlight the space
                   className += "bg-[var(--accent)]/20 border-b-2 border-[var(--foreground)]";
                 } else {
-                  // Upcoming characters
                   const distance = globalPos - absolutePosition;
                   if (distance < 5) {
                     className += "text-[var(--foreground)]/70";
@@ -278,7 +404,6 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
             </div>
           </div>
 
-          {/* Gradient fades on edges - only show when there's hidden content */}
           {startPos > 0 && (
             <div className="absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-[var(--background)] to-transparent pointer-events-none" />
           )}
@@ -286,10 +411,60 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
             <div className="absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-[var(--background)] to-transparent pointer-events-none" />
           )}
         </div>
-
       </div>
     );
   };
+
+  // Pause overlay
+  if (isPaused && !isComplete) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-8">
+        <div className="text-center max-w-md">
+          <div className="text-6xl mb-6">⏸</div>
+          <h2 className="text-3xl font-bold mb-2">Paused</h2>
+          <p className="text-[var(--muted)] mb-8">
+            Auto-paused after 5 seconds of inactivity
+          </p>
+
+          <div className="grid grid-cols-2 gap-6 mb-10">
+            <div className="text-center">
+              <div className="text-4xl font-bold">{calculateWPM()}</div>
+              <div className="text-sm text-[var(--muted)]">WPM</div>
+            </div>
+            <div className="text-center">
+              <div className="text-4xl font-bold">{calculateAccuracy()}%</div>
+              <div className="text-sm text-[var(--muted)]">Accuracy</div>
+            </div>
+          </div>
+
+          <div className="flex gap-4 justify-center">
+            <button
+              onClick={resumeFromPause}
+              className="px-8 py-3 bg-[var(--foreground)] text-[var(--background)] rounded-xl font-medium hover:opacity-90 transition-opacity"
+            >
+              Resume Typing
+            </button>
+            <button
+              onClick={() => setShowStats(true)}
+              className="px-8 py-3 border border-[var(--foreground)]/20 rounded-xl font-medium hover:bg-[var(--foreground)]/5 transition-colors"
+            >
+              View Stats
+            </button>
+          </div>
+        </div>
+
+        {showStats && (
+          <StatsView
+            stats={detailedStats}
+            wordsTyped={stats.wordsTyped}
+            totalWords={stats.totalWords}
+            accuracy={calculateAccuracy()}
+            onClose={() => setShowStats(false)}
+          />
+        )}
+      </div>
+    );
+  }
 
   if (isComplete) {
     return (
@@ -312,23 +487,31 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
             </div>
           </div>
 
-          <div className="text-sm text-[var(--muted)] mb-8">
-            {stats.wordsTyped} words in{" "}
-            {Math.round(
-              (accumulatedTime +
-                ((stats.endTime || 0) - (stats.startTime || 0))) /
-                1000
-            )}
-            s
+          <div className="flex gap-4 justify-center mb-8">
+            <button
+              onClick={() => setShowStats(true)}
+              className="px-8 py-3 bg-[var(--foreground)] text-[var(--background)] rounded-xl font-medium hover:opacity-90 transition-opacity"
+            >
+              View Detailed Stats
+            </button>
+            <button
+              onClick={onReset}
+              className="px-8 py-3 border border-[var(--foreground)]/20 rounded-xl font-medium hover:bg-[var(--foreground)]/5 transition-colors"
+            >
+              Start New Text
+            </button>
           </div>
-
-          <button
-            onClick={onReset}
-            className="px-8 py-3 bg-[var(--foreground)] text-[var(--background)] rounded-xl font-medium hover:opacity-90 transition-opacity"
-          >
-            Start New Text
-          </button>
         </div>
+
+        {showStats && (
+          <StatsView
+            stats={detailedStats}
+            wordsTyped={stats.wordsTyped}
+            totalWords={stats.totalWords}
+            accuracy={calculateAccuracy()}
+            onClose={() => setShowStats(false)}
+          />
+        )}
       </div>
     );
   }
@@ -366,6 +549,13 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                 {muted ? "🔇" : "🔊"}
               </button>
               <button
+                onClick={() => setShowStats(true)}
+                className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
+                title="View statistics"
+              >
+                📊
+              </button>
+              <button
                 onClick={handleSave}
                 className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors flex items-center gap-1"
               >
@@ -396,7 +586,6 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
 
       {/* Main typing area */}
       <main className="flex-1 flex flex-col max-w-4xl mx-auto w-full px-6">
-
         <input
           ref={inputRef}
           type="text"
@@ -443,8 +632,22 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
             {currentWordIndex} / {words.length} words
           </span>
           <span>{calculateAccuracy()}% accuracy</span>
+          {detailedStats.pauses.length > 0 && (
+            <span>{detailedStats.pauses.length} pauses</span>
+          )}
         </div>
       </main>
+
+      {/* Stats modal */}
+      {showStats && (
+        <StatsView
+          stats={detailedStats}
+          wordsTyped={stats.wordsTyped}
+          totalWords={stats.totalWords}
+          accuracy={calculateAccuracy()}
+          onClose={() => setShowStats(false)}
+        />
+      )}
 
       <style jsx>{`
         @keyframes shake {
