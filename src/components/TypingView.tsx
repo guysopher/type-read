@@ -45,6 +45,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   const [saveId] = useState(savedData?.id || generateId());
   const [showSaved, setShowSaved] = useState(false);
   const [ignoreCase, setIgnoreCase] = useState(true);
+  const [ignorePunctuation, setIgnorePunctuation] = useState(false);
   const [muted, setMuted] = useState(false);
 
   // Auto-pause and detailed stats
@@ -65,9 +66,19 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   const currentWord = words[currentWordIndex] || "";
   const progress = (currentWordIndex / words.length) * 100;
 
+  const stripPunctuation = useCallback((s: string) => {
+    return ignorePunctuation ? s.replace(/[.,!?;:'"()-]/g, "") : s;
+  }, [ignorePunctuation]);
+
   const compareStrings = useCallback((a: string, b: string) => {
-    return ignoreCase ? a.toLowerCase() === b.toLowerCase() : a === b;
-  }, [ignoreCase]);
+    let strA = stripPunctuation(a);
+    let strB = stripPunctuation(b);
+    if (ignoreCase) {
+      strA = strA.toLowerCase();
+      strB = strB.toLowerCase();
+    }
+    return strA === strB;
+  }, [ignoreCase, stripPunctuation]);
 
   const isWordComplete = compareStrings(currentInput, currentWord);
 
@@ -326,9 +337,16 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         if (newCharIndex >= 0 && newCharIndex < currentWord.length) {
           const newChar = value[newCharIndex];
           const expectedChar = currentWord[newCharIndex];
-          const isCorrect = ignoreCase
-            ? newChar.toLowerCase() === expectedChar.toLowerCase()
-            : newChar === expectedChar;
+          const isPunc = /[.,!?;:'"()-]/.test(expectedChar);
+          let isCorrect: boolean;
+          if (ignorePunctuation && isPunc) {
+            // Skip punctuation check - always correct if we're ignoring punctuation
+            isCorrect = true;
+          } else if (ignoreCase) {
+            isCorrect = newChar.toLowerCase() === expectedChar.toLowerCase();
+          } else {
+            isCorrect = newChar === expectedChar;
+          }
 
           if (!muted) {
             if (isCorrect) {
@@ -341,7 +359,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         setCurrentInput(value);
       }
     },
-    [currentWord, currentWordIndex, words.length, stats.startTime, compareStrings, ignoreCase, muted, getActiveTime]
+    [currentWord, currentWordIndex, words.length, stats.startTime, compareStrings, ignoreCase, ignorePunctuation, muted, getActiveTime]
   );
 
   // Sliding text bar renderer
@@ -376,9 +394,15 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                   const charIndexInWord = globalPos - wordStartPos;
                   const inputChar = currentInput[charIndexInWord] || "";
                   const targetChar = currentWord[charIndexInWord] || "";
-                  const isCorrect = ignoreCase
-                    ? inputChar.toLowerCase() === targetChar.toLowerCase()
-                    : inputChar === targetChar;
+                  const isPunc = /[.,!?;:'"()-]/.test(targetChar);
+                  let isCorrect: boolean;
+                  if (ignorePunctuation && isPunc) {
+                    isCorrect = true;
+                  } else if (ignoreCase) {
+                    isCorrect = inputChar.toLowerCase() === targetChar.toLowerCase();
+                  } else {
+                    isCorrect = inputChar === targetChar;
+                  }
                   className += isCorrect ? "text-[var(--foreground)]" : "text-[var(--error)]";
                 } else if (globalPos === absolutePosition && !isWordComplete) {
                   className += "text-[var(--foreground)] bg-[var(--accent)]/20 border-b-2 border-[var(--foreground)]";
@@ -538,6 +562,15 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                 title={ignoreCase ? "Case insensitive (click to toggle)" : "Case sensitive (click to toggle)"}
               >
                 Aa
+              </button>
+              <button
+                onClick={() => setIgnorePunctuation(!ignorePunctuation)}
+                className={`text-sm transition-colors flex items-center gap-1 ${
+                  ignorePunctuation ? "text-[var(--foreground)]" : "text-[var(--muted)]"
+                }`}
+                title={ignorePunctuation ? "Ignoring punctuation (click to toggle)" : "Strict punctuation (click to toggle)"}
+              >
+                .,
               </button>
               <button
                 onClick={() => setMuted(!muted)}
