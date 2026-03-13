@@ -41,6 +41,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   const [saveId] = useState(savedData?.id || generateId());
   const [showSaved, setShowSaved] = useState(false);
   const [ignoreCase, setIgnoreCase] = useState(true);
+  const [muted, setMuted] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const textContainerRef = useRef<HTMLDivElement>(null);
@@ -138,10 +139,12 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           const lastChar = currentWord[currentWord.length - 1];
           const hasPunctuation = /[.,!?;:]/.test(lastChar);
 
-          if (hasPunctuation) {
-            playPunctuationSound();
-          } else {
-            playWordCompleteSound();
+          if (!muted) {
+            if (hasPunctuation) {
+              playPunctuationSound();
+            } else {
+              playWordCompleteSound();
+            }
           }
 
           setStats((s) => ({
@@ -159,7 +162,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           }
           setCurrentInput("");
         } else {
-          playErrorSound();
+          if (!muted) playErrorSound();
           setShake(true);
           setTimeout(() => setShake(false), 300);
           setStats((s) => ({
@@ -178,16 +181,18 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
             ? newChar.toLowerCase() === expectedChar.toLowerCase()
             : newChar === expectedChar;
 
-          if (isCorrect) {
-            playCorrectSound();
-          } else {
-            playErrorSound();
+          if (!muted) {
+            if (isCorrect) {
+              playCorrectSound();
+            } else {
+              playErrorSound();
+            }
           }
         }
         setCurrentInput(value);
       }
     },
-    [currentWord, currentWordIndex, words.length, stats.startTime, compareStrings, ignoreCase]
+    [currentWord, currentWordIndex, words.length, stats.startTime, compareStrings, ignoreCase, muted]
   );
 
   const calculateWPM = () => {
@@ -350,6 +355,15 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                 title={ignoreCase ? "Case insensitive (click to toggle)" : "Case sensitive (click to toggle)"}
               >
                 Aa
+              </button>
+              <button
+                onClick={() => setMuted(!muted)}
+                className={`text-sm transition-colors ${
+                  muted ? "text-[var(--muted)]" : "text-[var(--foreground)]"
+                }`}
+                title={muted ? "Sound off (click to unmute)" : "Sound on (click to mute)"}
+              >
+                {muted ? "🔇" : "🔊"}
               </button>
               <button
                 onClick={handleSave}
