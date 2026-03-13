@@ -185,9 +185,6 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     // Calculate position of cursor within the current word
     const cursorInWord = currentInput.length;
 
-    // Calculate position in the visible window where the current char should be
-    const cursorPosInWindow = absolutePosition - startPos;
-
     return (
       <div className="mb-8 py-8">
         <div
@@ -214,7 +211,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                   className += isCorrect ? "text-[var(--foreground)]" : "text-[var(--error)]";
                 } else if (globalPos === absolutePosition && !isWordComplete) {
                   // Current character to type (not when word is complete - waiting for space)
-                  className += "text-[var(--foreground)] bg-[var(--foreground)]/10 rounded px-0.5";
+                  className += "text-[var(--foreground)] bg-[var(--accent)]/20 border-b-2 border-[var(--foreground)]";
                 } else if (globalPos === absolutePosition && isWordComplete) {
                   // Space after completed word - subtle indication
                   className += "text-[var(--foreground)]/30";
@@ -236,16 +233,6 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                   </span>
                 );
               })}
-              {/* Blinking caret */}
-              <span
-                className="caret text-[var(--accent)] absolute"
-                style={{
-                  left: `${cursorPosInWindow * 0.6}em`,
-                  marginLeft: "0.3em",
-                }}
-              >
-                |
-              </span>
             </div>
           </div>
 
