@@ -224,7 +224,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     const cursorInWord = currentInput.length;
 
     return (
-      <div className="mb-8 py-8">
+      <div>
         <div
           className={`relative overflow-hidden py-4 ${
             shake ? "animate-[shake_0.3s_ease-in-out]" : ""
@@ -389,9 +389,13 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         </div>
       </header>
 
-      {/* Main typing area */}
-      <main className="flex-1 flex flex-col max-w-4xl mx-auto w-full px-6 py-8">
+      {/* Sliding text bar - full width */}
+      <div className="w-full px-4 py-8">
         {renderSlidingTextBar()}
+      </div>
+
+      {/* Main typing area */}
+      <main className="flex-1 flex flex-col max-w-4xl mx-auto w-full px-6">
 
         <input
           ref={inputRef}
