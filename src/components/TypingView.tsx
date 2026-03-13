@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { SavedText, saveText, generateId } from "@/lib/storage";
+import { playCorrectSound, playErrorSound, playWordCompleteSound, playPunctuationSound } from "@/lib/sounds";
 
 interface TypingViewProps {
   text: string;
@@ -133,6 +134,16 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         const typedWord = value.trim();
 
         if (compareStrings(typedWord, currentWord)) {
+          // Check if word ends with punctuation
+          const lastChar = currentWord[currentWord.length - 1];
+          const hasPunctuation = /[.,!?;:]/.test(lastChar);
+
+          if (hasPunctuation) {
+            playPunctuationSound();
+          } else {
+            playWordCompleteSound();
+          }
+
           setStats((s) => ({
             ...s,
             wordsTyped: s.wordsTyped + 1,
@@ -148,6 +159,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           }
           setCurrentInput("");
         } else {
+          playErrorSound();
           setShake(true);
           setTimeout(() => setShake(false), 300);
           setStats((s) => ({
@@ -157,10 +169,25 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           setCurrentInput("");
         }
       } else {
+        // Check if the last typed character is correct
+        const newCharIndex = value.length - 1;
+        if (newCharIndex >= 0 && newCharIndex < currentWord.length) {
+          const newChar = value[newCharIndex];
+          const expectedChar = currentWord[newCharIndex];
+          const isCorrect = ignoreCase
+            ? newChar.toLowerCase() === expectedChar.toLowerCase()
+            : newChar === expectedChar;
+
+          if (isCorrect) {
+            playCorrectSound();
+          } else {
+            playErrorSound();
+          }
+        }
         setCurrentInput(value);
       }
     },
-    [currentWord, currentWordIndex, words.length, stats.startTime, compareStrings]
+    [currentWord, currentWordIndex, words.length, stats.startTime, compareStrings, ignoreCase]
   );
 
   const calculateWPM = () => {
