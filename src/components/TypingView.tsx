@@ -39,6 +39,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   const [shake, setShake] = useState(false);
   const [saveId] = useState(savedData?.id || generateId());
   const [showSaved, setShowSaved] = useState(false);
+  const [ignoreCase, setIgnoreCase] = useState(true);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const textContainerRef = useRef<HTMLDivElement>(null);
@@ -46,7 +47,12 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
 
   const currentWord = words[currentWordIndex] || "";
   const progress = (currentWordIndex / words.length) * 100;
-  const isWordComplete = currentInput.toLowerCase() === currentWord.toLowerCase();
+
+  const compareStrings = useCallback((a: string, b: string) => {
+    return ignoreCase ? a.toLowerCase() === b.toLowerCase() : a === b;
+  }, [ignoreCase]);
+
+  const isWordComplete = compareStrings(currentInput, currentWord);
 
   // Build the full text stream for the sliding view
   const fullTextStream = useMemo(() => words.join(" "), [words]);
@@ -126,7 +132,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
       if (value.endsWith(" ")) {
         const typedWord = value.trim();
 
-        if (typedWord.toLowerCase() === currentWord.toLowerCase()) {
+        if (compareStrings(typedWord, currentWord)) {
           setStats((s) => ({
             ...s,
             wordsTyped: s.wordsTyped + 1,
@@ -154,7 +160,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         setCurrentInput(value);
       }
     },
-    [currentWord, currentWordIndex, words.length, stats.startTime]
+    [currentWord, currentWordIndex, words.length, stats.startTime, compareStrings]
   );
 
   const calculateWPM = () => {
@@ -207,7 +213,11 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                 } else if (globalPos < absolutePosition) {
                   // Currently typing - check if correct
                   const charIndexInWord = globalPos - wordStartPos;
-                  const isCorrect = currentInput[charIndexInWord]?.toLowerCase() === currentWord[charIndexInWord]?.toLowerCase();
+                  const inputChar = currentInput[charIndexInWord] || "";
+                  const targetChar = currentWord[charIndexInWord] || "";
+                  const isCorrect = ignoreCase
+                    ? inputChar.toLowerCase() === targetChar.toLowerCase()
+                    : inputChar === targetChar;
                   className += isCorrect ? "text-[var(--foreground)]" : "text-[var(--error)]";
                 } else if (globalPos === absolutePosition && !isWordComplete) {
                   // Current character to type (not when word is complete - waiting for space)
@@ -301,6 +311,15 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
             </button>
             <h1 className="text-sm font-medium truncate max-w-[40%]">{title}</h1>
             <div className="flex items-center gap-4">
+              <button
+                onClick={() => setIgnoreCase(!ignoreCase)}
+                className={`text-sm transition-colors flex items-center gap-1 ${
+                  ignoreCase ? "text-[var(--foreground)]" : "text-[var(--muted)]"
+                }`}
+                title={ignoreCase ? "Case insensitive (click to toggle)" : "Case sensitive (click to toggle)"}
+              >
+                Aa
+              </button>
               <button
                 onClick={handleSave}
                 className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors flex items-center gap-1"
