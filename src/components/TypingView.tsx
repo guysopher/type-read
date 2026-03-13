@@ -45,8 +45,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   const [shake, setShake] = useState(false);
   const [saveId] = useState(savedData?.id || generateId());
   const [showSaved, setShowSaved] = useState(false);
-  const [ignoreCase, setIgnoreCase] = useState(true);
-  const [ignorePunctuation, setIgnorePunctuation] = useState(false);
+  const [forgivingMode, setForgivingMode] = useState(true);
   const [muted, setMuted] = useState(false);
 
   // Auto-pause and detailed stats
@@ -67,20 +66,20 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   const currentWord = words[currentWordIndex] || "";
   const progress = (currentWordIndex / words.length) * 100;
 
-  const stripPunctuation = useCallback((s: string) => {
-    // Remove all non-alphanumeric characters (keeps letters and numbers only)
-    return ignorePunctuation ? s.replace(/[^a-zA-Z0-9]/g, "") : s;
-  }, [ignorePunctuation]);
+  const stripNonAlpha = useCallback((s: string) => {
+    // In forgiving mode, only keep letters (a-z) and spaces
+    return forgivingMode ? s.replace(/[^a-zA-Z\s]/g, "") : s;
+  }, [forgivingMode]);
 
   const compareStrings = useCallback((a: string, b: string) => {
-    let strA = stripPunctuation(a);
-    let strB = stripPunctuation(b);
-    if (ignoreCase) {
+    let strA = stripNonAlpha(a);
+    let strB = stripNonAlpha(b);
+    if (forgivingMode) {
       strA = strA.toLowerCase();
       strB = strB.toLowerCase();
     }
     return strA === strB;
-  }, [ignoreCase, stripPunctuation]);
+  }, [forgivingMode, stripNonAlpha]);
 
   const isWordComplete = compareStrings(currentInput, currentWord);
 
@@ -131,22 +130,6 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     document.addEventListener("click", handleClick);
     return () => document.removeEventListener("click", handleClick);
   }, []);
-
-  // Resume from pause with space or escape
-  useEffect(() => {
-    if (!isPaused) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === " " || e.key === "Escape") {
-        e.preventDefault();
-        resumeFromPause();
-        inputRef.current?.focus();
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isPaused, resumeFromPause]);
 
   // Auto-pause detection
   useEffect(() => {
@@ -219,17 +202,10 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     return () => clearInterval(sampleWPM);
   }, [isComplete, isPaused, stats.startTime, stats.wordsTyped, getActiveTime, calculateWPM]);
 
-  // Scroll current word into view
+  // Scroll current word to center
   useEffect(() => {
-    if (currentWordRef.current && textContainerRef.current) {
-      const container = textContainerRef.current;
-      const word = currentWordRef.current;
-      const containerRect = container.getBoundingClientRect();
-      const wordRect = word.getBoundingClientRect();
-
-      if (wordRect.top < containerRect.top || wordRect.bottom > containerRect.bottom) {
-        word.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
+    if (currentWordRef.current) {
+      currentWordRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, [currentWordIndex]);
 
@@ -298,6 +274,19 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     lastActivityRef.current = Date.now();
     inputRef.current?.focus();
   }, [getActiveTime]);
+
+  // Resume from pause with space or escape
+  useEffect(() => {
+    if (!isPaused) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === " " || e.key === "Escape") {
+        e.preventDefault();
+        resumeFromPause();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isPaused, resumeFromPause]);
 
   const handleSave = useCallback(() => {
     const sessionTime = stats.startTime ? Date.now() - stats.startTime : 0;
@@ -402,12 +391,12 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         if (newCharIndex >= 0 && newCharIndex < currentWord.length) {
           const newChar = value[newCharIndex];
           const expectedChar = currentWord[newCharIndex];
-          const isPunc = /[^a-zA-Z0-9]/.test(expectedChar);
+          const isNonAlpha = /[^a-zA-Z]/.test(expectedChar);
           let isCorrect: boolean;
-          if (ignorePunctuation && isPunc) {
-            // Skip punctuation check - always correct if we're ignoring punctuation
+          if (forgivingMode && isNonAlpha) {
+            // In forgiving mode, skip non-alpha check - always correct
             isCorrect = true;
-          } else if (ignoreCase) {
+          } else if (forgivingMode) {
             isCorrect = newChar.toLowerCase() === expectedChar.toLowerCase();
           } else {
             isCorrect = newChar === expectedChar;
@@ -424,7 +413,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         setCurrentInput(value);
       }
     },
-    [currentWord, currentWordIndex, words.length, stats.startTime, compareStrings, ignoreCase, ignorePunctuation, muted, getActiveTime, isPaused, resumeFromPause]
+    [currentWord, currentWordIndex, words.length, stats.startTime, compareStrings, forgivingMode, muted, getActiveTime, isPaused, resumeFromPause]
   );
 
   // Sliding text bar renderer
@@ -459,11 +448,11 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                   const charIndexInWord = globalPos - wordStartPos;
                   const inputChar = currentInput[charIndexInWord] || "";
                   const targetChar = currentWord[charIndexInWord] || "";
-                  const isPunc = /[^a-zA-Z0-9]/.test(targetChar);
+                  const isNonAlpha = /[^a-zA-Z]/.test(targetChar);
                   let isCorrect: boolean;
-                  if (ignorePunctuation && isPunc) {
+                  if (forgivingMode && isNonAlpha) {
                     isCorrect = true;
-                  } else if (ignoreCase) {
+                  } else if (forgivingMode) {
                     isCorrect = inputChar.toLowerCase() === targetChar.toLowerCase();
                   } else {
                     isCorrect = inputChar === targetChar;
@@ -581,26 +570,15 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
             <h1 className="text-sm font-medium truncate max-w-[40%]">{title}</h1>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setIgnoreCase(!ignoreCase)}
-                className={`px-2 py-1 text-xs font-medium rounded transition-all ${
-                  ignoreCase
+                onClick={() => setForgivingMode(!forgivingMode)}
+                className={`px-3 py-1 text-xs font-medium rounded transition-all ${
+                  forgivingMode
                     ? "bg-[var(--foreground)] text-[var(--background)]"
                     : "bg-[var(--foreground)]/10 text-[var(--muted)] hover:bg-[var(--foreground)]/20"
                 }`}
-                title={ignoreCase ? "Case insensitive (click to toggle)" : "Case sensitive (click to toggle)"}
+                title={forgivingMode ? "Forgiving mode ON: only a-z and space count (click to toggle)" : "Strict mode: exact match required (click to toggle)"}
               >
-                Aa
-              </button>
-              <button
-                onClick={() => setIgnorePunctuation(!ignorePunctuation)}
-                className={`px-2 py-1 text-xs font-medium rounded transition-all ${
-                  ignorePunctuation
-                    ? "bg-[var(--foreground)] text-[var(--background)]"
-                    : "bg-[var(--foreground)]/10 text-[var(--muted)] hover:bg-[var(--foreground)]/20"
-                }`}
-                title={ignorePunctuation ? "Ignoring punctuation (click to toggle)" : "Strict punctuation (click to toggle)"}
-              >
-                #$
+                {forgivingMode ? "Forgiving" : "Strict"}
               </button>
               <button
                 onClick={() => setMuted(!muted)}
