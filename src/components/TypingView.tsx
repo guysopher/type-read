@@ -179,12 +179,19 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     return accumulatedTime + sessionTime - detailedStats.totalPauseTime;
   }, [accumulatedTime, detailedStats.totalPauseTime]);
 
-  // Focus input on mount and when clicking anywhere
+  // Focus input on mount and when clicking anywhere (except when note modal is open)
+  const showNoteInputRef = useRef(showNoteInput);
+  showNoteInputRef.current = showNoteInput;
+
   useEffect(() => {
-    inputRef.current?.focus();
+    if (!showNoteInputRef.current) {
+      inputRef.current?.focus();
+    }
 
     const handleClick = () => {
-      inputRef.current?.focus();
+      if (!showNoteInputRef.current) {
+        inputRef.current?.focus();
+      }
     };
     document.addEventListener("click", handleClick);
     return () => document.removeEventListener("click", handleClick);
@@ -866,6 +873,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           autoCorrect="off"
           autoComplete="off"
           spellCheck={false}
+          disabled={showNoteInput}
         />
 
         <div
