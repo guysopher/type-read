@@ -45,6 +45,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   const [shake, setShake] = useState(false);
   const [saveId] = useState(savedData?.id || generateId());
   const [showSaved, setShowSaved] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
   const [lastSavedTime, setLastSavedTime] = useState<number | null>(savedData?.updatedAt || null);
   const [forgivingMode, setForgivingMode] = useState(true);
   const [muted, setMuted] = useState(false);
@@ -297,6 +298,8 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
 
       saveText(savedText);
       setLastSavedTime(Date.now());
+      setJustSaved(true);
+      setTimeout(() => setJustSaved(false), 1500);
     }, AUTO_SAVE_INTERVAL);
 
     return () => clearInterval(autoSave);
@@ -965,11 +968,11 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
             <span>{detailedStats.pauses.length} pauses</span>
           )}
           {lastSavedTime && (
-            <span className="flex items-center gap-1">
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <span className={`flex items-center gap-1 transition-all duration-300 ${justSaved ? 'text-green-500 scale-110' : ''}`}>
+              <svg className={`w-3 h-3 ${justSaved ? 'animate-pulse' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
-              Saved
+              {justSaved ? 'Saving...' : 'Saved'}
             </span>
           )}
         </div>
