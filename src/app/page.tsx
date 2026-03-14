@@ -22,6 +22,42 @@ Now stop reading this tutorial and start typing it. Feel the rhythm of the words
 
 const TUTORIAL_TITLE = "Welcome to TypeRead";
 
+// Clean text for easier typing - remove markdown, lists, etc.
+function cleanTextForTyping(text: string): string {
+  return text
+    // Remove markdown headers (# ## ### etc.)
+    .replace(/^#{1,6}\s+/gm, '')
+    // Remove markdown bold/italic (**text**, *text*, __text__, _text_)
+    .replace(/(\*\*|__)(.*?)\1/g, '$2')
+    .replace(/(\*|_)(.*?)\1/g, '$2')
+    // Remove markdown links [text](url) -> text
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    // Remove markdown images ![alt](url)
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
+    // Remove inline code `code`
+    .replace(/`([^`]+)`/g, '$1')
+    // Remove code blocks ```code```
+    .replace(/```[\s\S]*?```/g, '')
+    // Remove bullet points (-, *, •) at start of lines
+    .replace(/^[\s]*[-*•]\s+/gm, '')
+    // Remove numbered lists (1. 2. 3. etc.) at start of lines
+    .replace(/^[\s]*\d+\.\s+/gm, '')
+    // Remove blockquotes >
+    .replace(/^>\s*/gm, '')
+    // Remove horizontal rules (---, ***, ___)
+    .replace(/^[-*_]{3,}\s*$/gm, '')
+    // Remove HTML tags
+    .replace(/<[^>]+>/g, '')
+    // Normalize multiple newlines to double newline (paragraph break)
+    .replace(/\n{3,}/g, '\n\n')
+    // Trim each line
+    .split('\n')
+    .map(line => line.trim())
+    .join('\n')
+    // Remove empty lines at start/end
+    .trim();
+}
+
 export default function Home() {
   const [text, setText] = useState<string | null>(null);
   const [title, setTitle] = useState<string>("");
@@ -74,7 +110,7 @@ export default function Home() {
           throw new Error(data.error || "Failed to extract content");
         }
 
-        setText(data.content);
+        setText(cleanTextForTyping(data.content));
         setTitle(data.title || "Article");
       } catch (err) {
         setError(
@@ -84,7 +120,7 @@ export default function Home() {
         setLoading(false);
       }
     } else {
-      setText(inputValue);
+      setText(cleanTextForTyping(inputValue));
       setTitle("Your Text");
     }
   };
