@@ -26,7 +26,24 @@ const WPM_SAMPLE_INTERVAL = 3000; // Sample WPM every 3 seconds
 const AUTO_SAVE_INTERVAL = 10000; // Auto-save every 10 seconds
 
 export default function TypingView({ text, title, onReset, savedData }: TypingViewProps) {
-  const words = useMemo(() => text.split(/\s+/).filter((w) => w.length > 0), [text]);
+  // Split text into words while tracking paragraph breaks
+  const { words, paragraphStarts } = useMemo(() => {
+    const paragraphs = text.split(/\n\n+/);
+    const allWords: string[] = [];
+    const startIndices = new Set<number>();
+
+    paragraphs.forEach((para, pIndex) => {
+      const paraWords = para.split(/\s+/).filter((w) => w.length > 0);
+      if (paraWords.length > 0) {
+        if (pIndex > 0) {
+          startIndices.add(allWords.length);
+        }
+        allWords.push(...paraWords);
+      }
+    });
+
+    return { words: allWords, paragraphStarts: startIndices };
+  }, [text]);
 
   const [currentWordIndex, setCurrentWordIndex] = useState(
     savedData?.progress.currentWordIndex || 0
@@ -934,6 +951,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
               const highlight = getHighlightForWord(index);
               const isSelected = selectedRange && index >= selectedRange.start && index <= selectedRange.end;
               const isHighlightStart = highlight && index === highlight.startWordIndex;
+              const isParagraphStart = paragraphStarts.has(index);
 
               let className = "inline cursor-pointer transition-all ";
               if (index < currentWordIndex) {
@@ -955,6 +973,8 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
 
               return (
                 <span key={index} className="relative inline">
+                  {/* Add paragraph break */}
+                  {isParagraphStart && <span className="block h-4" />}
                   <span
                     ref={index === currentWordIndex ? currentWordRef : null}
                     className={className}
