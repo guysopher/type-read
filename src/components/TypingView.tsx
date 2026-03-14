@@ -972,9 +972,9 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
               }
 
               return (
-                <span key={index} className="relative inline">
+                <span key={index} className="relative">
                   {/* Add paragraph break */}
-                  {isParagraphStart && <span className="block h-4" />}
+                  {isParagraphStart && <><br /><br /></>}
                   <span
                     ref={index === currentWordIndex ? currentWordRef : null}
                     className={className}
