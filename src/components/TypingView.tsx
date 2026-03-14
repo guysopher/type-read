@@ -508,14 +508,11 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           }
           setCurrentInput("");
         } else {
+          // Word is incorrect - just ignore the space, don't clear input
           if (!muted) playErrorSound();
           setShake(true);
           setTimeout(() => setShake(false), 300);
-          setStats((s) => ({
-            ...s,
-            totalKeystrokes: s.totalKeystrokes + typedWord.length,
-          }));
-          setCurrentInput("");
+          // Keep current input without the space so user can fix their mistake
         }
       } else {
         const newCharIndex = value.length - 1;
