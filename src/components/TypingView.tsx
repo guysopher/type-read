@@ -47,9 +47,20 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   const [showSaved, setShowSaved] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
   const [lastSavedTime, setLastSavedTime] = useState<number | null>(savedData?.updatedAt || null);
-  const [forgivingMode, setForgivingMode] = useState(true);
-  const [muted, setMuted] = useState(false);
-  const [fingerHintPosition, setFingerHintPosition] = useState<'off' | 'top' | 'bottom'>('bottom');
+  const [forgivingMode, setForgivingMode] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    const saved = localStorage.getItem('typeread_forgiving_mode');
+    return saved !== null ? saved === 'true' : true;
+  });
+  const [muted, setMuted] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem('typeread_muted') === 'true';
+  });
+  const [fingerHintPosition, setFingerHintPosition] = useState<'off' | 'top' | 'bottom'>(() => {
+    if (typeof window === 'undefined') return 'bottom';
+    const saved = localStorage.getItem('typeread_finger_hint_position');
+    return (saved as 'off' | 'top' | 'bottom') || 'bottom';
+  });
 
   // Auto-pause and detailed stats
   const [isPaused, setIsPaused] = useState(false);
@@ -226,6 +237,19 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     document.addEventListener("click", handleClick);
     return () => document.removeEventListener("click", handleClick);
   }, []);
+
+  // Save preferences to localStorage
+  useEffect(() => {
+    localStorage.setItem('typeread_forgiving_mode', String(forgivingMode));
+  }, [forgivingMode]);
+
+  useEffect(() => {
+    localStorage.setItem('typeread_muted', String(muted));
+  }, [muted]);
+
+  useEffect(() => {
+    localStorage.setItem('typeread_finger_hint_position', fingerHintPosition);
+  }, [fingerHintPosition]);
 
   // Auto-pause detection
   useEffect(() => {
