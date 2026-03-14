@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { SavedText, saveText, generateId, DetailedStats, WPMSample, PauseEvent, createEmptyDetailedStats } from "@/lib/storage";
+import { SavedText, saveText, generateId, DetailedStats, WPMSample, PauseEvent, createEmptyDetailedStats, Highlight } from "@/lib/storage";
 import { playCorrectSound, playErrorSound, playWordCompleteSound, playPunctuationSound } from "@/lib/sounds";
 import StatsView from "./StatsView";
 
@@ -56,7 +56,15 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     savedData?.detailedStats || createEmptyDetailedStats()
   );
 
+  // Highlights and notes
+  const [highlights, setHighlights] = useState<Highlight[]>(savedData?.highlights || []);
+  const [selectedRange, setSelectedRange] = useState<{ start: number; end: number } | null>(null);
+  const [showNoteInput, setShowNoteInput] = useState(false);
+  const [noteText, setNoteText] = useState("");
+  const [activeHighlight, setActiveHighlight] = useState<string | null>(null);
+
   const inputRef = useRef<HTMLInputElement>(null);
+  const noteInputRef = useRef<HTMLTextAreaElement>(null);
   const textContainerRef = useRef<HTMLDivElement>(null);
   const currentWordRef = useRef<HTMLSpanElement>(null);
   const lastActivityRef = useRef<number>(Date.now());
@@ -281,6 +289,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           ...detailedStats,
           totalActiveTime: getActiveTime(),
         },
+        highlights,
         createdAt: savedData?.createdAt || Date.now(),
         updatedAt: Date.now(),
       };
@@ -299,6 +308,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     text,
     currentWordIndex,
     detailedStats,
+    highlights,
     getActiveTime,
     savedData?.createdAt,
   ]);
@@ -357,6 +367,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         ...detailedStats,
         totalActiveTime: getActiveTime(),
       },
+      highlights,
       createdAt: savedData?.createdAt || Date.now(),
       updatedAt: Date.now(),
     };
@@ -374,8 +385,66 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     accumulatedTime,
     savedData?.createdAt,
     detailedStats,
+    highlights,
     getActiveTime,
   ]);
+
+  // Highlight functions
+  const getHighlightForWord = useCallback((wordIndex: number): Highlight | null => {
+    return highlights.find(h => wordIndex >= h.startWordIndex && wordIndex <= h.endWordIndex) || null;
+  }, [highlights]);
+
+  const handleWordClick = useCallback((wordIndex: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    // If clicking on highlighted word, show the note
+    const existingHighlight = getHighlightForWord(wordIndex);
+    if (existingHighlight) {
+      setActiveHighlight(activeHighlight === existingHighlight.id ? null : existingHighlight.id);
+      return;
+    }
+
+    // Start or extend selection
+    if (selectedRange === null) {
+      setSelectedRange({ start: wordIndex, end: wordIndex });
+    } else {
+      // Extend selection
+      const newStart = Math.min(selectedRange.start, wordIndex);
+      const newEnd = Math.max(selectedRange.end, wordIndex);
+      setSelectedRange({ start: newStart, end: newEnd });
+      setShowNoteInput(true);
+      setTimeout(() => noteInputRef.current?.focus(), 100);
+    }
+  }, [selectedRange, getHighlightForWord, activeHighlight]);
+
+  const handleAddHighlight = useCallback(() => {
+    if (!selectedRange || !noteText.trim()) return;
+
+    const newHighlight: Highlight = {
+      id: generateId(),
+      startWordIndex: selectedRange.start,
+      endWordIndex: selectedRange.end,
+      note: noteText.trim(),
+      color: 'yellow',
+      createdAt: Date.now(),
+    };
+
+    setHighlights(prev => [...prev, newHighlight]);
+    setSelectedRange(null);
+    setShowNoteInput(false);
+    setNoteText("");
+  }, [selectedRange, noteText]);
+
+  const handleDeleteHighlight = useCallback((highlightId: string) => {
+    setHighlights(prev => prev.filter(h => h.id !== highlightId));
+    setActiveHighlight(null);
+  }, []);
+
+  const cancelHighlight = useCallback(() => {
+    setSelectedRange(null);
+    setShowNoteInput(false);
+    setNoteText("");
+  }, []);
 
   const handleInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -776,7 +845,11 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         >
           <div className="max-w-2xl mx-auto py-[30vh]">
             {words.map((word, index) => {
-              let className = "inline ";
+              const highlight = getHighlightForWord(index);
+              const isSelected = selectedRange && index >= selectedRange.start && index <= selectedRange.end;
+              const isHighlightStart = highlight && index === highlight.startWordIndex;
+
+              let className = "inline cursor-pointer transition-all ";
               if (index < currentWordIndex) {
                 className += "text-[var(--muted)]";
               } else if (index === currentWordIndex) {
@@ -786,18 +859,76 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                 className += "text-[var(--foreground)]/60";
               }
 
+              // Add highlight styling
+              if (highlight) {
+                className += " bg-yellow-200/40 dark:bg-yellow-500/20";
+              }
+              if (isSelected) {
+                className += " bg-blue-200/50 dark:bg-blue-500/30";
+              }
+
               return (
-                <span
-                  key={index}
-                  ref={index === currentWordIndex ? currentWordRef : null}
-                  className={className}
-                >
-                  {word}{" "}
+                <span key={index} className="relative inline">
+                  <span
+                    ref={index === currentWordIndex ? currentWordRef : null}
+                    className={className}
+                    onClick={(e) => handleWordClick(index, e)}
+                  >
+                    {word}
+                  </span>
+                  {" "}
+                  {/* Show note popup for active highlight */}
+                  {isHighlightStart && activeHighlight === highlight.id && (
+                    <div className="absolute left-0 top-full mt-1 z-30 bg-[var(--background)] border border-[var(--foreground)]/20 rounded-lg shadow-lg p-3 min-w-[200px] max-w-[300px]">
+                      <p className="text-sm mb-2">{highlight.note}</p>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDeleteHighlight(highlight.id); }}
+                        className="text-xs text-red-500 hover:text-red-700"
+                      >
+                        Delete note
+                      </button>
+                    </div>
+                  )}
                 </span>
               );
             })}
           </div>
         </div>
+
+        {/* Note input modal */}
+        {showNoteInput && selectedRange && (
+          <div className="fixed inset-0 bg-black/30 z-40 flex items-center justify-center" onClick={cancelHighlight}>
+            <div className="bg-[var(--background)] rounded-xl p-6 shadow-2xl max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
+              <h3 className="font-medium mb-2">Add a note</h3>
+              <p className="text-sm text-[var(--muted)] mb-4">
+                Selected: &ldquo;{words.slice(selectedRange.start, selectedRange.end + 1).join(' ')}&rdquo;
+              </p>
+              <textarea
+                ref={noteInputRef}
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
+                placeholder="Write your note here..."
+                className="w-full p-3 border border-[var(--foreground)]/20 rounded-lg bg-transparent resize-none"
+                rows={3}
+              />
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={handleAddHighlight}
+                  disabled={!noteText.trim()}
+                  className="flex-1 py-2 bg-[var(--foreground)] text-[var(--background)] rounded-lg font-medium disabled:opacity-50"
+                >
+                  Save Note
+                </button>
+                <button
+                  onClick={cancelHighlight}
+                  className="px-4 py-2 border border-[var(--foreground)]/20 rounded-lg"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="flex-shrink-0 mt-6 pt-4 border-t border-[var(--foreground)]/5 flex justify-center gap-8 text-sm text-[var(--muted)]">
           <span>

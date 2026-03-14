@@ -20,6 +20,15 @@ export interface DetailedStats {
   wordsPerMinuteByMinute: { minute: number; wpm: number }[];
 }
 
+export interface Highlight {
+  id: string;
+  startWordIndex: number;
+  endWordIndex: number;
+  note: string;
+  color: string;
+  createdAt: number;
+}
+
 export interface SavedText {
   id: string;
   title: string;
@@ -32,6 +41,7 @@ export interface SavedText {
     totalTime: number; // accumulated time in ms
   };
   detailedStats?: DetailedStats;
+  highlights?: Highlight[];
   createdAt: number;
   updatedAt: number;
 }
