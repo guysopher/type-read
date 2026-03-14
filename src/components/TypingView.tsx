@@ -48,6 +48,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   const [lastSavedTime, setLastSavedTime] = useState<number | null>(savedData?.updatedAt || null);
   const [forgivingMode, setForgivingMode] = useState(true);
   const [muted, setMuted] = useState(false);
+  const [fingerHintPosition, setFingerHintPosition] = useState<'off' | 'top' | 'bottom'>('bottom');
 
   // Auto-pause and detailed stats
   const [isPaused, setIsPaused] = useState(false);
@@ -613,6 +614,88 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     );
   };
 
+  // Finger hint renderer
+  const renderFingerHint = () => {
+    if (!fingerHint || fingerHintPosition === 'off') return null;
+
+    return (
+      <div className="flex-shrink-0 py-4 flex justify-center">
+        <div className="flex items-center gap-6">
+          {/* Left hand */}
+          <div className="flex items-end gap-1">
+            {['pinky', 'ring', 'middle', 'index'].map((finger, i) => {
+              const isActive = fingerHint.hand === 'L' && fingerHint.finger === finger;
+              const heights = [20, 26, 30, 24];
+              return (
+                <div key={finger} className="relative flex flex-col items-center">
+                  {isActive && fingerHint.direction !== '●' && (
+                    <div className="absolute -top-6 text-blue-500 text-lg">
+                      {fingerHint.direction.includes('↑') && fingerHint.direction.includes('←') ? '↖' :
+                       fingerHint.direction.includes('↑') && fingerHint.direction.includes('→') ? '↗' :
+                       fingerHint.direction.includes('↓') && fingerHint.direction.includes('←') ? '↙' :
+                       fingerHint.direction.includes('↓') && fingerHint.direction.includes('→') ? '↘' :
+                       fingerHint.direction.includes('↑') ? '↑' :
+                       fingerHint.direction.includes('↓') ? '↓' :
+                       fingerHint.direction.includes('←') ? '←' :
+                       fingerHint.direction.includes('→') ? '→' : ''}
+                    </div>
+                  )}
+                  <div
+                    className={`rounded-t-full transition-all ${
+                      isActive
+                        ? 'bg-blue-500 shadow-lg shadow-blue-500/30'
+                        : 'bg-[var(--foreground)]/15'
+                    }`}
+                    style={{ width: 16, height: heights[i] }}
+                  />
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Character display */}
+          <div className="flex flex-col items-center">
+            <span className="text-3xl font-mono font-bold">
+              {nextCharToType === ' ' ? '␣' : nextCharToType}
+            </span>
+          </div>
+
+          {/* Right hand */}
+          <div className="flex items-end gap-1">
+            {['index', 'middle', 'ring', 'pinky'].map((finger, i) => {
+              const isActive = fingerHint.hand === 'R' && fingerHint.finger === finger;
+              const heights = [24, 30, 26, 20];
+              return (
+                <div key={finger} className="relative flex flex-col items-center">
+                  {isActive && fingerHint.direction !== '●' && (
+                    <div className="absolute -top-6 text-green-500 text-lg">
+                      {fingerHint.direction.includes('↑') && fingerHint.direction.includes('←') ? '↖' :
+                       fingerHint.direction.includes('↑') && fingerHint.direction.includes('→') ? '↗' :
+                       fingerHint.direction.includes('↓') && fingerHint.direction.includes('←') ? '↙' :
+                       fingerHint.direction.includes('↓') && fingerHint.direction.includes('→') ? '↘' :
+                       fingerHint.direction.includes('↑') ? '↑' :
+                       fingerHint.direction.includes('↓') ? '↓' :
+                       fingerHint.direction.includes('←') ? '←' :
+                       fingerHint.direction.includes('→') ? '→' : ''}
+                    </div>
+                  )}
+                  <div
+                    className={`rounded-t-full transition-all ${
+                      isActive
+                        ? 'bg-green-500 shadow-lg shadow-green-500/30'
+                        : 'bg-[var(--foreground)]/15'
+                    }`}
+                    style={{ width: 16, height: heights[i] }}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (isComplete) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-8">
@@ -712,6 +795,17 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                 {muted ? "🔇" : "🔊"}
               </button>
               <button
+                onClick={() => setFingerHintPosition(p => p === 'off' ? 'top' : p === 'top' ? 'bottom' : 'off')}
+                className={`px-2 py-1 text-xs rounded transition-all ${
+                  fingerHintPosition !== 'off'
+                    ? "bg-[var(--foreground)] text-[var(--background)]"
+                    : "bg-[var(--foreground)]/10 text-[var(--muted)] hover:bg-[var(--foreground)]/20"
+                }`}
+                title={`Finger hints: ${fingerHintPosition} (click to cycle)`}
+              >
+                {fingerHintPosition === 'off' ? '✋' : fingerHintPosition === 'top' ? '☝️' : '👇'}
+              </button>
+              <button
                 onClick={() => setShowStats(true)}
                 className="px-2 py-1 text-xs rounded bg-[var(--foreground)]/10 text-[var(--muted)] hover:bg-[var(--foreground)]/20 transition-all"
                 title="View statistics"
@@ -747,83 +841,8 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         {renderSlidingTextBar()}
       </div>
 
-      {/* Finger hint - visual fingertips */}
-      {fingerHint && (
-        <div className="flex-shrink-0 pb-4 flex justify-center">
-          <div className="flex items-center gap-6">
-            {/* Left hand */}
-            <div className="flex items-end gap-1">
-              {['pinky', 'ring', 'middle', 'index'].map((finger, i) => {
-                const isActive = fingerHint.hand === 'L' && fingerHint.finger === finger;
-                const heights = [20, 26, 30, 24];
-                return (
-                  <div key={finger} className="relative flex flex-col items-center">
-                    {isActive && fingerHint.direction !== '●' && (
-                      <div className="absolute -top-6 text-blue-500 text-lg">
-                        {fingerHint.direction.includes('↑') && fingerHint.direction.includes('←') ? '↖' :
-                         fingerHint.direction.includes('↑') && fingerHint.direction.includes('→') ? '↗' :
-                         fingerHint.direction.includes('↓') && fingerHint.direction.includes('←') ? '↙' :
-                         fingerHint.direction.includes('↓') && fingerHint.direction.includes('→') ? '↘' :
-                         fingerHint.direction.includes('↑') ? '↑' :
-                         fingerHint.direction.includes('↓') ? '↓' :
-                         fingerHint.direction.includes('←') ? '←' :
-                         fingerHint.direction.includes('→') ? '→' : ''}
-                      </div>
-                    )}
-                    <div
-                      className={`rounded-t-full transition-all ${
-                        isActive
-                          ? 'bg-blue-500 shadow-lg shadow-blue-500/30'
-                          : 'bg-[var(--foreground)]/15'
-                      }`}
-                      style={{ width: 16, height: heights[i] }}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Character display */}
-            <div className="flex flex-col items-center">
-              <span className="text-3xl font-mono font-bold">
-                {nextCharToType === ' ' ? '␣' : nextCharToType}
-              </span>
-            </div>
-
-            {/* Right hand */}
-            <div className="flex items-end gap-1">
-              {['index', 'middle', 'ring', 'pinky'].map((finger, i) => {
-                const isActive = fingerHint.hand === 'R' && fingerHint.finger === finger;
-                const heights = [24, 30, 26, 20];
-                return (
-                  <div key={finger} className="relative flex flex-col items-center">
-                    {isActive && fingerHint.direction !== '●' && (
-                      <div className="absolute -top-6 text-green-500 text-lg">
-                        {fingerHint.direction.includes('↑') && fingerHint.direction.includes('←') ? '↖' :
-                         fingerHint.direction.includes('↑') && fingerHint.direction.includes('→') ? '↗' :
-                         fingerHint.direction.includes('↓') && fingerHint.direction.includes('←') ? '↙' :
-                         fingerHint.direction.includes('↓') && fingerHint.direction.includes('→') ? '↘' :
-                         fingerHint.direction.includes('↑') ? '↑' :
-                         fingerHint.direction.includes('↓') ? '↓' :
-                         fingerHint.direction.includes('←') ? '←' :
-                         fingerHint.direction.includes('→') ? '→' : ''}
-                      </div>
-                    )}
-                    <div
-                      className={`rounded-t-full transition-all ${
-                        isActive
-                          ? 'bg-green-500 shadow-lg shadow-green-500/30'
-                          : 'bg-[var(--foreground)]/15'
-                      }`}
-                      style={{ width: 16, height: heights[i] }}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Finger hint - top position */}
+      {fingerHintPosition === 'top' && renderFingerHint()}
 
       {/* Main typing area */}
       <main className="flex-1 flex flex-col max-w-4xl mx-auto w-full px-6 min-h-0">
@@ -947,6 +966,9 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
             </span>
           )}
         </div>
+
+        {/* Finger hint - bottom position */}
+        {fingerHintPosition === 'bottom' && renderFingerHint()}
       </main>
 
       {/* Stats modal */}
