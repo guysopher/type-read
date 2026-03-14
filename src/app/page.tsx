@@ -4,6 +4,24 @@ import { useState, useEffect } from "react";
 import TypingView from "@/components/TypingView";
 import { SavedText, getSavedTexts, deleteText } from "@/lib/storage";
 
+const TUTORIAL_TEXT = `Welcome to TypeRead, the app that transforms reading into an active adventure. Instead of passively scrolling through articles, you will type every single word, engaging both your mind and your fingers in a dance of comprehension and muscle memory.
+
+Here is how it works. You paste a URL or some text, and then you start typing. Each word you type correctly advances you through the content. Make a mistake and you will see it highlighted in red, exactly as you typed it. Just backspace and try again. No pressure, no judgment, just practice.
+
+The finger hints at the bottom of the screen show you which finger should press each key and in which direction to move from the home row. This is perfect for learning touch typing or refining your technique. You can toggle this feature off, move it to the top, or keep it at the bottom.
+
+Forgiving mode is your friend when you are just starting out. It ignores capitalization and punctuation, letting you focus on the flow of typing rather than perfect accuracy. Toggle it off when you are ready for a challenge.
+
+Your progress saves automatically every ten seconds, so you can close the browser and come back later. Pick up right where you left off, whether it is a quick news article or a lengthy essay.
+
+You can also highlight passages and add notes as you read. Click on a word to start selecting, click another to extend, and then write your thoughts. These annotations stay with your saved text, perfect for studying or collecting favorite quotes.
+
+The statistics page shows your words per minute over time, tracks your pauses, and gives you a detailed breakdown of your typing session. Watch yourself improve with every article you complete.
+
+Now stop reading this tutorial and start typing it. Feel the rhythm of the words beneath your fingers. Notice how your brain processes each sentence differently when you have to actively reproduce it. This is TypeRead, where every word counts because you typed it yourself.`;
+
+const TUTORIAL_TITLE = "Welcome to TypeRead";
+
 export default function Home() {
   const [text, setText] = useState<string | null>(null);
   const [title, setTitle] = useState<string>("");
@@ -84,6 +102,12 @@ export default function Home() {
     setText(saved.text);
     setTitle(saved.title);
     setActiveSaved(saved);
+  };
+
+  const handleStartTutorial = () => {
+    setText(TUTORIAL_TEXT);
+    setTitle(TUTORIAL_TITLE);
+    setActiveSaved(null);
   };
 
   const handleDelete = (id: string, e: React.MouseEvent) => {
@@ -210,6 +234,27 @@ export default function Home() {
             )}
           </button>
         </form>
+
+        {/* Tutorial / Try it out */}
+        <div className="mt-8 text-center">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-[var(--foreground)]/10"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-4 bg-[var(--background)] text-[var(--muted)]">or</span>
+            </div>
+          </div>
+          <button
+            onClick={handleStartTutorial}
+            className="mt-6 px-6 py-3 text-sm font-medium border border-[var(--foreground)]/20 rounded-xl hover:border-[var(--foreground)]/40 hover:bg-[var(--foreground)]/5 transition-all"
+          >
+            Try the tutorial
+          </button>
+          <p className="mt-2 text-xs text-[var(--muted)]">
+            Learn how TypeRead works by typing through a quick introduction
+          </p>
+        </div>
 
         {/* Saved Texts */}
         {savedTexts.length > 0 && (
