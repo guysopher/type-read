@@ -110,10 +110,6 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     return { finger: mapping[0], direction: mapping[1], hand: mapping[2] };
   }, []);
 
-  // Get the next character to type
-  const nextCharToType = currentWord[currentInput.length] || (isWordComplete ? ' ' : '');
-  const fingerHint = getFingerHint(nextCharToType);
-
   const stripNonAlpha = useCallback((s: string) => {
     // In forgiving mode, only keep letters (a-z) and spaces
     return forgivingMode ? s.replace(/[^a-zA-Z\s]/g, "") : s;
@@ -130,6 +126,10 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   }, [forgivingMode, stripNonAlpha]);
 
   const isWordComplete = compareStrings(currentInput, currentWord);
+
+  // Get the next character to type
+  const nextCharToType = currentWord[currentInput.length] || (isWordComplete ? ' ' : '');
+  const fingerHint = getFingerHint(nextCharToType);
 
   // Build the full text stream for the sliding view
   const fullTextStream = useMemo(() => words.join(" "), [words]);
