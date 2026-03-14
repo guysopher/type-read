@@ -138,8 +138,38 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
 
   const isWordComplete = compareStrings(currentInput, currentWord);
 
-  // Get the next character to type
-  const nextCharToType = currentWord[currentInput.length] || (isWordComplete ? ' ' : '');
+  // Get the next character to type (or the character that needs fixing)
+  const getNextCharToType = () => {
+    // If word is complete, next is space
+    if (isWordComplete) return ' ';
+
+    // Find first incorrect character position
+    for (let i = 0; i < currentInput.length; i++) {
+      const inputChar = currentInput[i];
+      const expectedChar = currentWord[i];
+      if (!expectedChar) break; // Typed more than word length
+
+      const isNonAlpha = /[^a-zA-Z]/.test(expectedChar);
+      let isCorrect: boolean;
+      if (forgivingMode && isNonAlpha) {
+        isCorrect = true;
+      } else if (forgivingMode) {
+        isCorrect = inputChar.toLowerCase() === expectedChar.toLowerCase();
+      } else {
+        isCorrect = inputChar === expectedChar;
+      }
+
+      if (!isCorrect) {
+        // Show the character they need to fix (use backspace indicator or the correct char)
+        return expectedChar;
+      }
+    }
+
+    // All typed chars are correct, show next expected char
+    return currentWord[currentInput.length] || ' ';
+  };
+
+  const nextCharToType = getNextCharToType();
   const fingerHint = getFingerHint(nextCharToType);
 
   // Build the full text stream for the sliding view
