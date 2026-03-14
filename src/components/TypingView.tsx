@@ -728,24 +728,79 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           )}
         </div>
 
-        {/* Finger hint */}
+        {/* Finger hint - visual fingertips */}
         {fingerHint && (
           <div className="flex-shrink-0 py-4 flex justify-center">
-            <div className="flex items-center gap-3 px-4 py-2 rounded-lg bg-[var(--foreground)]/5">
-              <span className="text-2xl font-mono font-bold">
-                {nextCharToType === ' ' ? '␣' : nextCharToType}
-              </span>
-              <div className="h-6 w-px bg-[var(--foreground)]/10" />
-              <div className="flex items-center gap-2 text-sm">
-                <span className={`font-medium ${fingerHint.hand === 'L' ? 'text-blue-500' : fingerHint.hand === 'R' ? 'text-green-500' : 'text-[var(--muted)]'}`}>
-                  {fingerHint.hand === 'L' ? 'Left' : fingerHint.hand === 'R' ? 'Right' : ''} {fingerHint.finger}
+            <div className="flex items-center gap-6">
+              {/* Left hand */}
+              <div className="flex items-end gap-1">
+                {['pinky', 'ring', 'middle', 'index'].map((finger, i) => {
+                  const isActive = fingerHint.hand === 'L' && fingerHint.finger === finger;
+                  const heights = [20, 26, 30, 24];
+                  return (
+                    <div key={finger} className="relative flex flex-col items-center">
+                      {isActive && fingerHint.direction !== '●' && (
+                        <div className="absolute -top-6 text-blue-500 text-lg">
+                          {fingerHint.direction.includes('↑') && fingerHint.direction.includes('←') ? '↖' :
+                           fingerHint.direction.includes('↑') && fingerHint.direction.includes('→') ? '↗' :
+                           fingerHint.direction.includes('↓') && fingerHint.direction.includes('←') ? '↙' :
+                           fingerHint.direction.includes('↓') && fingerHint.direction.includes('→') ? '↘' :
+                           fingerHint.direction.includes('↑') ? '↑' :
+                           fingerHint.direction.includes('↓') ? '↓' :
+                           fingerHint.direction.includes('←') ? '←' :
+                           fingerHint.direction.includes('→') ? '→' : ''}
+                        </div>
+                      )}
+                      <div
+                        className={`rounded-t-full transition-all ${
+                          isActive
+                            ? 'bg-blue-500 shadow-lg shadow-blue-500/30'
+                            : 'bg-[var(--foreground)]/15'
+                        }`}
+                        style={{ width: 16, height: heights[i] }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Character display */}
+              <div className="flex flex-col items-center">
+                <span className="text-3xl font-mono font-bold">
+                  {nextCharToType === ' ' ? '␣' : nextCharToType}
                 </span>
-                {fingerHint.direction !== '●' && (
-                  <span className="text-lg text-[var(--muted)]">{fingerHint.direction}</span>
-                )}
-                {fingerHint.direction === '●' && (
-                  <span className="text-xs text-[var(--muted)]">home</span>
-                )}
+              </div>
+
+              {/* Right hand */}
+              <div className="flex items-end gap-1">
+                {['index', 'middle', 'ring', 'pinky'].map((finger, i) => {
+                  const isActive = fingerHint.hand === 'R' && fingerHint.finger === finger;
+                  const heights = [24, 30, 26, 20];
+                  return (
+                    <div key={finger} className="relative flex flex-col items-center">
+                      {isActive && fingerHint.direction !== '●' && (
+                        <div className="absolute -top-6 text-green-500 text-lg">
+                          {fingerHint.direction.includes('↑') && fingerHint.direction.includes('←') ? '↖' :
+                           fingerHint.direction.includes('↑') && fingerHint.direction.includes('→') ? '↗' :
+                           fingerHint.direction.includes('↓') && fingerHint.direction.includes('←') ? '↙' :
+                           fingerHint.direction.includes('↓') && fingerHint.direction.includes('→') ? '↘' :
+                           fingerHint.direction.includes('↑') ? '↑' :
+                           fingerHint.direction.includes('↓') ? '↓' :
+                           fingerHint.direction.includes('←') ? '←' :
+                           fingerHint.direction.includes('→') ? '→' : ''}
+                        </div>
+                      )}
+                      <div
+                        className={`rounded-t-full transition-all ${
+                          isActive
+                            ? 'bg-green-500 shadow-lg shadow-green-500/30'
+                            : 'bg-[var(--foreground)]/15'
+                        }`}
+                        style={{ width: 16, height: heights[i] }}
+                      />
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
