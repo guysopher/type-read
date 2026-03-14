@@ -66,6 +66,54 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   const currentWord = words[currentWordIndex] || "";
   const progress = (currentWordIndex / words.length) * 100;
 
+  // Finger mapping for touch typing hints
+  const getFingerHint = useCallback((char: string): { finger: string; direction: string; hand: string } | null => {
+    const key = char.toLowerCase();
+
+    // Finger assignments: [finger name, direction from home, hand]
+    const fingerMap: Record<string, [string, string, string]> = {
+      // Left pinky
+      'q': ['pinky', '↑', 'L'], 'a': ['pinky', '●', 'L'], 'z': ['pinky', '↓', 'L'],
+      '1': ['pinky', '↑↑', 'L'], '`': ['pinky', '↑←', 'L'],
+      // Left ring
+      'w': ['ring', '↑', 'L'], 's': ['ring', '●', 'L'], 'x': ['ring', '↓', 'L'],
+      '2': ['ring', '↑↑', 'L'],
+      // Left middle
+      'e': ['middle', '↑', 'L'], 'd': ['middle', '●', 'L'], 'c': ['middle', '↓', 'L'],
+      '3': ['middle', '↑↑', 'L'],
+      // Left index
+      'r': ['index', '↑', 'L'], 'f': ['index', '●', 'L'], 'v': ['index', '↓', 'L'],
+      't': ['index', '↑→', 'L'], 'g': ['index', '→', 'L'], 'b': ['index', '↓→', 'L'],
+      '4': ['index', '↑↑', 'L'], '5': ['index', '↑↑→', 'L'],
+      // Right index
+      'y': ['index', '↑←', 'R'], 'h': ['index', '←', 'R'], 'n': ['index', '↓←', 'R'],
+      'u': ['index', '↑', 'R'], 'j': ['index', '●', 'R'], 'm': ['index', '↓', 'R'],
+      '6': ['index', '↑↑←', 'R'], '7': ['index', '↑↑', 'R'],
+      // Right middle
+      'i': ['middle', '↑', 'R'], 'k': ['middle', '●', 'R'], ',': ['middle', '↓', 'R'],
+      '8': ['middle', '↑↑', 'R'],
+      // Right ring
+      'o': ['ring', '↑', 'R'], 'l': ['ring', '●', 'R'], '.': ['ring', '↓', 'R'],
+      '9': ['ring', '↑↑', 'R'],
+      // Right pinky
+      'p': ['pinky', '↑', 'R'], ';': ['pinky', '●', 'R'], '/': ['pinky', '↓', 'R'],
+      '0': ['pinky', '↑↑', 'R'], '-': ['pinky', '↑↑→', 'R'], '=': ['pinky', '↑↑→→', 'R'],
+      '[': ['pinky', '↑→', 'R'], ']': ['pinky', '↑→→', 'R'], '\\': ['pinky', '↑→→→', 'R'],
+      "'": ['pinky', '→', 'R'],
+      // Space - thumbs
+      ' ': ['thumb', '●', 'either'],
+    };
+
+    const mapping = fingerMap[key];
+    if (!mapping) return null;
+
+    return { finger: mapping[0], direction: mapping[1], hand: mapping[2] };
+  }, []);
+
+  // Get the next character to type
+  const nextCharToType = currentWord[currentInput.length] || (isWordComplete ? ' ' : '');
+  const fingerHint = getFingerHint(nextCharToType);
+
   const stripNonAlpha = useCallback((s: string) => {
     // In forgiving mode, only keep letters (a-z) and spaces
     return forgivingMode ? s.replace(/[^a-zA-Z\s]/g, "") : s;
@@ -679,6 +727,29 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
             <span>{detailedStats.pauses.length} pauses</span>
           )}
         </div>
+
+        {/* Finger hint */}
+        {fingerHint && (
+          <div className="flex-shrink-0 py-4 flex justify-center">
+            <div className="flex items-center gap-3 px-4 py-2 rounded-lg bg-[var(--foreground)]/5">
+              <span className="text-2xl font-mono font-bold">
+                {nextCharToType === ' ' ? '␣' : nextCharToType}
+              </span>
+              <div className="h-6 w-px bg-[var(--foreground)]/10" />
+              <div className="flex items-center gap-2 text-sm">
+                <span className={`font-medium ${fingerHint.hand === 'L' ? 'text-blue-500' : fingerHint.hand === 'R' ? 'text-green-500' : 'text-[var(--muted)]'}`}>
+                  {fingerHint.hand === 'L' ? 'Left' : fingerHint.hand === 'R' ? 'Right' : ''} {fingerHint.finger}
+                </span>
+                {fingerHint.direction !== '●' && (
+                  <span className="text-lg text-[var(--muted)]">{fingerHint.direction}</span>
+                )}
+                {fingerHint.direction === '●' && (
+                  <span className="text-xs text-[var(--muted)]">home</span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Stats modal */}
