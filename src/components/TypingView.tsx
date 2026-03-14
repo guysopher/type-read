@@ -642,10 +642,8 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                     isCorrect = inputChar === targetChar;
                   }
 
-                  // Show what was actually typed, not the expected character
-                  if (!isCorrect) {
-                    displayChar = inputChar;
-                  }
+                  // Always show what was actually typed
+                  displayChar = inputChar;
                   className += isCorrect ? "text-[var(--foreground)]" : "text-[var(--error)]";
                 } else if (globalPos === absolutePosition && !isWordComplete) {
                   className += "text-[var(--foreground)] bg-[var(--accent)]/20 border-b-2 border-[var(--foreground)]";
