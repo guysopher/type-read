@@ -562,6 +562,8 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                 const wordStartPos = absolutePosition - cursorInWord;
 
                 let className = "inline-block transition-all duration-75 ";
+                let displayChar = char;
+                let isCorrect = true;
 
                 if (globalPos < wordStartPos) {
                   className += "text-[var(--muted)]/40";
@@ -570,13 +572,18 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                   const inputChar = currentInput[charIndexInWord] || "";
                   const targetChar = currentWord[charIndexInWord] || "";
                   const isNonAlpha = /[^a-zA-Z]/.test(targetChar);
-                  let isCorrect: boolean;
+
                   if (forgivingMode && isNonAlpha) {
                     isCorrect = true;
                   } else if (forgivingMode) {
                     isCorrect = inputChar.toLowerCase() === targetChar.toLowerCase();
                   } else {
                     isCorrect = inputChar === targetChar;
+                  }
+
+                  // Show what was actually typed, not the expected character
+                  if (!isCorrect) {
+                    displayChar = inputChar;
                   }
                   className += isCorrect ? "text-[var(--foreground)]" : "text-[var(--error)]";
                 } else if (globalPos === absolutePosition && !isWordComplete) {
@@ -595,8 +602,8 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                 }
 
                 return (
-                  <span key={`${globalPos}-${char}`} className={className}>
-                    {char === " " ? "\u00A0" : char}
+                  <span key={`${globalPos}-${char}-${displayChar}`} className={className}>
+                    {displayChar === " " ? "\u00A0" : displayChar}
                   </span>
                 );
               })}
