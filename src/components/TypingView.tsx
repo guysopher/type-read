@@ -101,9 +101,17 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   const pauseStartRef = useRef<number | null>(null);
   const sessionStartRef = useRef<number | null>(null);
   const wordsAtLastSampleRef = useRef<number>(savedData?.progress.wordsTyped || 0);
+  const slidingBarRef = useRef<HTMLDivElement>(null);
+  const [slidingBarWidth, setSlidingBarWidth] = useState(0);
 
   const currentWord = words[currentWordIndex] || "";
   const progress = (currentWordIndex / words.length) * 100;
+
+  // Detect RTL text (Hebrew, Arabic, etc.)
+  const isRTL = useMemo(() => {
+    const rtlRegex = /[\u0590-\u05FF\u0600-\u06FF\u0750-\u077F]/;
+    return rtlRegex.test(text);
+  }, [text]);
 
   // Finger mapping for touch typing hints
   const getFingerHint = useCallback((char: string): { finger: string; direction: string; hand: string } | null => {
@@ -141,6 +149,28 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
       "'": ['pinky', '→', 'R'],
       // Space - thumbs
       ' ': ['thumb', '●', 'either'],
+
+      // Hebrew keyboard layout (standard SI-1452)
+      // Note: Hebrew is RTL, but physical keyboard positions remain the same
+      // Left pinky
+      '/': ['pinky', '↑', 'L'], 'ש': ['pinky', '●', 'L'], 'ז': ['pinky', '↓', 'L'],
+      // Left ring
+      '\'': ['ring', '↑', 'L'], 'ד': ['ring', '●', 'L'], 'ס': ['ring', '↓', 'L'],
+      // Left middle
+      'ק': ['middle', '↑', 'L'], 'ג': ['middle', '●', 'L'], 'ב': ['middle', '↓', 'L'],
+      // Left index
+      'ר': ['index', '↑', 'L'], 'כ': ['index', '●', 'L'], 'ה': ['index', '↓', 'L'],
+      'א': ['index', '↑→', 'L'], 'ע': ['index', '→', 'L'], 'נ': ['index', '↓→', 'L'],
+      // Right index
+      'ט': ['index', '↑←', 'R'], 'י': ['index', '←', 'R'], 'מ': ['index', '↓←', 'R'],
+      'ו': ['index', '↑', 'R'], 'ח': ['index', '●', 'R'], 'צ': ['index', '↓', 'R'],
+      // Right middle
+      'ן': ['middle', '↑', 'R'], 'ל': ['middle', '●', 'R'], 'ת': ['middle', '↓', 'R'],
+      // Right ring
+      'ם': ['ring', '↑', 'R'], 'ך': ['ring', '●', 'R'], 'ץ': ['ring', '↓', 'R'],
+      // Right pinky
+      'פ': ['pinky', '↑', 'R'], 'ף': ['pinky', '●', 'R'],
+      ']': ['pinky', '↑→', 'R'], '[': ['pinky', '↑→→', 'R'],
     };
 
     const mapping = fingerMap[key];
@@ -253,6 +283,19 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     };
     document.addEventListener("click", handleClick);
     return () => document.removeEventListener("click", handleClick);
+  }, []);
+
+  // Measure sliding bar width for responsive character count
+  useEffect(() => {
+    const measureWidth = () => {
+      if (slidingBarRef.current) {
+        setSlidingBarWidth(slidingBarRef.current.offsetWidth);
+      }
+    };
+
+    measureWidth();
+    window.addEventListener('resize', measureWidth);
+    return () => window.removeEventListener('resize', measureWidth);
   }, []);
 
   // Save preferences to localStorage
@@ -617,8 +660,13 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
 
   // Sliding text bar renderer
   const renderSlidingTextBar = () => {
-    const windowSize = 50;
-    const centerOffset = 20;
+    // Calculate character width based on container width
+    // On mobile (text-2xl ~24px), chars are ~14px wide; on desktop (text-4xl ~36px), chars are ~22px wide
+    const isMobile = slidingBarWidth < 640;
+    const charWidth = isMobile ? 14 : 22;
+    const availableWidth = slidingBarWidth - 32; // Account for padding and gradients
+    const windowSize = Math.max(20, Math.floor(availableWidth / charWidth));
+    const centerOffset = Math.floor(windowSize * 0.4); // Keep cursor at 40% from left
 
     const startPos = Math.max(0, absolutePosition - centerOffset);
     const endPos = Math.min(fullTextStream.length, startPos + windowSize);
@@ -627,14 +675,17 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     const cursorInWord = currentInput.length;
 
     return (
-      <div>
+      <div ref={slidingBarRef}>
         <div
-          className={`relative overflow-hidden py-4 ${
+          className={`relative overflow-hidden py-2 sm:py-4 ${
             shake ? "animate-[shake_0.3s_ease-in-out]" : ""
           }`}
         >
           <div className="flex justify-center items-center">
-            <div className="font-mono text-4xl tracking-wide whitespace-pre">
+            <div
+              className="font-mono text-2xl sm:text-4xl tracking-wide whitespace-pre"
+              dir={isRTL ? "rtl" : "ltr"}
+            >
               {visibleText.split("").map((char, i) => {
                 const globalPos = startPos + i;
                 const wordStartPos = absolutePosition - cursorInWord;
@@ -687,25 +738,37 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           </div>
 
           {startPos > 0 && (
-            <div className="absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-[var(--background)] to-transparent pointer-events-none" />
+            <div
+              className="absolute inset-y-0 w-8 sm:w-16 from-[var(--background)] to-transparent pointer-events-none"
+              style={{
+                [isRTL ? 'right' : 'left']: 0,
+                background: `linear-gradient(to ${isRTL ? 'left' : 'right'}, var(--background), transparent)`
+              }}
+            />
           )}
           {endPos < fullTextStream.length && (
-            <div className="absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-[var(--background)] to-transparent pointer-events-none" />
+            <div
+              className="absolute inset-y-0 w-8 sm:w-16 from-[var(--background)] to-transparent pointer-events-none"
+              style={{
+                [isRTL ? 'left' : 'right']: 0,
+                background: `linear-gradient(to ${isRTL ? 'right' : 'left'}, var(--background), transparent)`
+              }}
+            />
           )}
         </div>
       </div>
     );
   };
 
-  // Finger hint renderer
+  // Finger hint renderer (hidden on mobile - not useful with touch keyboard)
   const renderFingerHint = () => {
     if (!fingerHint || fingerHintPosition === 'off') return null;
 
     return (
-      <div className="flex-shrink-0 py-4 flex justify-center">
-        <div className="flex items-center gap-6">
+      <div className="flex-shrink-0 py-2 sm:py-4 hidden sm:flex justify-center">
+        <div className="flex items-center gap-3 sm:gap-6">
           {/* Left hand */}
-          <div className="flex items-end gap-1">
+          <div className="hidden sm:flex items-end gap-1">
             {['pinky', 'ring', 'middle', 'index'].map((finger, i) => {
               const isActive = fingerHint.hand === 'L' && fingerHint.finger === finger;
               const heights = [20, 26, 30, 24];
@@ -736,15 +799,29 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
             })}
           </div>
 
+          {/* Mobile: Just show hand indicator */}
+          <div className="sm:hidden text-xs text-[var(--muted)]">
+            {fingerHint.hand === 'L' ? 'L' : ''}
+          </div>
+
           {/* Character display */}
           <div className="flex flex-col items-center">
-            <span className="text-3xl font-mono font-bold">
+            <span className="text-2xl sm:text-3xl font-mono font-bold">
               {nextCharToType === ' ' ? '␣' : nextCharToType}
+            </span>
+            {/* Mobile: show finger below */}
+            <span className="sm:hidden text-xs text-[var(--muted)] mt-1">
+              {fingerHint.finger} {fingerHint.direction !== '●' ? fingerHint.direction : ''}
             </span>
           </div>
 
+          {/* Mobile: Just show hand indicator */}
+          <div className="sm:hidden text-xs text-[var(--muted)]">
+            {fingerHint.hand === 'R' ? 'R' : ''}
+          </div>
+
           {/* Right hand */}
-          <div className="flex items-end gap-1">
+          <div className="hidden sm:flex items-end gap-1">
             {['index', 'middle', 'ring', 'pinky'].map((finger, i) => {
               const isActive = fingerHint.hand === 'R' && fingerHint.finger === finger;
               const heights = [24, 30, 26, 20];
@@ -781,35 +858,38 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
 
   if (isComplete) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-8">
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8">
         <div className="text-center max-w-md">
-          <div className="text-6xl mb-6">✓</div>
-          <h2 className="text-3xl font-bold mb-2">Complete!</h2>
-          <p className="text-[var(--muted)] mb-8">
-            You&apos;ve read &ldquo;{title}&rdquo;
-          </p>
+          <div className="text-5xl sm:text-6xl mb-4 sm:mb-6">✓</div>
+          <h2 className="text-2xl sm:text-3xl font-bold mb-2">Complete!</h2>
+          {title && (
+            <p className="text-[var(--muted)] mb-6 sm:mb-8 text-sm sm:text-base">
+              You&apos;ve read &ldquo;{title}&rdquo;
+            </p>
+          )}
+          {!title && <div className="mb-6 sm:mb-8" />}
 
-          <div className="grid grid-cols-2 gap-6 mb-10">
+          <div className="grid grid-cols-2 gap-4 sm:gap-6 mb-8 sm:mb-10">
             <div className="text-center">
-              <div className="text-4xl font-bold">{calculateWPM()}</div>
-              <div className="text-sm text-[var(--muted)]">WPM</div>
+              <div className="text-3xl sm:text-4xl font-bold">{calculateWPM()}</div>
+              <div className="text-xs sm:text-sm text-[var(--muted)]">WPM</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-bold">{calculateAccuracy()}%</div>
-              <div className="text-sm text-[var(--muted)]">Accuracy</div>
+              <div className="text-3xl sm:text-4xl font-bold">{calculateAccuracy()}%</div>
+              <div className="text-xs sm:text-sm text-[var(--muted)]">Accuracy</div>
             </div>
           </div>
 
-          <div className="flex gap-4 justify-center mb-8">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center mb-8">
             <button
               onClick={() => setShowStats(true)}
-              className="px-8 py-3 bg-[var(--foreground)] text-[var(--background)] rounded-xl font-medium hover:opacity-90 transition-opacity"
+              className="px-6 sm:px-8 py-3 bg-[var(--foreground)] text-[var(--background)] rounded-xl font-medium hover:opacity-90 transition-opacity text-sm sm:text-base"
             >
               View Detailed Stats
             </button>
             <button
               onClick={onReset}
-              className="px-8 py-3 border border-[var(--foreground)]/20 rounded-xl font-medium hover:bg-[var(--foreground)]/5 transition-colors"
+              className="px-6 sm:px-8 py-3 border border-[var(--foreground)]/20 rounded-xl font-medium hover:bg-[var(--foreground)]/5 transition-colors text-sm sm:text-base"
             >
               Start New Text
             </button>
@@ -834,30 +914,31 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
       {/* Pause banner */}
       {isPaused && (
         <div
-          className="flex-shrink-0 bg-[var(--foreground)] text-[var(--background)] py-3 px-6 flex items-center justify-center gap-4 cursor-pointer hover:opacity-90 transition-opacity"
+          className="flex-shrink-0 bg-[var(--foreground)] text-[var(--background)] py-2 sm:py-3 px-4 sm:px-6 flex items-center justify-center gap-2 sm:gap-4 cursor-pointer hover:opacity-90 transition-opacity"
           onClick={resumeFromPause}
         >
-          <span className="text-lg">⏸</span>
-          <span className="font-medium">Paused</span>
-          <span className="text-sm opacity-75">— Press Space, Esc, or click to resume</span>
+          <span className="text-base sm:text-lg">⏸</span>
+          <span className="font-medium text-sm sm:text-base">Paused</span>
+          <span className="text-xs sm:text-sm opacity-75 hidden sm:inline">— Press Space, Esc, or click to resume</span>
+          <span className="text-xs opacity-75 sm:hidden">Tap to resume</span>
         </div>
       )}
 
       {/* Header with progress */}
       <header className="flex-shrink-0 bg-[var(--background)] border-b border-[var(--foreground)]/5 z-10">
-        <div className="max-w-4xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between mb-3">
+        <div className="max-w-4xl mx-auto px-3 sm:px-6 py-2 sm:py-4">
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
             <button
               onClick={onReset}
-              className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
+              className="text-xs sm:text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
             >
               ← Back
             </button>
-            <h1 className="text-sm font-medium truncate max-w-[40%]">{title}</h1>
-            <div className="flex items-center gap-2">
+            {title && <h1 className="text-xs sm:text-sm font-medium truncate max-w-[30%] sm:max-w-[40%]">{title}</h1>}
+            <div className="flex items-center gap-1 sm:gap-2">
               <button
                 onClick={() => setForgivingMode(!forgivingMode)}
-                className={`px-3 py-1 text-xs font-medium rounded transition-all ${
+                className={`hidden sm:block px-3 py-1 text-xs font-medium rounded transition-all ${
                   forgivingMode
                     ? "bg-[var(--foreground)] text-[var(--background)]"
                     : "bg-[var(--foreground)]/10 text-[var(--muted)] hover:bg-[var(--foreground)]/20"
@@ -865,6 +946,17 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                 title={forgivingMode ? "Forgiving mode ON: only a-z and space count (click to toggle)" : "Strict mode: exact match required (click to toggle)"}
               >
                 {forgivingMode ? "Forgiving" : "Strict"}
+              </button>
+              <button
+                onClick={() => setForgivingMode(!forgivingMode)}
+                className={`sm:hidden px-2 py-1 text-xs rounded transition-all ${
+                  forgivingMode
+                    ? "bg-[var(--foreground)] text-[var(--background)]"
+                    : "bg-[var(--foreground)]/10 text-[var(--muted)] hover:bg-[var(--foreground)]/20"
+                }`}
+                title={forgivingMode ? "Forgiving mode" : "Strict mode"}
+              >
+                {forgivingMode ? "✓" : "!"}
               </button>
               <button
                 onClick={() => setMuted(!muted)}
@@ -879,7 +971,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
               </button>
               <button
                 onClick={() => setFingerHintPosition(p => p === 'off' ? 'top' : p === 'top' ? 'bottom' : 'off')}
-                className={`px-2 py-1 text-xs rounded transition-all ${
+                className={`hidden sm:block px-2 py-1 text-xs rounded transition-all ${
                   fingerHintPosition !== 'off'
                     ? "bg-[var(--foreground)] text-[var(--background)]"
                     : "bg-[var(--foreground)]/10 text-[var(--muted)] hover:bg-[var(--foreground)]/20"
@@ -897,7 +989,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
               </button>
               <button
                 onClick={handleSave}
-                className="px-2 py-1 text-xs rounded bg-[var(--foreground)]/10 text-[var(--muted)] hover:bg-[var(--foreground)]/20 transition-all"
+                className="hidden sm:block px-2 py-1 text-xs rounded bg-[var(--foreground)]/10 text-[var(--muted)] hover:bg-[var(--foreground)]/20 transition-all"
               >
                 {showSaved ? (
                   <span className="text-[var(--success)]">Saved ✓</span>
@@ -905,8 +997,8 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                   "💾"
                 )}
               </button>
-              <div className="text-sm font-medium text-[var(--muted)] ml-2">
-                {calculateWPM()} <span className="text-xs">WPM</span>
+              <div className="text-xs sm:text-sm font-medium text-[var(--muted)] ml-1 sm:ml-2">
+                {calculateWPM()} <span className="text-xs hidden sm:inline">WPM</span>
               </div>
             </div>
           </div>
@@ -920,15 +1012,15 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
       </header>
 
       {/* Sliding text bar - full width */}
-      <div className="flex-shrink-0 w-full px-4 py-8">
+      <div className="flex-shrink-0 w-full px-2 sm:px-4 py-1 sm:py-8">
         {renderSlidingTextBar()}
       </div>
 
       {/* Finger hint - top position */}
       {fingerHintPosition === 'top' && renderFingerHint()}
 
-      {/* Main typing area */}
-      <main className="flex-1 flex flex-col max-w-4xl mx-auto w-full px-6 min-h-0">
+      {/* Main typing area with side notes */}
+      <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
         <input
           ref={inputRef}
           type="text"
@@ -940,18 +1032,27 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           autoComplete="off"
           spellCheck={false}
           disabled={showNoteInput}
+          dir={isRTL ? "rtl" : "ltr"}
         />
 
-        <div
-          ref={textContainerRef}
-          className="typing-area flex-1 overflow-y-auto leading-relaxed text-lg min-h-0 py-8"
-        >
-          <div className="max-w-2xl mx-auto py-[30vh]">
+        {/* Content area with side notes */}
+        <div className="flex-1 flex min-h-0 overflow-hidden">
+          {/* Left spacer for symmetry on desktop */}
+          <div className="hidden lg:block w-64 flex-shrink-0" />
+
+          {/* Main text content */}
+          <div
+            ref={textContainerRef}
+            className="typing-area flex-1 overflow-y-auto leading-relaxed text-base sm:text-lg py-2 sm:py-8 px-3 sm:px-6"
+            dir={isRTL ? "rtl" : "ltr"}
+          >
+          <div className="max-w-2xl mx-auto py-[10vh] sm:py-[30vh]">
             {words.map((word, index) => {
               const highlight = getHighlightForWord(index);
               const isSelected = selectedRange && index >= selectedRange.start && index <= selectedRange.end;
-              const isHighlightStart = highlight && index === highlight.startWordIndex;
+              const isHighlightEnd = highlight && index === highlight.endWordIndex;
               const isParagraphStart = paragraphStarts.has(index);
+              const highlightIndex = highlight ? highlights.findIndex(h => h.id === highlight.id) : -1;
 
               let className = "inline cursor-pointer transition-all ";
               if (index < currentWordIndex) {
@@ -963,9 +1064,9 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                 className += "text-[var(--foreground)]/60";
               }
 
-              // Add highlight styling
+              // Add highlight styling with underline instead of background
               if (highlight) {
-                className += " bg-yellow-200/40 dark:bg-yellow-500/20";
+                className += " underline decoration-2 decoration-yellow-400/60 underline-offset-2";
               }
               if (isSelected) {
                 className += " bg-blue-200/50 dark:bg-blue-500/30";
@@ -982,67 +1083,141 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                   >
                     {word}
                   </span>
-                  {" "}
-                  {/* Show note popup for active highlight */}
-                  {isHighlightStart && activeHighlight === highlight.id && (
-                    <div className="absolute left-0 top-full mt-1 z-30 bg-[var(--background)] border border-[var(--foreground)]/20 rounded-lg shadow-lg p-3 min-w-[200px] max-w-[300px]">
-                      <p className="text-sm mb-2">{highlight.note}</p>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleDeleteHighlight(highlight.id); }}
-                        className="text-xs text-red-500 hover:text-red-700"
-                      >
-                        Delete note
-                      </button>
-                    </div>
+                  {/* Small note indicator at end of highlight */}
+                  {isHighlightEnd && (
+                    <sup
+                      className="ml-0.5 text-xs text-yellow-600 dark:text-yellow-400 cursor-pointer hover:text-yellow-700 font-medium"
+                      onClick={(e) => { e.stopPropagation(); setActiveHighlight(activeHighlight === highlight.id ? null : highlight.id); }}
+                    >
+                      {highlightIndex + 1}
+                    </sup>
                   )}
+                  {" "}
                 </span>
               );
             })}
           </div>
         </div>
 
-        {/* Note input modal */}
-        {showNoteInput && selectedRange && (
-          <div className="fixed inset-0 bg-black/30 z-40 flex items-center justify-center" onClick={cancelHighlight}>
-            <div className="bg-[var(--background)] rounded-xl p-6 shadow-2xl max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
-              <h3 className="font-medium mb-2">Add a note</h3>
-              <p className="text-sm text-[var(--muted)] mb-4">
-                Selected: &ldquo;{words.slice(selectedRange.start, selectedRange.end + 1).join(' ')}&rdquo;
-              </p>
-              <textarea
-                ref={noteInputRef}
-                value={noteText}
-                onChange={(e) => setNoteText(e.target.value)}
-                placeholder="Write your note here..."
-                className="w-full p-3 border border-[var(--foreground)]/20 rounded-lg bg-transparent resize-none"
-                rows={3}
-              />
-              <div className="flex gap-2 mt-4">
-                <button
-                  onClick={handleAddHighlight}
-                  disabled={!noteText.trim()}
-                  className="flex-1 py-2 bg-[var(--foreground)] text-[var(--background)] rounded-lg font-medium disabled:opacity-50"
+          {/* Side notes panel */}
+          <div className="hidden lg:block w-64 flex-shrink-0 overflow-y-auto py-8 pr-6">
+            <div className="space-y-4">
+              {highlights.map((highlight, index) => (
+                <div
+                  key={highlight.id}
+                  className={`p-3 rounded-lg border-l-2 transition-all cursor-pointer ${
+                    activeHighlight === highlight.id
+                      ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20'
+                      : 'border-[var(--foreground)]/10 hover:border-yellow-400/50 hover:bg-[var(--foreground)]/5'
+                  }`}
+                  onClick={() => setActiveHighlight(activeHighlight === highlight.id ? null : highlight.id)}
                 >
-                  Save Note
-                </button>
-                <button
-                  onClick={cancelHighlight}
-                  className="px-4 py-2 border border-[var(--foreground)]/20 rounded-lg"
-                >
-                  Cancel
-                </button>
-              </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-xs font-medium text-yellow-600 dark:text-yellow-400 mt-0.5">{index + 1}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-[var(--muted)] mb-1 truncate italic">
+                        &ldquo;{words.slice(highlight.startWordIndex, highlight.endWordIndex + 1).slice(0, 5).join(' ')}{highlight.endWordIndex - highlight.startWordIndex > 4 ? '...' : ''}&rdquo;
+                      </p>
+                      <p className="text-sm">{highlight.note}</p>
+                      {activeHighlight === highlight.id && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteHighlight(highlight.id); }}
+                          className="mt-2 text-xs text-red-500 hover:text-red-700"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
+          </div>
+        </div>
+
+        {/* Mobile: Bottom sheet for active note */}
+        {activeHighlight && (
+          <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-[var(--background)] border-t border-[var(--foreground)]/10 p-4 z-30 shadow-lg">
+            {(() => {
+              const highlight = highlights.find(h => h.id === activeHighlight);
+              if (!highlight) return null;
+              return (
+                <div>
+                  <p className="text-xs text-[var(--muted)] mb-1 italic">
+                    &ldquo;{words.slice(highlight.startWordIndex, highlight.endWordIndex + 1).slice(0, 8).join(' ')}{highlight.endWordIndex - highlight.startWordIndex > 7 ? '...' : ''}&rdquo;
+                  </p>
+                  <p className="text-sm mb-2">{highlight.note}</p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setActiveHighlight(null)}
+                      className="flex-1 py-2 text-sm bg-[var(--foreground)]/10 rounded-lg"
+                    >
+                      Close
+                    </button>
+                    <button
+                      onClick={() => handleDeleteHighlight(highlight.id)}
+                      className="px-4 py-2 text-sm text-red-500 border border-red-500/30 rounded-lg"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
 
-        <div className="flex-shrink-0 mt-6 pt-4 border-t border-[var(--foreground)]/5 flex justify-center gap-8 text-sm text-[var(--muted)]">
+        {/* Note input - inline tooltip style */}
+        {showNoteInput && selectedRange && (
+          <div
+            className="fixed z-40 bg-[var(--background)] rounded-xl shadow-2xl border border-[var(--foreground)]/10 p-4 w-72"
+            style={{
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)'
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-1 h-4 bg-yellow-400 rounded-full" />
+              <p className="text-xs text-[var(--muted)] truncate flex-1">
+                {words.slice(selectedRange.start, selectedRange.end + 1).slice(0, 4).join(' ')}{selectedRange.end - selectedRange.start > 3 ? '...' : ''}
+              </p>
+            </div>
+            <textarea
+              ref={noteInputRef}
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              placeholder="Add a note..."
+              className="w-full p-2 text-sm border border-[var(--foreground)]/10 rounded-lg bg-transparent resize-none focus:outline-none focus:border-yellow-400/50"
+              rows={2}
+            />
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={handleAddHighlight}
+                disabled={!noteText.trim()}
+                className="flex-1 py-1.5 text-sm bg-yellow-400 text-black rounded-lg font-medium disabled:opacity-50 hover:bg-yellow-500 transition-colors"
+              >
+                Save
+              </button>
+              <button
+                onClick={cancelHighlight}
+                className="px-3 py-1.5 text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+        {showNoteInput && <div className="fixed inset-0 z-30" onClick={cancelHighlight} />}
+
+        <div className="flex-shrink-0 hidden sm:flex mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-[var(--foreground)]/5 flex-wrap justify-center gap-3 sm:gap-8 text-xs sm:text-sm text-[var(--muted)]">
           <span>
-            {currentWordIndex} / {words.length} words
+            {currentWordIndex} / {words.length} <span className="hidden sm:inline">words</span>
           </span>
-          <span>{calculateAccuracy()}% accuracy</span>
+          <span>{calculateAccuracy()}%<span className="hidden sm:inline"> accuracy</span></span>
           {detailedStats.pauses.length > 0 && (
-            <span>{detailedStats.pauses.length} pauses</span>
+            <span className="hidden sm:inline">{detailedStats.pauses.length} pauses</span>
           )}
           {lastSavedTime && (
             <span className={`flex items-center gap-1 transition-all duration-300 ${justSaved ? 'text-green-500 scale-110' : ''}`}>
