@@ -180,8 +180,8 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   }, []);
 
   const stripNonAlpha = useCallback((s: string) => {
-    // In forgiving mode, only keep letters (a-z) and spaces
-    return forgivingMode ? s.replace(/[^a-zA-Z\s]/g, "") : s;
+    // In forgiving mode, only keep letters (a-z, Hebrew) and spaces
+    return forgivingMode ? s.replace(/[^a-zA-Z\u0590-\u05FF\s]/g, "") : s;
   }, [forgivingMode]);
 
   const compareStrings = useCallback((a: string, b: string) => {
@@ -207,7 +207,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
       const expectedChar = currentWord[i];
       if (!expectedChar) break; // Typed more than word length
 
-      const isNonAlpha = /[^a-zA-Z]/.test(expectedChar);
+      const isNonAlpha = /[^a-zA-Z\u0590-\u05FF]/.test(expectedChar);
       let isCorrect: boolean;
       if (forgivingMode && isNonAlpha) {
         isCorrect = true;
@@ -633,7 +633,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         if (newCharIndex >= 0 && newCharIndex < currentWord.length) {
           const newChar = value[newCharIndex];
           const expectedChar = currentWord[newCharIndex];
-          const isNonAlpha = /[^a-zA-Z]/.test(expectedChar);
+          const isNonAlpha = /[^a-zA-Z\u0590-\u05FF]/.test(expectedChar);
           let isCorrect: boolean;
           if (forgivingMode && isNonAlpha) {
             // In forgiving mode, skip non-alpha check - always correct
@@ -700,7 +700,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                   const charIndexInWord = globalPos - wordStartPos;
                   const inputChar = currentInput[charIndexInWord] || "";
                   const targetChar = currentWord[charIndexInWord] || "";
-                  const isNonAlpha = /[^a-zA-Z]/.test(targetChar);
+                  const isNonAlpha = /[^a-zA-Z\u0590-\u05FF]/.test(targetChar);
 
                   if (forgivingMode && isNonAlpha) {
                     isCorrect = true;
