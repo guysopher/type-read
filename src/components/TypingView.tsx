@@ -151,11 +151,10 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
       ' ': ['thumb', '●', 'either'],
 
       // Hebrew keyboard layout (standard SI-1452)
-      // Note: Hebrew is RTL, but physical keyboard positions remain the same
       // Left pinky
-      '/': ['pinky', '↑', 'L'], 'ש': ['pinky', '●', 'L'], 'ז': ['pinky', '↓', 'L'],
+      'ש': ['pinky', '●', 'L'], 'ז': ['pinky', '↓', 'L'],
       // Left ring
-      '\'': ['ring', '↑', 'L'], 'ד': ['ring', '●', 'L'], 'ס': ['ring', '↓', 'L'],
+      'ד': ['ring', '●', 'L'], 'ס': ['ring', '↓', 'L'],
       // Left middle
       'ק': ['middle', '↑', 'L'], 'ג': ['middle', '●', 'L'], 'ב': ['middle', '↓', 'L'],
       // Left index
@@ -170,7 +169,6 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
       'ם': ['ring', '↑', 'R'], 'ך': ['ring', '●', 'R'], 'ץ': ['ring', '↓', 'R'],
       // Right pinky
       'פ': ['pinky', '↑', 'R'], 'ף': ['pinky', '●', 'R'],
-      ']': ['pinky', '↑→', 'R'], '[': ['pinky', '↑→→', 'R'],
     };
 
     const mapping = fingerMap[key];
