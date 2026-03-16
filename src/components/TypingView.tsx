@@ -649,6 +649,11 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
               playErrorSound();
             }
           }
+        } else if (newCharIndex >= currentWord.length) {
+          // Typing beyond word length - always an error
+          if (!muted) playErrorSound();
+          setShake(true);
+          setTimeout(() => setShake(false), 300);
         }
         setCurrentInput(value);
       }
