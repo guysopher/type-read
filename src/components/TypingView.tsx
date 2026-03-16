@@ -189,6 +189,10 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
       strA = strA.toLowerCase();
       strB = strB.toLowerCase();
     }
+    // Explicit length check - strings must be same length
+    if (strA.length !== strB.length) return false;
+    // Empty strings don't match
+    if (strA.length === 0) return false;
     return strA === strB;
   }, [forgivingMode, stripNonAlpha]);
 
@@ -588,7 +592,12 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
       if (value.endsWith(" ")) {
         const typedWord = value.trim();
 
-        if (compareStrings(typedWord, currentWord)) {
+        // Debug: log comparison for Hebrew text
+        if (isRTL) {
+          console.log('Hebrew comparison:', { typedWord, currentWord, result: compareStrings(typedWord, currentWord) });
+        }
+
+        if (typedWord.length > 0 && compareStrings(typedWord, currentWord)) {
           const lastChar = currentWord[currentWord.length - 1];
           const hasPunctuation = /[.,!?;:]/.test(lastChar);
 
