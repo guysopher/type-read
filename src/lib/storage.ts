@@ -63,6 +63,11 @@ export function saveText(saved: SavedText): void {
   const existingIndex = texts.findIndex((t) => t.id === saved.id);
 
   if (existingIndex >= 0) {
+    const existing = texts[existingIndex];
+    // Never save older progress over newer progress
+    if (saved.progress.currentWordIndex < existing.progress.currentWordIndex) {
+      return; // Don't overwrite - existing has more progress
+    }
     texts[existingIndex] = saved;
   } else {
     texts.unshift(saved);

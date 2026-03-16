@@ -49,6 +49,8 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     savedData?.progress.currentWordIndex || 0
   );
   const [currentInput, setCurrentInput] = useState("");
+  // Track what was typed for each word and whether it was correct
+  const [typedWords, setTypedWords] = useState<Map<number, { typed: string; correct: boolean }>>(new Map());
   const [stats, setStats] = useState<Stats>({
     wordsTyped: savedData?.progress.wordsTyped || 0,
     totalWords: words.length,
@@ -592,49 +594,55 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
       if (value.endsWith(" ")) {
         const typedWord = value.trim();
 
-        // Debug: log comparison for Hebrew text
-        if (isRTL) {
-          console.log('Hebrew comparison:', { typedWord, currentWord, result: compareStrings(typedWord, currentWord) });
+        if (typedWord.length === 0) {
+          // Just a space with no content, ignore
+          return;
         }
 
-        if (typedWord.length > 0 && compareStrings(typedWord, currentWord)) {
-          const lastChar = currentWord[currentWord.length - 1];
-          const hasPunctuation = /[.,!?;:]/.test(lastChar);
+        const isCorrect = compareStrings(typedWord, currentWord);
+        const lastChar = currentWord[currentWord.length - 1];
+        const hasPunctuation = /[.,!?;:]/.test(lastChar);
 
-          if (!muted) {
+        // Track what was typed for this word
+        setTypedWords(prev => {
+          const newMap = new Map(prev);
+          newMap.set(currentWordIndex, { typed: typedWord, correct: isCorrect });
+          return newMap;
+        });
+
+        // Play appropriate sound
+        if (!muted) {
+          if (isCorrect) {
             if (hasPunctuation) {
               playPunctuationSound();
             } else {
               playWordCompleteSound();
             }
-          }
-
-          setStats((s) => ({
-            ...s,
-            wordsTyped: s.wordsTyped + 1,
-            correctKeystrokes: s.correctKeystrokes + typedWord.length,
-            totalKeystrokes: s.totalKeystrokes + typedWord.length,
-          }));
-
-          if (currentWordIndex === words.length - 1) {
-            setIsComplete(true);
-            setStats((s) => ({ ...s, endTime: Date.now() }));
-            // Final stats update
-            setDetailedStats((prev) => ({
-              ...prev,
-              totalActiveTime: getActiveTime(),
-            }));
           } else {
-            setCurrentWordIndex((i) => i + 1);
+            playErrorSound();
           }
-          setCurrentInput("");
-        } else {
-          // Word is incorrect - just ignore the space, don't clear input
-          if (!muted) playErrorSound();
-          setShake(true);
-          setTimeout(() => setShake(false), 300);
-          // Keep current input without the space so user can fix their mistake
         }
+
+        // Update stats
+        setStats((s) => ({
+          ...s,
+          wordsTyped: s.wordsTyped + 1,
+          correctKeystrokes: s.correctKeystrokes + (isCorrect ? typedWord.length : 0),
+          totalKeystrokes: s.totalKeystrokes + typedWord.length,
+        }));
+
+        // Always advance to next word
+        if (currentWordIndex === words.length - 1) {
+          setIsComplete(true);
+          setStats((s) => ({ ...s, endTime: Date.now() }));
+          setDetailedStats((prev) => ({
+            ...prev,
+            totalActiveTime: getActiveTime(),
+          }));
+        } else {
+          setCurrentWordIndex((i) => i + 1);
+        }
+        setCurrentInput("");
       } else {
         const newCharIndex = value.length - 1;
         if (newCharIndex >= 0 && newCharIndex < currentWord.length) {
@@ -1065,15 +1073,65 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
               const isHighlightEnd = highlight && index === highlight.endWordIndex;
               const isParagraphStart = paragraphStarts.has(index);
               const highlightIndex = highlight ? highlights.findIndex(h => h.id === highlight.id) : -1;
+              const typedWordData = typedWords.get(index);
 
+              // Determine word display based on typing status
+              let wordContent: React.ReactNode = word;
               let className = "inline cursor-pointer transition-all ";
+
               if (index < currentWordIndex) {
-                className += "text-[var(--muted)]";
+                // Already typed word
+                if (typedWordData) {
+                  if (typedWordData.correct) {
+                    // Correct - bright white
+                    className += "text-[var(--foreground)]";
+                  } else {
+                    // Wrong - show what was typed in red
+                    className += "text-[var(--error)]";
+                    wordContent = typedWordData.typed;
+                  }
+                } else {
+                  // No data (shouldn't happen, but fallback)
+                  className += "text-[var(--foreground)]";
+                }
               } else if (index === currentWordIndex) {
-                className +=
-                  "text-[var(--foreground)] font-semibold bg-[var(--foreground)]/5 px-1 rounded";
+                // Current word - show character by character
+                className += "px-1 rounded bg-[var(--foreground)]/5";
+                wordContent = (
+                  <>
+                    {word.split('').map((char, charIndex) => {
+                      const inputChar = currentInput[charIndex];
+                      if (inputChar === undefined) {
+                        // Not yet typed - gray
+                        return <span key={charIndex} className="text-[var(--muted)]">{char}</span>;
+                      }
+                      // Check if correct
+                      const isNonAlpha = /[^a-zA-Z\u0590-\u05FF]/.test(char);
+                      let charCorrect: boolean;
+                      if (forgivingMode && isNonAlpha) {
+                        charCorrect = true;
+                      } else if (forgivingMode) {
+                        charCorrect = inputChar.toLowerCase() === char.toLowerCase();
+                      } else {
+                        charCorrect = inputChar === char;
+                      }
+                      return (
+                        <span key={charIndex} className={charCorrect ? "text-[var(--foreground)] font-semibold" : "text-[var(--error)] font-semibold"}>
+                          {inputChar}
+                        </span>
+                      );
+                    })}
+                    {/* Show extra typed characters in red */}
+                    {currentInput.length > word.length && (
+                      <span className="text-[var(--error)] font-semibold">
+                        {currentInput.slice(word.length)}
+                      </span>
+                    )}
+                  </>
+                );
               } else {
-                className += "text-[var(--foreground)]/60";
+                // Future word - gray/dull
+                className += "text-[var(--muted)]";
               }
 
               // Add highlight styling with underline instead of background
@@ -1093,7 +1151,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                     className={className}
                     onClick={(e) => handleWordClick(index, e)}
                   >
-                    {word}
+                    {wordContent}
                   </span>
                   {/* Small note indicator at end of highlight */}
                   {isHighlightEnd && (

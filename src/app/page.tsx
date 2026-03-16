@@ -67,6 +67,7 @@ export default function Home() {
   const [inputMode, setInputMode] = useState<"url" | "text">("url");
   const [savedTexts, setSavedTexts] = useState<SavedText[]>([]);
   const [activeSaved, setActiveSaved] = useState<SavedText | null>(null);
+  const [customTitle, setCustomTitle] = useState("");
 
   useEffect(() => {
     setSavedTexts(getSavedTexts());
@@ -121,7 +122,7 @@ export default function Home() {
       }
     } else {
       setText(cleanTextForTyping(inputValue));
-      setTitle("Your Text");
+      setTitle(customTitle.trim());
     }
   };
 
@@ -129,6 +130,7 @@ export default function Home() {
     setText(null);
     setTitle("");
     setInputValue("");
+    setCustomTitle("");
     setError(null);
     setActiveSaved(null);
     setSavedTexts(getSavedTexts());
@@ -179,20 +181,20 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-8">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8">
       <div className="w-full max-w-xl">
-        <header className="text-center mb-12">
-          <h1 className="text-4xl font-bold tracking-tight mb-3">TypeRead</h1>
-          <p className="text-[var(--muted)] text-lg">
+        <header className="text-center mb-8 sm:mb-12">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2 sm:mb-3">TypeRead</h1>
+          <p className="text-[var(--muted)] text-base sm:text-lg">
             Read articles by typing them. Word by word.
           </p>
         </header>
 
-        <div className="flex gap-1 mb-6 p-1 bg-[var(--foreground)]/5 rounded-lg w-fit mx-auto">
+        <div className="flex gap-1 mb-4 sm:mb-6 p-1 bg-[var(--foreground)]/5 rounded-lg w-fit mx-auto">
           <button
             type="button"
             onClick={() => setInputMode("url")}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            className={`px-3 sm:px-4 py-2 rounded-md text-sm font-medium transition-colors ${
               inputMode === "url"
                 ? "bg-[var(--foreground)] text-[var(--background)]"
                 : "text-[var(--muted)] hover:text-[var(--foreground)]"
@@ -203,7 +205,7 @@ export default function Home() {
           <button
             type="button"
             onClick={() => setInputMode("text")}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            className={`px-3 sm:px-4 py-2 rounded-md text-sm font-medium transition-colors ${
               inputMode === "text"
                 ? "bg-[var(--foreground)] text-[var(--background)]"
                 : "text-[var(--muted)] hover:text-[var(--foreground)]"
@@ -213,27 +215,37 @@ export default function Home() {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
           {inputMode === "url" ? (
             <input
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="Paste article URL..."
-              className="w-full px-4 py-4 text-lg border border-[var(--foreground)]/10 rounded-xl bg-transparent focus:border-[var(--foreground)]/30 transition-colors"
+              className="w-full px-3 sm:px-4 py-3 sm:py-4 text-base sm:text-lg border border-[var(--foreground)]/10 rounded-xl bg-transparent focus:border-[var(--foreground)]/30 transition-colors"
               disabled={loading}
               autoFocus
             />
           ) : (
-            <textarea
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Paste your text here..."
-              rows={8}
-              className="w-full px-4 py-4 text-lg border border-[var(--foreground)]/10 rounded-xl bg-transparent focus:border-[var(--foreground)]/30 transition-colors resize-none"
-              disabled={loading}
-              autoFocus
-            />
+            <div className="space-y-3">
+              <input
+                type="text"
+                value={customTitle}
+                onChange={(e) => setCustomTitle(e.target.value)}
+                placeholder="Title (optional)"
+                className="w-full px-3 sm:px-4 py-2 text-sm border border-[var(--foreground)]/10 rounded-lg bg-transparent focus:border-[var(--foreground)]/30 transition-colors"
+                disabled={loading}
+              />
+              <textarea
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder="Paste your text here..."
+                rows={6}
+                className="w-full px-3 sm:px-4 py-3 sm:py-4 text-base sm:text-lg border border-[var(--foreground)]/10 rounded-xl bg-transparent focus:border-[var(--foreground)]/30 transition-colors resize-none"
+                disabled={loading}
+                autoFocus
+              />
+            </div>
           )}
 
           {error && (
@@ -243,7 +255,7 @@ export default function Home() {
           <button
             type="submit"
             disabled={loading || !inputValue.trim()}
-            className="w-full py-4 text-lg font-medium bg-[var(--foreground)] text-[var(--background)] rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-3 sm:py-4 text-base sm:text-lg font-medium bg-[var(--foreground)] text-[var(--background)] rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">
@@ -272,7 +284,7 @@ export default function Home() {
         </form>
 
         {/* Tutorial / Try it out */}
-        <div className="mt-8 text-center">
+        <div className="mt-6 sm:mt-8 text-center">
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-[var(--foreground)]/10"></div>
@@ -283,7 +295,7 @@ export default function Home() {
           </div>
           <button
             onClick={handleStartTutorial}
-            className="mt-6 px-6 py-3 text-sm font-medium border border-[var(--foreground)]/20 rounded-xl hover:border-[var(--foreground)]/40 hover:bg-[var(--foreground)]/5 transition-all"
+            className="mt-4 sm:mt-6 px-5 sm:px-6 py-2.5 sm:py-3 text-sm font-medium border border-[var(--foreground)]/20 rounded-xl hover:border-[var(--foreground)]/40 hover:bg-[var(--foreground)]/5 transition-all"
           >
             Try the tutorial
           </button>
@@ -294,8 +306,8 @@ export default function Home() {
 
         {/* Saved Texts */}
         {savedTexts.length > 0 && (
-          <div className="mt-12">
-            <h2 className="text-sm font-medium text-[var(--muted)] mb-4">
+          <div className="mt-8 sm:mt-12">
+            <h2 className="text-sm font-medium text-[var(--muted)] mb-3 sm:mb-4">
               Continue Reading
             </h2>
             <div className="space-y-2">
@@ -303,19 +315,19 @@ export default function Home() {
                 <button
                   key={saved.id}
                   onClick={() => handleResume(saved)}
-                  className="w-full text-left p-4 border border-[var(--foreground)]/10 rounded-xl hover:border-[var(--foreground)]/30 transition-colors group"
+                  className="w-full text-left p-3 sm:p-4 border border-[var(--foreground)]/10 rounded-xl hover:border-[var(--foreground)]/30 transition-colors group"
                 >
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start justify-between gap-2 sm:gap-4">
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-medium truncate">{saved.title}</h3>
-                      <div className="flex items-center gap-3 mt-1 text-sm text-[var(--muted)]">
+                      <h3 className="font-medium truncate text-sm sm:text-base">{saved.title}</h3>
+                      <div className="flex items-center gap-2 sm:gap-3 mt-1 text-xs sm:text-sm text-[var(--muted)]">
                         <span>{formatProgress(saved)} complete</span>
                         <span>·</span>
                         <span>{formatTime(saved.progress.totalTime)}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="w-16 h-1 bg-[var(--foreground)]/10 rounded-full overflow-hidden">
+                      <div className="w-12 sm:w-16 h-1 bg-[var(--foreground)]/10 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-[var(--foreground)] rounded-full"
                           style={{
@@ -325,7 +337,7 @@ export default function Home() {
                       </div>
                       <button
                         onClick={(e) => handleDelete(saved.id, e)}
-                        className="p-1 text-[var(--muted)] hover:text-[var(--error)] opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="p-1 text-[var(--muted)] hover:text-[var(--error)] sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                         title="Delete"
                       >
                         <svg
@@ -350,7 +362,7 @@ export default function Home() {
           </div>
         )}
 
-        <footer className="mt-16 text-center text-sm text-[var(--muted)]">
+        <footer className="mt-10 sm:mt-16 text-center text-xs sm:text-sm text-[var(--muted)]">
           <p>Type each word to advance. Improve your speed while you read.</p>
         </footer>
       </div>
