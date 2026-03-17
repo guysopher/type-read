@@ -575,6 +575,40 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     setNoteText("");
   }, []);
 
+  // Handle backspace to go back to previous word
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Backspace' && currentInput === '' && currentWordIndex > 0) {
+        e.preventDefault();
+        // Go back to previous word
+        const prevIndex = currentWordIndex - 1;
+        const prevTypedData = typedWords.get(prevIndex);
+
+        // Remove the previous word from typed words so it can be re-typed
+        setTypedWords(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(prevIndex);
+          return newMap;
+        });
+
+        // Restore the previous input (what was typed before)
+        setCurrentInput(prevTypedData?.typed || '');
+        setCurrentWordIndex(prevIndex);
+
+        // Adjust stats
+        setStats(s => ({
+          ...s,
+          wordsTyped: Math.max(0, s.wordsTyped - 1),
+          totalKeystrokes: Math.max(0, s.totalKeystrokes - (prevTypedData?.typed.length || 0)),
+          correctKeystrokes: prevTypedData?.correct
+            ? Math.max(0, s.correctKeystrokes - (prevTypedData?.typed.length || 0))
+            : s.correctKeystrokes,
+        }));
+      }
+    },
+    [currentInput, currentWordIndex, typedWords]
+  );
+
   const handleInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value;
@@ -1046,6 +1080,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           type="text"
           value={currentInput}
           onChange={handleInput}
+          onKeyDown={handleKeyDown}
           className="sr-only"
           autoCapitalize="off"
           autoCorrect="off"
