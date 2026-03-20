@@ -48,70 +48,32 @@ export default function Home() {
   const [text, setText] = useState<string | null>(null);
   const [title, setTitle] = useState<string>("");
   const [inputValue, setInputValue] = useState("");
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [inputMode, setInputMode] = useState<"url" | "text">("url");
   const [savedTexts, setSavedTexts] = useState<SavedText[]>([]);
   const [activeSaved, setActiveSaved] = useState<SavedText | null>(null);
   const [customTitle, setCustomTitle] = useState("");
   const [showStories, setShowStories] = useState(false);
   const [storyLanguage, setStoryLanguage] = useState<'en' | 'he'>('en');
+  const [showAddText, setShowAddText] = useState(false);
 
   useEffect(() => {
     setSavedTexts(getSavedTexts());
   }, []);
 
-  const isUrl = (str: string) => {
-    try {
-      new URL(str);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleAddText = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
     if (!inputValue.trim()) {
-      setError("Please enter a URL or some text");
+      setError("Please enter some text");
       return;
     }
 
-    if (inputMode === "url") {
-      if (!isUrl(inputValue)) {
-        setError("Please enter a valid URL");
-        return;
-      }
-
-      setLoading(true);
-      try {
-        const response = await fetch("/api/extract", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: inputValue }),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || "Failed to extract content");
-        }
-
-        setText(cleanTextForTyping(data.content));
-        setTitle(data.title || "Article");
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Failed to fetch article"
-        );
-      } finally {
-        setLoading(false);
-      }
-    } else {
-      setText(cleanTextForTyping(inputValue));
-      setTitle(customTitle.trim());
-    }
+    setText(cleanTextForTyping(inputValue));
+    setTitle(customTitle.trim() || "Custom Text");
+    setShowAddText(false);
+    setInputValue("");
+    setCustomTitle("");
   };
 
   const handleReset = () => {
@@ -183,24 +145,51 @@ export default function Home() {
   const stories = storyLanguage === 'en' ? ENGLISH_STORIES : HEBREW_STORIES;
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8">
-      <div className="w-full max-w-xl">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8 relative overflow-hidden bg-gradient-to-b from-[var(--background)] via-[var(--background)] to-purple-950/20">
+      {/* CRT scanline overlay */}
+      <div
+        className="fixed inset-0 pointer-events-none z-50 opacity-[0.04]"
+        style={{
+          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.4) 2px, rgba(0,0,0,0.4) 4px)',
+        }}
+      />
+
+      {/* Subtle vignette effect */}
+      <div
+        className="fixed inset-0 pointer-events-none z-40"
+        style={{
+          background: 'radial-gradient(ellipse at center, transparent 0%, transparent 60%, rgba(0,0,0,0.3) 100%)',
+        }}
+      />
+
+      <div className="w-full max-w-xl relative z-10">
         {/* Header */}
         <header className="text-center mb-8 sm:mb-12">
-          <div className="flex items-center justify-center gap-3 mb-3">
+          <div className="flex items-center justify-center gap-4 mb-4">
             <span
-              className="text-4xl"
+              className="text-5xl"
               style={{
-                animation: 'bounce 1s ease-in-out infinite',
-                display: 'inline-block'
+                animation: 'float 2s ease-in-out infinite',
+                display: 'inline-block',
+                filter: 'drop-shadow(0 0 12px rgba(168, 85, 247, 0.7)) drop-shadow(0 0 24px rgba(168, 85, 247, 0.4))',
               }}
             >
               👾
             </span>
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">TypeRead</h1>
+            <h1
+              className="text-3xl sm:text-4xl font-bold"
+              style={{
+                fontFamily: 'var(--font-press-start), system-ui, monospace',
+                fontSize: 'clamp(1.25rem, 5vw, 1.75rem)',
+                textShadow: '2px 2px 0 rgba(0, 0, 0, 0.3)',
+                letterSpacing: '0.1em',
+              }}
+            >
+              TypeRead
+            </h1>
           </div>
-          <p className="text-[var(--muted)] text-base sm:text-lg">
-            Read by typing. Escape the monster.
+          <p className="text-sm sm:text-base font-mono tracking-widest uppercase text-[var(--muted)]">
+            ▸ Read by typing ▸ Escape the monster ▸
           </p>
         </header>
 
@@ -208,20 +197,40 @@ export default function Home() {
         {lastPlayed && (
           <button
             onClick={() => handleResume(lastPlayed)}
-            className="w-full mb-6 p-4 bg-[var(--foreground)] text-[var(--background)] rounded-xl hover:opacity-90 transition-all group"
+            className="w-full mb-6 p-4 text-white group relative overflow-hidden"
+            style={{
+              background: 'linear-gradient(180deg, #7c3aed 0%, #5b21b6 100%)',
+              boxShadow: '0 0 30px rgba(168, 85, 247, 0.5), inset 0 2px 0 rgba(255,255,255,0.2), inset 0 -2px 0 rgba(0,0,0,0.3)',
+              border: '3px solid #a855f7',
+              imageRendering: 'pixelated',
+            }}
           >
-            <div className="flex items-center justify-between">
+            {/* Pixel corner decorations */}
+            <div className="absolute top-0 left-0 w-2 h-2 bg-purple-300" />
+            <div className="absolute top-0 right-0 w-2 h-2 bg-purple-300" />
+            <div className="absolute bottom-0 left-0 w-2 h-2 bg-purple-900" />
+            <div className="absolute bottom-0 right-0 w-2 h-2 bg-purple-900" />
+
+            <div className="flex items-center justify-between relative z-10">
               <div className="flex items-center gap-3">
-                <span className="text-2xl group-hover:scale-110 transition-transform">▶</span>
+                <span
+                  className="text-2xl"
+                  style={{
+                    filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.8))',
+                    animation: 'blink 1s step-end infinite',
+                  }}
+                >
+                  ▶
+                </span>
                 <div className="text-left">
-                  <div className="text-xs opacity-70">Continue</div>
+                  <div className="text-xs opacity-80 font-mono uppercase tracking-widest" style={{ fontFamily: 'var(--font-press-start)', fontSize: '8px' }}>Continue</div>
                   <div className="font-medium truncate max-w-[180px] sm:max-w-[280px]">
                     {lastPlayed.title || "Untitled"}
                   </div>
                 </div>
               </div>
-              <div className="text-right">
-                <div className="text-lg font-bold">{formatProgress(lastPlayed)}%</div>
+              <div className="text-right font-mono">
+                <div className="text-xl font-bold" style={{ textShadow: '2px 2px 0 rgba(0,0,0,0.3)' }}>{formatProgress(lastPlayed)}%</div>
                 <div className="text-xs opacity-70">{formatTime(lastPlayed.progress.totalTime)}</div>
               </div>
             </div>
@@ -232,20 +241,37 @@ export default function Home() {
         <div className="flex gap-3 mb-6">
           <button
             onClick={() => setShowStories(true)}
-            className="flex-1 py-3 px-4 text-sm font-medium border border-[var(--foreground)]/20 rounded-xl hover:border-[var(--foreground)]/40 hover:bg-[var(--foreground)]/5 transition-all"
+            className="flex-1 py-3 px-4 text-sm font-mono uppercase tracking-wider transition-all hover:scale-105"
+            style={{
+              background: 'linear-gradient(180deg, rgba(168,85,247,0.2) 0%, rgba(168,85,247,0.1) 100%)',
+              border: '2px solid rgba(168,85,247,0.4)',
+              boxShadow: '0 0 15px rgba(168,85,247,0.2), inset 0 1px 0 rgba(255,255,255,0.1)',
+              textShadow: '0 0 10px rgba(168,85,247,0.5)',
+            }}
           >
             📚 Stories
           </button>
           <button
             onClick={handleStartTutorial}
-            className="flex-1 py-3 px-4 text-sm font-medium border border-[var(--foreground)]/20 rounded-xl hover:border-[var(--foreground)]/40 hover:bg-[var(--foreground)]/5 transition-all"
+            className="flex-1 py-3 px-4 text-sm font-mono uppercase tracking-wider transition-all hover:scale-105"
+            style={{
+              background: 'linear-gradient(180deg, rgba(168,85,247,0.2) 0%, rgba(168,85,247,0.1) 100%)',
+              border: '2px solid rgba(168,85,247,0.4)',
+              boxShadow: '0 0 15px rgba(168,85,247,0.2), inset 0 1px 0 rgba(255,255,255,0.1)',
+              textShadow: '0 0 10px rgba(168,85,247,0.5)',
+            }}
           >
             🎮 Tutorial
           </button>
           <button
             onClick={handleStartHebrewTutorial}
-            className="py-3 px-4 text-sm font-medium border border-[var(--foreground)]/20 rounded-xl hover:border-[var(--foreground)]/40 hover:bg-[var(--foreground)]/5 transition-all"
+            className="py-3 px-4 text-sm font-mono transition-all hover:scale-105"
             title="Hebrew Tutorial"
+            style={{
+              background: 'linear-gradient(180deg, rgba(168,85,247,0.2) 0%, rgba(168,85,247,0.1) 100%)',
+              border: '2px solid rgba(168,85,247,0.4)',
+              boxShadow: '0 0 15px rgba(168,85,247,0.2), inset 0 1px 0 rgba(255,255,255,0.1)',
+            }}
           >
             🇮🇱
           </button>
@@ -253,13 +279,18 @@ export default function Home() {
 
         {/* Stories Modal */}
         {showStories && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-            <div className="w-full max-w-lg bg-[var(--background)] rounded-2xl shadow-2xl border border-[var(--foreground)]/10 overflow-hidden">
-              <div className="flex items-center justify-between p-4 border-b border-[var(--foreground)]/10">
-                <h2 className="text-lg font-semibold">Choose a Story</h2>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div
+              className="w-full max-w-lg bg-[var(--background)] rounded-lg shadow-2xl border-2 border-purple-500/30 overflow-hidden"
+              style={{ boxShadow: '0 0 40px rgba(168, 85, 247, 0.15)' }}
+            >
+              <div className="flex items-center justify-between p-4 border-b-2 border-purple-500/20 bg-purple-500/5">
+                <h2 className="text-lg font-semibold font-mono flex items-center gap-2">
+                  <span>📚</span> Choose a Story
+                </h2>
                 <button
                   onClick={() => setShowStories(false)}
-                  className="p-1 hover:bg-[var(--foreground)]/10 rounded-lg transition-colors"
+                  className="p-1 hover:bg-purple-500/20 rounded-lg transition-colors text-purple-400"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -268,23 +299,23 @@ export default function Home() {
               </div>
 
               {/* Language Toggle */}
-              <div className="flex gap-2 p-4 border-b border-[var(--foreground)]/5">
+              <div className="flex gap-2 p-4 border-b-2 border-purple-500/10">
                 <button
                   onClick={() => setStoryLanguage('en')}
-                  className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
+                  className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium font-mono transition-all border-2 ${
                     storyLanguage === 'en'
-                      ? 'bg-[var(--foreground)] text-[var(--background)]'
-                      : 'bg-[var(--foreground)]/5 hover:bg-[var(--foreground)]/10'
+                      ? 'bg-purple-500 text-white border-purple-400'
+                      : 'border-[var(--foreground)]/10 hover:border-purple-400/50'
                   }`}
                 >
                   English
                 </button>
                 <button
                   onClick={() => setStoryLanguage('he')}
-                  className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
+                  className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium font-mono transition-all border-2 ${
                     storyLanguage === 'he'
-                      ? 'bg-[var(--foreground)] text-[var(--background)]'
-                      : 'bg-[var(--foreground)]/5 hover:bg-[var(--foreground)]/10'
+                      ? 'bg-purple-500 text-white border-purple-400'
+                      : 'border-[var(--foreground)]/10 hover:border-purple-400/50'
                   }`}
                 >
                   עברית
@@ -297,11 +328,11 @@ export default function Home() {
                   <button
                     key={story.id}
                     onClick={() => handleStartStory(story)}
-                    className="w-full text-left p-3 rounded-lg hover:bg-[var(--foreground)]/5 transition-colors"
+                    className="w-full text-left p-3 rounded-lg hover:bg-purple-500/10 transition-colors border-l-2 border-transparent hover:border-purple-400"
                     dir={story.language === 'he' ? 'rtl' : 'ltr'}
                   >
                     <div className="font-medium">{story.title}</div>
-                    <div className="text-sm text-[var(--muted)]">{story.author}</div>
+                    <div className="text-sm text-[var(--muted)] font-mono">{story.author}</div>
                   </button>
                 ))}
               </div>
@@ -309,99 +340,91 @@ export default function Home() {
           </div>
         )}
 
-        {/* Divider */}
-        <div className="relative my-6">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-[var(--foreground)]/10"></div>
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-4 bg-[var(--background)] text-[var(--muted)]">or paste your own</span>
-          </div>
-        </div>
+        {/* Add New Text Modal */}
+        {showAddText && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div
+              className="w-full max-w-lg bg-[var(--background)] rounded-lg shadow-2xl border-2 border-purple-500/30 overflow-hidden"
+              style={{ boxShadow: '0 0 40px rgba(168, 85, 247, 0.15)' }}
+            >
+              <div className="flex items-center justify-between p-4 border-b-2 border-purple-500/20 bg-purple-500/5">
+                <h2 className="text-lg font-semibold font-mono flex items-center gap-2">
+                  <span>✏️</span> Add New Text
+                </h2>
+                <button
+                  onClick={() => setShowAddText(false)}
+                  className="p-1 hover:bg-purple-500/20 rounded-lg transition-colors text-purple-400"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
 
-        {/* Input Mode Toggle */}
-        <div className="flex gap-1 mb-4 p-1 bg-[var(--foreground)]/5 rounded-lg w-fit mx-auto">
-          <button
-            onClick={() => setInputMode("url")}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              inputMode === "url"
-                ? "bg-[var(--foreground)] text-[var(--background)]"
-                : "text-[var(--muted)] hover:text-[var(--foreground)]"
-            }`}
-          >
-            URL
-          </button>
-          <button
-            onClick={() => setInputMode("text")}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              inputMode === "text"
-                ? "bg-[var(--foreground)] text-[var(--background)]"
-                : "text-[var(--muted)] hover:text-[var(--foreground)]"
-            }`}
-          >
-            Text
-          </button>
-        </div>
+              <form onSubmit={handleAddText} className="p-4 space-y-4">
+                <input
+                  type="text"
+                  value={customTitle}
+                  onChange={(e) => setCustomTitle(e.target.value)}
+                  placeholder="Title (optional)"
+                  className="w-full px-4 py-2 text-sm border-2 border-purple-500/20 rounded-lg bg-transparent focus:border-purple-500/50 transition-colors"
+                  autoFocus
+                />
+                <textarea
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  placeholder="Paste your text here..."
+                  rows={6}
+                  className="w-full px-4 py-3 text-base border-2 border-purple-500/20 rounded-lg bg-transparent focus:border-purple-500/50 transition-colors resize-none"
+                />
 
-        {/* Input Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {inputMode === "url" ? (
-            <input
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Paste article URL..."
-              className="w-full px-4 py-3 text-base border border-[var(--foreground)]/10 rounded-xl bg-transparent focus:border-[var(--foreground)]/30 transition-colors"
-              disabled={loading}
-              autoFocus
-            />
-          ) : (
-            <div className="space-y-3">
-              <input
-                type="text"
-                value={customTitle}
-                onChange={(e) => setCustomTitle(e.target.value)}
-                placeholder="Title (optional)"
-                className="w-full px-4 py-2 text-sm border border-[var(--foreground)]/10 rounded-lg bg-transparent focus:border-[var(--foreground)]/30 transition-colors"
-                disabled={loading}
-              />
-              <textarea
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                placeholder="Paste your text here..."
-                rows={4}
-                className="w-full px-4 py-3 text-base border border-[var(--foreground)]/10 rounded-xl bg-transparent focus:border-[var(--foreground)]/30 transition-colors resize-none"
-                disabled={loading}
-                autoFocus
-              />
+                {error && (
+                  <p className="text-[var(--error)] text-sm text-center">{error}</p>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={!inputValue.trim()}
+                  className="w-full py-3 text-base font-mono uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-[1.02]"
+                  style={{
+                    background: 'linear-gradient(180deg, #a855f7 0%, #7c3aed 100%)',
+                    border: '3px solid #c084fc',
+                    boxShadow: '0 0 30px rgba(168, 85, 247, 0.4), inset 0 2px 0 rgba(255,255,255,0.2), inset 0 -2px 0 rgba(0,0,0,0.3)',
+                    color: '#fff',
+                    textShadow: '2px 2px 0 rgba(0,0,0,0.3)',
+                  }}
+                >
+                  ▶ Start Typing
+                </button>
+              </form>
             </div>
-          )}
+          </div>
+        )}
 
-          {error && (
-            <p className="text-[var(--error)] text-sm text-center">{error}</p>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading || !inputValue.trim()}
-            className="w-full py-3 text-base font-medium bg-[var(--foreground)] text-[var(--background)] rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? "Loading..." : "Start Typing"}
-          </button>
-        </form>
-
-        {/* Saved Texts */}
-        {savedTexts.length > 1 && (
-          <div className="mt-8">
-            <h2 className="text-sm font-medium text-[var(--muted)] mb-3">
-              Previous Sessions
+        {/* Your Texts Section */}
+        <div className="mt-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-medium text-[var(--muted)]">
+              Your Texts
             </h2>
-            <div className="space-y-2">
-              {savedTexts.slice(1, 4).map((saved) => (
+            <button
+              onClick={() => setShowAddText(true)}
+              className="flex items-center gap-1 px-3 py-1.5 text-xs font-mono uppercase tracking-wider bg-purple-500/10 border border-purple-500/30 rounded-lg hover:bg-purple-500/20 transition-colors text-purple-400"
+            >
+              <span>+</span> Add New
+            </button>
+          </div>
+          <div className="space-y-2">
+            {savedTexts.length === 0 ? (
+              <p className="text-sm text-[var(--muted)] text-center py-4">
+                No saved texts yet. Try a story or add your own!
+              </p>
+            ) : (
+              savedTexts.slice(lastPlayed ? 1 : 0, lastPlayed ? 5 : 4).map((saved) => (
                 <button
                   key={saved.id}
                   onClick={() => handleResume(saved)}
-                  className="w-full text-left p-3 border border-[var(--foreground)]/10 rounded-xl hover:border-[var(--foreground)]/20 transition-colors group"
+                  className="w-full text-left p-3 border border-[var(--foreground)]/10 rounded-lg hover:border-purple-500/30 transition-colors group"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex-1 min-w-0">
@@ -420,21 +443,54 @@ export default function Home() {
                     </button>
                   </div>
                 </button>
-              ))}
-            </div>
+              ))
+            )}
           </div>
-        )}
+        </div>
 
         {/* Footer */}
-        <footer className="mt-12 text-center text-xs text-[var(--muted)]">
-          <p>Type each word to advance. The monster is always watching.</p>
+        <footer className="mt-12 text-center font-mono">
+          <p
+            className="text-xs uppercase tracking-widest mb-2"
+            style={{
+              color: '#a855f7',
+              textShadow: '0 0 10px rgba(168, 85, 247, 0.5)',
+            }}
+          >
+            ━━━ Insert Text to Begin ━━━
+          </p>
+          <p
+            className="text-xs text-purple-300/50"
+            style={{ animation: 'flicker 4s linear infinite' }}
+          >
+            👾 The monster is always watching... 👾
+          </p>
+          <p className="mt-4 text-[10px] text-[var(--muted)]/30 tracking-widest">
+            © 2024 TYPEREAD ARCADE
+          </p>
         </footer>
       </div>
 
       <style jsx>{`
-        @keyframes bounce {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-6px); }
+        @keyframes float {
+          0%, 100% { transform: translateY(0) rotate(-5deg); }
+          50% { transform: translateY(-8px) rotate(5deg); }
+        }
+        @keyframes blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.3; }
+        }
+        @keyframes flicker {
+          0%, 100% { opacity: 0.5; }
+          92% { opacity: 0.5; }
+          93% { opacity: 0.2; }
+          94% { opacity: 0.5; }
+          96% { opacity: 0.3; }
+          97% { opacity: 0.5; }
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.7; }
         }
       `}</style>
     </div>

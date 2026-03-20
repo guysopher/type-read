@@ -21,7 +21,6 @@ interface Stats {
   endTime: number | null;
 }
 
-const AUTO_PAUSE_DELAY = 5000; // 5 seconds
 const WPM_SAMPLE_INTERVAL = 3000; // Sample WPM every 3 seconds
 const AUTO_SAVE_INTERVAL = 10000; // Auto-save every 10 seconds
 
@@ -66,14 +65,20 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   const [showSaved, setShowSaved] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
   const [lastSavedTime, setLastSavedTime] = useState<number | null>(savedData?.updatedAt || null);
-  const [forgivingMode, setForgivingMode] = useState(() => {
+  // Settings
+  const [monsterMode, setMonsterMode] = useState(() => {
     if (typeof window === 'undefined') return true;
-    const saved = localStorage.getItem('typeread_forgiving_mode');
+    const saved = localStorage.getItem('typeread_monster_mode');
     return saved !== null ? saved === 'true' : true;
   });
-  const [soundEffects, setSoundEffects] = useState(() => {
+  const [forgiveCapitals, setForgiveCapitals] = useState(() => {
     if (typeof window === 'undefined') return true;
-    const saved = localStorage.getItem('typeread_sound_effects');
+    const saved = localStorage.getItem('typeread_forgive_capitals');
+    return saved !== null ? saved === 'true' : true;
+  });
+  const [forgiveNonAlpha, setForgiveNonAlpha] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    const saved = localStorage.getItem('typeread_forgive_non_alpha');
     return saved !== null ? saved === 'true' : true;
   });
   const [musicEnabled, setMusicEnabled] = useState(() => {
@@ -81,14 +86,19 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     const saved = localStorage.getItem('typeread_music');
     return saved !== null ? saved === 'true' : true;
   });
-  const [fingerHintPosition, setFingerHintPosition] = useState<'off' | 'top' | 'bottom'>(() => {
-    if (typeof window === 'undefined') return 'bottom';
-    const saved = localStorage.getItem('typeread_finger_hint_position');
-    return (saved as 'off' | 'top' | 'bottom') || 'bottom';
-  });
-  const [allowMistakes, setAllowMistakes] = useState(() => {
+  const [soundEffects, setSoundEffects] = useState(() => {
     if (typeof window === 'undefined') return true;
-    const saved = localStorage.getItem('typeread_allow_mistakes');
+    const saved = localStorage.getItem('typeread_sound_effects');
+    return saved !== null ? saved === 'true' : true;
+  });
+  const [fingerHintPosition, setFingerHintPosition] = useState<'off' | 'top' | 'bottom'>(() => {
+    if (typeof window === 'undefined') return 'top';
+    const saved = localStorage.getItem('typeread_finger_hint_position');
+    return (saved as 'off' | 'top' | 'bottom') || 'top';
+  });
+  const [autosaveEnabled, setAutosaveEnabled] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    const saved = localStorage.getItem('typeread_autosave');
     return saved !== null ? saved === 'true' : true;
   });
 
@@ -110,8 +120,13 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   const [bestStreak, setBestStreak] = useState(0);
   const [streakBonus, setStreakBonus] = useState<{ amount: number; timestamp: number } | null>(null);
 
+  // Monster countdown before chase begins
+  const [monsterCountdown, setMonsterCountdown] = useState<number | null>(null);
+  const monsterStartTimeRef = useRef<number | null>(null); // When monster started chasing
+
   // Rolling speed tracking for adaptive monster
   const recentKeystrokesRef = useRef<number[]>([]); // timestamps of recent keystrokes
+  const allKeystrokesRef = useRef<number[]>([]); // all keystrokes for initial speed calc
   const [detailedStats, setDetailedStats] = useState<DetailedStats>(
     savedData?.detailedStats || createEmptyDetailedStats()
   );
@@ -208,23 +223,23 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   }, []);
 
   const stripNonAlpha = useCallback((s: string) => {
-    // In forgiving mode, only keep letters (a-z, Hebrew) and spaces
-    return forgivingMode ? s.replace(/[^a-zA-Z\u0590-\u05FF\s]/g, "") : s;
-  }, [forgivingMode]);
+    // If forgiveNonAlpha is on, strip punctuation and keep only letters
+    return forgiveNonAlpha ? s.replace(/[^a-zA-Z\u0590-\u05FF]/g, "") : s;
+  }, [forgiveNonAlpha]);
 
   const compareStrings = useCallback((a: string, b: string) => {
+    // Strip punctuation if forgiveNonAlpha is on
     let strA = stripNonAlpha(a);
     let strB = stripNonAlpha(b);
-    if (forgivingMode) {
+    // Make case-insensitive if forgiveCapitals is on
+    if (forgiveCapitals) {
       strA = strA.toLowerCase();
       strB = strB.toLowerCase();
     }
-    // Explicit length check - strings must be same length
-    if (strA.length !== strB.length) return false;
-    // Empty strings don't match
-    if (strA.length === 0) return false;
+    // Empty strings don't match (need at least some letters)
+    if (strA.length === 0 || strB.length === 0) return false;
     return strA === strB;
-  }, [forgivingMode, stripNonAlpha]);
+  }, [forgiveCapitals, forgiveNonAlpha, stripNonAlpha]);
 
   const isWordComplete = compareStrings(currentInput, currentWord);
 
@@ -241,9 +256,9 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
 
       const isNonAlpha = /[^a-zA-Z\u0590-\u05FF]/.test(expectedChar);
       let isCorrect: boolean;
-      if (forgivingMode && isNonAlpha) {
+      if (forgiveNonAlpha && isNonAlpha) {
         isCorrect = true;
-      } else if (forgivingMode) {
+      } else if (forgiveCapitals) {
         isCorrect = inputChar.toLowerCase() === expectedChar.toLowerCase();
       } else {
         isCorrect = inputChar === expectedChar;
@@ -286,22 +301,26 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     return Math.round(stats.wordsTyped / minutes);
   }, [stats, accumulatedTime, detailedStats.totalPauseTime]);
 
-  // Calculate recent typing speed (chars/sec) from last 3 seconds of keystrokes
-  const calculateRecentSpeed = useCallback(() => {
+  // Calculate typing speed (chars/sec) from last 60 seconds of keystrokes
+  const calculateLastMinuteSpeed = useCallback(() => {
     const now = Date.now();
-    const windowMs = 3000; // 3 second window
+    const windowMs = 60000; // 60 second window (1 minute)
 
-    // Filter to keystrokes in the last 3 seconds
+    // Filter to keystrokes in the last minute
     const recentKeystrokes = recentKeystrokesRef.current.filter(ts => now - ts < windowMs);
     recentKeystrokesRef.current = recentKeystrokes; // Clean up old ones
 
     if (recentKeystrokes.length < 2) return 0;
 
-    // Calculate chars per second based on keystrokes in window
-    const timeSpan = (now - recentKeystrokes[0]) / 1000; // in seconds
-    if (timeSpan < 0.1) return 0;
+    // Calculate chars per second based on keystrokes in the last minute
+    // Use the actual time span within the window for accuracy
+    const oldestInWindow = recentKeystrokes[0];
+    const timeSpanSec = (now - oldestInWindow) / 1000; // in seconds
 
-    return recentKeystrokes.length / timeSpan;
+    if (timeSpanSec < 1) return 0;
+
+    // Return chars per second
+    return recentKeystrokes.length / timeSpanSec;
   }, []);
 
   const calculateAccuracy = useCallback(() => {
@@ -350,61 +369,93 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
 
   // Save preferences to localStorage
   useEffect(() => {
-    localStorage.setItem('typeread_forgiving_mode', String(forgivingMode));
-  }, [forgivingMode]);
+    localStorage.setItem('typeread_monster_mode', String(monsterMode));
+  }, [monsterMode]);
 
   useEffect(() => {
-    localStorage.setItem('typeread_sound_effects', String(soundEffects));
-  }, [soundEffects]);
+    localStorage.setItem('typeread_forgive_capitals', String(forgiveCapitals));
+  }, [forgiveCapitals]);
+
+  useEffect(() => {
+    localStorage.setItem('typeread_forgive_non_alpha', String(forgiveNonAlpha));
+  }, [forgiveNonAlpha]);
 
   useEffect(() => {
     localStorage.setItem('typeread_music', String(musicEnabled));
   }, [musicEnabled]);
 
   useEffect(() => {
+    localStorage.setItem('typeread_sound_effects', String(soundEffects));
+  }, [soundEffects]);
+
+  useEffect(() => {
     localStorage.setItem('typeread_finger_hint_position', fingerHintPosition);
   }, [fingerHintPosition]);
 
   useEffect(() => {
-    localStorage.setItem('typeread_allow_mistakes', String(allowMistakes));
-  }, [allowMistakes]);
+    localStorage.setItem('typeread_autosave', String(autosaveEnabled));
+  }, [autosaveEnabled]);
 
-  // Auto-pause detection - completely disabled in chase mode (monster never pauses!)
+  // Auto-pause detection - completely disabled in chase/monster mode
+  // Since this is always a chase game, we never pause
   useEffect(() => {
-    // No auto-pause once the monster has started - you can't pause, only escape!
-    if (isComplete || isPaused || !stats.startTime || isGameOver || monsterStarted) return;
+    // Chase mode is always on - no pausing allowed!
+    // The monster waits for no one.
+    return;
+  }, []);
 
-    const checkActivity = setInterval(() => {
-      const timeSinceActivity = Date.now() - lastActivityRef.current;
-      if (timeSinceActivity >= AUTO_PAUSE_DELAY) {
-        setIsPaused(true);
-        pauseStartRef.current = Date.now();
+  // Start monster countdown after player has typed a few words
+  useEffect(() => {
+    // Only start monster if monster mode is enabled
+    if (!monsterMode) return;
+    // Start countdown after 3 words typed
+    if (!monsterStarted && monsterCountdown === null && stats.wordsTyped >= 3 && stats.startTime) {
+      // Calculate chars per second from actual keystroke timestamps (more accurate than wall clock)
+      const keystrokes = allKeystrokesRef.current;
+      let playerCharsPerSec = 2; // default minimum
+
+      if (keystrokes.length >= 2) {
+        // Use time between first and last keystroke for accurate speed
+        const firstKeystroke = keystrokes[0];
+        const lastKeystroke = keystrokes[keystrokes.length - 1];
+        const activeTypingTime = (lastKeystroke - firstKeystroke) / 1000; // in seconds
+
+        if (activeTypingTime > 0.5) {
+          // chars per second based on actual typing activity (keystrokes / active time)
+          playerCharsPerSec = Math.max(keystrokes.length / activeTypingTime, 2);
+        }
       }
-    }, 1000);
 
-    return () => clearInterval(checkActivity);
-  }, [isComplete, isPaused, stats.startTime, isGameOver, monsterStarted]);
-
-  // Start monster chase after player has typed a few words
-  useEffect(() => {
-    // Start the monster after 3 words typed, position it 2 words behind
-    if (!monsterStarted && stats.wordsTyped >= 3 && stats.startTime) {
-      // Calculate chars per second from the first 3 words typed
-      const elapsedMs = Date.now() - stats.startTime;
-      const elapsedSec = elapsedMs / 1000;
-      // Use actual keystrokes for the first 3 words
-      const charsTyped = stats.correctKeystrokes;
-      const playerCharsPerSec = elapsedSec > 0 ? Math.max(charsTyped / elapsedSec, 2) : 2;
       setMonsterSpeed(playerCharsPerSec);
 
-      // Position monster 3 words behind (roughly 18 characters)
+      // Start the countdown!
+      setMonsterCountdown(3);
+    }
+  }, [stats.wordsTyped, stats.startTime, monsterStarted, monsterCountdown, monsterMode]);
+
+  // Handle monster countdown timer
+  useEffect(() => {
+    if (monsterCountdown === null || monsterCountdown < 0) return;
+
+    if (monsterCountdown === 0) {
+      // Countdown finished, start the monster!
       const startPosition = Math.max(0, absolutePosition - 18);
       setMonsterPosition(startPosition);
       setMonsterStarted(true);
+      setMonsterCountdown(null);
+      monsterStartTimeRef.current = Date.now(); // Record when chase started
       // Start the chase music!
       if (musicEnabled) playBackgroundMusic();
+      return;
     }
-  }, [stats.wordsTyped, stats.startTime, monsterStarted, calculateWPM, absolutePosition, musicEnabled]);
+
+    // Tick down every second
+    const timer = setTimeout(() => {
+      setMonsterCountdown(monsterCountdown - 1);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [monsterCountdown, absolutePosition, musicEnabled]);
 
   // Handle music based on game state
   useEffect(() => {
@@ -452,36 +503,33 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         }
         return newPos;
       });
-
-      // Monster speed: adapts to player's recent typing speed
-      const recentSpeed = calculateRecentSpeed(); // chars/sec from last 3 seconds
-      const avgSpeed = Math.max(calculateWPM() / 12, 2); // overall avg as fallback
-
-      setMonsterSpeed((prev: number) => {
-        // Use recent speed if available, otherwise use average
-        const playerSpeed = recentSpeed > 0 ? recentSpeed : avgSpeed;
-
-        // Monster tries to be 5% faster than player's recent speed
-        const targetSpeed = playerSpeed * 1.05;
-
-        // Smoothly approach target speed (easing)
-        const easedSpeed = prev + (targetSpeed - prev) * 0.02;
-
-        // Also add a tiny constant increase to prevent stalling
-        const increased = easedSpeed + 0.001;
-
-        // Clamp between minimum (2 c/s) and maximum (25 c/s)
-        return Math.min(Math.max(increased, 2), 25);
-      });
     }, 50);
+
+    // Update monster speed every second based on last minute average + progressive bonus
+    const speedUpdateInterval = setInterval(() => {
+      const lastMinuteSpeed = calculateLastMinuteSpeed(); // chars/sec from last 60 seconds
+
+      if (lastMinuteSpeed > 0 && monsterStartTimeRef.current) {
+        // Calculate progressive speed bonus: +1 cpm every 10 seconds
+        const elapsedSeconds = (Date.now() - monsterStartTimeRef.current) / 1000;
+        const bonusCpm = Math.floor(elapsedSeconds / 10); // +1 cpm every 10 seconds
+        const bonusCps = bonusCpm / 60; // Convert cpm to chars/sec
+
+        // Monster speed = player's last minute average + progressive bonus
+        const newSpeed = lastMinuteSpeed + bonusCps;
+        // Clamp between minimum (2 c/s) and maximum (25 c/s)
+        setMonsterSpeed(Math.min(Math.max(newSpeed, 2), 25));
+      }
+    }, 1000);
 
     return () => {
       if (monsterIntervalRef.current) {
         clearInterval(monsterIntervalRef.current);
         monsterIntervalRef.current = null;
       }
+      clearInterval(speedUpdateInterval);
     };
-  }, [monsterStarted, isComplete, isGameOver, isPaused, absolutePosition, monsterSpeed, calculateWPM]);
+  }, [monsterStarted, isComplete, isGameOver, isPaused, absolutePosition, monsterSpeed, calculateLastMinuteSpeed]);
 
   // WPM sampling
   useEffect(() => {
@@ -547,7 +595,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
 
   // Auto-save
   useEffect(() => {
-    if (isComplete || !stats.startTime) return;
+    if (isComplete || !stats.startTime || !autosaveEnabled) return;
 
     const autoSave = setInterval(() => {
       const sessionTime = stats.startTime ? Date.now() - stats.startTime : 0;
@@ -592,6 +640,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     highlights,
     getActiveTime,
     savedData?.createdAt,
+    autosaveEnabled,
   ]);
 
   const resumeFromPause = useCallback(() => {
@@ -789,17 +838,18 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         const lastChar = currentWord[currentWord.length - 1];
         const hasPunctuation = /[.,!?;:]/.test(lastChar);
 
-        // Count mistakes in the word
+        // Strip punctuation for length/mistake comparison if forgiveNonAlpha is on
+        const strippedTyped = forgiveNonAlpha ? typedWord.replace(/[^a-zA-Z\u0590-\u05FF]/g, "") : typedWord;
+        const strippedTarget = forgiveNonAlpha ? currentWord.replace(/[^a-zA-Z\u0590-\u05FF]/g, "") : currentWord;
+
+        // Count mistakes in the word (comparing letter by letter)
         let mistakeCount = 0;
-        const minLen = Math.min(typedWord.length, currentWord.length);
+        const minLen = Math.min(strippedTyped.length, strippedTarget.length);
         for (let i = 0; i < minLen; i++) {
-          const inputChar = typedWord[i];
-          const expectedChar = currentWord[i];
-          const isNonAlpha = /[^a-zA-Z\u0590-\u05FF]/.test(expectedChar);
+          const inputChar = strippedTyped[i];
+          const expectedChar = strippedTarget[i];
           let charCorrect: boolean;
-          if (forgivingMode && isNonAlpha) {
-            charCorrect = true;
-          } else if (forgivingMode) {
+          if (forgiveCapitals) {
             charCorrect = inputChar.toLowerCase() === expectedChar.toLowerCase();
           } else {
             charCorrect = inputChar === expectedChar;
@@ -807,13 +857,13 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           if (!charCorrect) mistakeCount++;
         }
         // Extra or missing characters count as mistakes
-        mistakeCount += Math.abs(typedWord.length - currentWord.length);
+        mistakeCount += Math.abs(strippedTyped.length - strippedTarget.length);
 
-        // Word must be fully typed (same length as target) to be completed
-        const isFullyTyped = typedWord.length === currentWord.length;
+        // Word must be fully typed
+        const isFullyTyped = strippedTyped.length === strippedTarget.length;
 
-        // Block completion if: not fully typed, or more than 3 mistakes, or (mistakes not allowed and has any mistakes)
-        if (!isFullyTyped || mistakeCount > 3 || (!allowMistakes && !isCorrect)) {
+        // Block completion if: not fully typed, or more than 3 mistakes, or not correct
+        if (!isFullyTyped || mistakeCount > 3 || !isCorrect) {
           if (soundEffects) playErrorSound();
           setShake(true);
           setTimeout(() => setShake(false), 300);
@@ -866,7 +916,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           const streakMultiplier = Math.min(1 + Math.floor(newStreak / 5) * 0.1, 2); // Up to 2x at 50+ streak
           setGameScore((prev: number) => prev + Math.round(currentWord.length * streakMultiplier) + bonus);
         } else {
-          // Word has mistakes but allowMistakes is true
+          // Word has mistakes
           setCurrentStreak(0);
           // Lose 1 point per mistake
           setGameScore((prev: number) => Math.max(0, prev - mistakeCount));
@@ -899,17 +949,22 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           const expectedChar = currentWord[newCharIndex];
           const isNonAlpha = /[^a-zA-Z\u0590-\u05FF]/.test(expectedChar);
           let isCorrect: boolean;
-          if (forgivingMode && isNonAlpha) {
-            // In forgiving mode, skip non-alpha check - always correct
+          if (forgiveNonAlpha && isNonAlpha) {
+            // Skip non-alpha characters - always correct
             isCorrect = true;
-          } else if (forgivingMode) {
+          } else if (forgiveCapitals) {
             isCorrect = newChar.toLowerCase() === expectedChar.toLowerCase();
           } else {
             isCorrect = newChar === expectedChar;
           }
 
           // Record keystroke for rolling speed calculation
-          recentKeystrokesRef.current.push(Date.now());
+          const now = Date.now();
+          recentKeystrokesRef.current.push(now);
+          // Also track all keystrokes for initial monster speed calculation
+          if (!monsterStarted) {
+            allKeystrokesRef.current.push(now);
+          }
 
           if (soundEffects) {
             if (isCorrect) {
@@ -927,7 +982,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         setCurrentInput(value);
       }
     },
-    [currentWord, currentWordIndex, words.length, stats.startTime, compareStrings, forgivingMode, soundEffects, getActiveTime, isPaused, resumeFromPause, allowMistakes, currentStreak]
+    [currentWord, currentWordIndex, words.length, stats.startTime, compareStrings, forgiveCapitals, forgiveNonAlpha, soundEffects, getActiveTime, isPaused, resumeFromPause, currentStreak]
   );
 
   // Sliding text bar renderer
@@ -984,7 +1039,8 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
 
           <div className="flex justify-center items-center">
             <div
-              className="font-mono text-2xl sm:text-4xl tracking-wide whitespace-pre"
+              className="text-2xl sm:text-4xl tracking-wide whitespace-pre"
+              style={{ fontFamily: 'var(--font-cousine), var(--font-geist-mono), monospace' }}
             >
               {visibleText.split("").map((char: string, i: number) => {
                 // Account for leading padding when calculating global position
@@ -1034,9 +1090,9 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                   const targetChar = currentWord[charIndexInWord] || "";
                   const isNonAlpha = /[^a-zA-Z\u0590-\u05FF]/.test(targetChar);
 
-                  if (forgivingMode && isNonAlpha) {
+                  if (forgiveNonAlpha && isNonAlpha) {
                     isCorrect = true;
-                  } else if (forgivingMode) {
+                  } else if (forgiveCapitals) {
                     isCorrect = inputChar.toLowerCase() === targetChar.toLowerCase();
                   } else {
                     isCorrect = inputChar === targetChar;
@@ -1107,7 +1163,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
               return (
                 <div key={finger} className="relative flex flex-col items-center">
                   {isActive && fingerHint.direction !== '●' && (
-                    <div className="absolute -top-6 text-blue-500 text-lg">
+                    <div className="absolute -top-6 text-[var(--foreground)] text-lg">
                       {fingerHint.direction.includes('↑') && fingerHint.direction.includes('←') ? '↖' :
                        fingerHint.direction.includes('↑') && fingerHint.direction.includes('→') ? '↗' :
                        fingerHint.direction.includes('↓') && fingerHint.direction.includes('←') ? '↙' :
@@ -1121,7 +1177,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                   <div
                     className={`rounded-t-full transition-all ${
                       isActive
-                        ? 'bg-blue-500 shadow-lg shadow-blue-500/30'
+                        ? 'bg-[var(--foreground)] shadow-lg shadow-[var(--foreground)]/30'
                         : 'bg-[var(--foreground)]/15'
                     }`}
                     style={{ width: 16, height: heights[i] }}
@@ -1160,7 +1216,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
               return (
                 <div key={finger} className="relative flex flex-col items-center">
                   {isActive && fingerHint.direction !== '●' && (
-                    <div className="absolute -top-6 text-green-500 text-lg">
+                    <div className="absolute -top-6 text-[var(--foreground)] text-lg">
                       {fingerHint.direction.includes('↑') && fingerHint.direction.includes('←') ? '↖' :
                        fingerHint.direction.includes('↑') && fingerHint.direction.includes('→') ? '↗' :
                        fingerHint.direction.includes('↓') && fingerHint.direction.includes('←') ? '↙' :
@@ -1174,7 +1230,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                   <div
                     className={`rounded-t-full transition-all ${
                       isActive
-                        ? 'bg-green-500 shadow-lg shadow-green-500/30'
+                        ? 'bg-[var(--foreground)]/70 shadow-lg shadow-[var(--foreground)]/20'
                         : 'bg-[var(--foreground)]/15'
                     }`}
                     style={{ width: 16, height: heights[i] }}
@@ -1300,58 +1356,106 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                 {showSettings && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setShowSettings(false)} />
-                    <div className={`absolute top-full mt-2 w-56 bg-[var(--background)] border border-[var(--foreground)]/10 rounded-xl shadow-xl z-50 py-2 ${isRTL ? 'left-0' : 'right-0'}`} dir="ltr">
+                    <div className={`absolute top-full mt-2 w-72 bg-[var(--background)] border border-[var(--foreground)]/10 rounded-xl shadow-xl z-50 py-2 ${isRTL ? 'left-0' : 'right-0'}`} dir="ltr">
                       <div className="px-3 py-2 border-b border-[var(--foreground)]/5">
                         <span className="text-xs font-medium text-[var(--muted)]">Settings</span>
                       </div>
-                      {/* Forgiving mode */}
+                      {/* Monster Mode */}
                       <button
-                        onClick={() => setForgivingMode(!forgivingMode)}
-                        className="w-full px-3 py-2 flex items-center justify-between hover:bg-[var(--foreground)]/5 transition-colors"
+                        onClick={() => setMonsterMode(!monsterMode)}
+                        className="w-full px-3 py-2 flex items-center justify-between hover:bg-[var(--foreground)]/5 transition-colors group"
+                        title="Enable the chase game with the monster"
                       >
-                        <span className="text-sm">Forgiving mode</span>
-                        <span className={`text-xs px-2 py-0.5 rounded ${forgivingMode ? 'bg-green-500/20 text-green-600' : 'bg-[var(--foreground)]/10 text-[var(--muted)]'}`}>
-                          {forgivingMode ? 'ON' : 'OFF'}
+                        <div className="flex flex-col items-start">
+                          <span className="text-sm">👾 Monster Mode</span>
+                          <span className="text-[10px] text-[var(--muted)] opacity-0 group-hover:opacity-100 transition-opacity">Chase game with the monster</span>
+                        </div>
+                        <span className={`text-xs px-2 py-0.5 rounded ${monsterMode ? 'bg-green-500/20 text-green-600' : 'bg-[var(--foreground)]/10 text-[var(--muted)]'}`}>
+                          {monsterMode ? 'ON' : 'OFF'}
                         </span>
                       </button>
-                      {/* Allow mistakes */}
+                      {/* Forgive Capitals */}
                       <button
-                        onClick={() => setAllowMistakes(!allowMistakes)}
-                        className="w-full px-3 py-2 flex items-center justify-between hover:bg-[var(--foreground)]/5 transition-colors"
+                        onClick={() => setForgiveCapitals(!forgiveCapitals)}
+                        className="w-full px-3 py-2 flex items-center justify-between hover:bg-[var(--foreground)]/5 transition-colors group"
+                        title="Ignore uppercase/lowercase differences"
                       >
-                        <span className="text-sm">Allow mistakes</span>
-                        <span className={`text-xs px-2 py-0.5 rounded ${allowMistakes ? 'bg-green-500/20 text-green-600' : 'bg-[var(--foreground)]/10 text-[var(--muted)]'}`}>
-                          {allowMistakes ? 'ON' : 'OFF'}
+                        <div className="flex flex-col items-start">
+                          <span className="text-sm">Forgive Capitals</span>
+                          <span className="text-[10px] text-[var(--muted)] opacity-0 group-hover:opacity-100 transition-opacity">Aa = aa (case insensitive)</span>
+                        </div>
+                        <span className={`text-xs px-2 py-0.5 rounded ${forgiveCapitals ? 'bg-green-500/20 text-green-600' : 'bg-[var(--foreground)]/10 text-[var(--muted)]'}`}>
+                          {forgiveCapitals ? 'ON' : 'OFF'}
                         </span>
                       </button>
-                      {/* Sound Effects */}
+                      {/* Forgive Non-Alpha */}
                       <button
-                        onClick={() => setSoundEffects(!soundEffects)}
-                        className="w-full px-3 py-2 flex items-center justify-between hover:bg-[var(--foreground)]/5 transition-colors"
+                        onClick={() => setForgiveNonAlpha(!forgiveNonAlpha)}
+                        className="w-full px-3 py-2 flex items-center justify-between hover:bg-[var(--foreground)]/5 transition-colors group"
+                        title="Skip punctuation and special characters"
                       >
-                        <span className="text-sm">Sound effects</span>
-                        <span className={`text-xs px-2 py-0.5 rounded ${soundEffects ? 'bg-green-500/20 text-green-600' : 'bg-[var(--foreground)]/10 text-[var(--muted)]'}`}>
-                          {soundEffects ? 'ON' : 'OFF'}
+                        <div className="flex flex-col items-start">
+                          <span className="text-sm">Forgive Punctuation</span>
+                          <span className="text-[10px] text-[var(--muted)] opacity-0 group-hover:opacity-100 transition-opacity">Skip commas, periods, etc.</span>
+                        </div>
+                        <span className={`text-xs px-2 py-0.5 rounded ${forgiveNonAlpha ? 'bg-green-500/20 text-green-600' : 'bg-[var(--foreground)]/10 text-[var(--muted)]'}`}>
+                          {forgiveNonAlpha ? 'ON' : 'OFF'}
                         </span>
                       </button>
                       {/* Music */}
                       <button
                         onClick={() => setMusicEnabled(!musicEnabled)}
-                        className="w-full px-3 py-2 flex items-center justify-between hover:bg-[var(--foreground)]/5 transition-colors"
+                        className="w-full px-3 py-2 flex items-center justify-between hover:bg-[var(--foreground)]/5 transition-colors group"
+                        title="Background music during chase"
                       >
-                        <span className="text-sm">Music</span>
+                        <div className="flex flex-col items-start">
+                          <span className="text-sm">🎵 Music</span>
+                          <span className="text-[10px] text-[var(--muted)] opacity-0 group-hover:opacity-100 transition-opacity">Background chase music</span>
+                        </div>
                         <span className={`text-xs px-2 py-0.5 rounded ${musicEnabled ? 'bg-green-500/20 text-green-600' : 'bg-[var(--foreground)]/10 text-[var(--muted)]'}`}>
                           {musicEnabled ? 'ON' : 'OFF'}
                         </span>
                       </button>
+                      {/* Sound Effects */}
+                      <button
+                        onClick={() => setSoundEffects(!soundEffects)}
+                        className="w-full px-3 py-2 flex items-center justify-between hover:bg-[var(--foreground)]/5 transition-colors group"
+                        title="Typing sounds for correct/incorrect keys"
+                      >
+                        <div className="flex flex-col items-start">
+                          <span className="text-sm">🔊 Sound Effects</span>
+                          <span className="text-[10px] text-[var(--muted)] opacity-0 group-hover:opacity-100 transition-opacity">Typing feedback sounds</span>
+                        </div>
+                        <span className={`text-xs px-2 py-0.5 rounded ${soundEffects ? 'bg-green-500/20 text-green-600' : 'bg-[var(--foreground)]/10 text-[var(--muted)]'}`}>
+                          {soundEffects ? 'ON' : 'OFF'}
+                        </span>
+                      </button>
                       {/* Finger hints */}
                       <button
-                        onClick={() => setFingerHintPosition(p => p === 'off' ? 'bottom' : p === 'bottom' ? 'top' : 'off')}
-                        className="w-full px-3 py-2 flex items-center justify-between hover:bg-[var(--foreground)]/5 transition-colors"
+                        onClick={() => setFingerHintPosition(p => p === 'off' ? 'top' : p === 'top' ? 'bottom' : 'off')}
+                        className="w-full px-3 py-2 flex items-center justify-between hover:bg-[var(--foreground)]/5 transition-colors group"
+                        title="Show which finger to use for each key"
                       >
-                        <span className="text-sm">Finger hints</span>
+                        <div className="flex flex-col items-start">
+                          <span className="text-sm">👆 Finger Tips</span>
+                          <span className="text-[10px] text-[var(--muted)] opacity-0 group-hover:opacity-100 transition-opacity">Shows correct finger for each key</span>
+                        </div>
                         <span className={`text-xs px-2 py-0.5 rounded ${fingerHintPosition !== 'off' ? 'bg-green-500/20 text-green-600' : 'bg-[var(--foreground)]/10 text-[var(--muted)]'}`}>
                           {fingerHintPosition === 'off' ? 'OFF' : fingerHintPosition.toUpperCase()}
+                        </span>
+                      </button>
+                      {/* Autosave */}
+                      <button
+                        onClick={() => setAutosaveEnabled(!autosaveEnabled)}
+                        className="w-full px-3 py-2 flex items-center justify-between hover:bg-[var(--foreground)]/5 transition-colors group"
+                        title="Automatically save progress"
+                      >
+                        <div className="flex flex-col items-start">
+                          <span className="text-sm">💾 Autosave</span>
+                          <span className="text-[10px] text-[var(--muted)] opacity-0 group-hover:opacity-100 transition-opacity">Save progress automatically</span>
+                        </div>
+                        <span className={`text-xs px-2 py-0.5 rounded ${autosaveEnabled ? 'bg-green-500/20 text-green-600' : 'bg-[var(--foreground)]/10 text-[var(--muted)]'}`}>
+                          {autosaveEnabled ? 'ON' : 'OFF'}
                         </span>
                       </button>
                     </div>
@@ -1380,17 +1484,24 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                 )}
                 {/* Speed comparison display */}
                 {monsterStarted && (() => {
-                  const recentSpeed = calculateRecentSpeed();
-                  const playerCpm = recentSpeed > 0 ? Math.round(recentSpeed * 60) : calculateWPM() * 5;
+                  const lastMinuteSpeed = calculateLastMinuteSpeed();
+                  const playerCpm = lastMinuteSpeed > 0 ? Math.round(lastMinuteSpeed * 60) : calculateWPM() * 5;
                   const monsterCpm = Math.round(monsterSpeed * 60);
                   const isAhead = playerCpm > monsterCpm;
+                  // Calculate the bonus cpm the monster has
+                  const bonusCpm = monsterStartTimeRef.current
+                    ? Math.floor((Date.now() - monsterStartTimeRef.current) / 10000)
+                    : 0;
                   return (
-                    <div className="flex items-center gap-1 px-2 py-1 bg-purple-500/10 rounded-lg">
+                    <div className="flex items-center gap-1 px-2 py-1 bg-[var(--foreground)]/5 rounded-lg">
                       <span className={`text-xs sm:text-sm font-bold tabular-nums ${isAhead ? 'text-green-500' : 'text-red-500'}`}>
                         {playerCpm}
                       </span>
                       <span className="text-xs text-[var(--muted)]">vs</span>
                       <span className="text-xs sm:text-sm font-bold text-purple-500 tabular-nums">{monsterCpm}</span>
+                      {bonusCpm > 0 && (
+                        <span className="text-[10px] text-purple-400">+{bonusCpm}</span>
+                      )}
                       <span className="text-sm">👾</span>
                       <span className="text-xs text-[var(--muted)] hidden sm:inline">c/m</span>
                     </div>
@@ -1489,9 +1600,9 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                       // Check if correct
                       const isNonAlpha = /[^a-zA-Z\u0590-\u05FF]/.test(char);
                       let charCorrect: boolean;
-                      if (forgivingMode && isNonAlpha) {
+                      if (forgiveNonAlpha && isNonAlpha) {
                         charCorrect = true;
-                      } else if (forgivingMode) {
+                      } else if (forgiveCapitals) {
                         charCorrect = inputChar.toLowerCase() === char.toLowerCase();
                       } else {
                         charCorrect = inputChar === char;
@@ -1520,7 +1631,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                 className += " underline decoration-2 decoration-yellow-400/60 underline-offset-2";
               }
               if (isSelected) {
-                className += " bg-blue-200/50 dark:bg-blue-500/30";
+                className += " bg-[var(--foreground)]/10";
               }
 
               return (
@@ -1684,6 +1795,28 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         {fingerHintPosition === 'bottom' && renderFingerHint()}
       </main>
 
+      {/* Monster countdown overlay */}
+      {monsterCountdown !== null && monsterCountdown > 0 && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center pointer-events-none">
+          <div className="relative">
+            <div
+              className="text-8xl sm:text-9xl font-bold text-purple-500 animate-pulse"
+              style={{
+                textShadow: '0 0 40px rgba(168, 85, 247, 0.5), 0 0 80px rgba(168, 85, 247, 0.3)',
+                animation: 'countdownPulse 1s ease-in-out'
+              }}
+              key={monsterCountdown}
+            >
+              {monsterCountdown}
+            </div>
+            <div className="text-center mt-4">
+              <span className="text-2xl sm:text-3xl">👾</span>
+              <span className="text-sm sm:text-base text-purple-400 ml-2">is coming...</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Game Over overlay */}
       {isGameOver && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
@@ -1723,6 +1856,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                   setMonsterPosition(-1);
                   setMonsterSpeed(2);
                   setMonsterStarted(false);
+                  setMonsterCountdown(null);
                   setGameScore(0);
                   setCurrentStreak(0);
                   setBestStreak(0);
@@ -1731,6 +1865,10 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                   setCurrentInput("");
                   setTypedWords(new Map());
                   setStats((s: Stats) => ({ ...s, startTime: null, endTime: null, wordsTyped: 0, correctKeystrokes: 0, totalKeystrokes: 0 }));
+                  // Reset keystroke tracking and monster start time
+                  recentKeystrokesRef.current = [];
+                  allKeystrokesRef.current = [];
+                  monsterStartTimeRef.current = null;
                 }}
                 className="px-6 py-3 bg-[var(--foreground)] text-[var(--background)] rounded-xl font-medium hover:opacity-90 transition-opacity"
               >
@@ -1779,6 +1917,20 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           100% {
             opacity: 0;
             transform: translateX(-50%) translateY(-30px);
+          }
+        }
+        @keyframes countdownPulse {
+          0% {
+            transform: scale(1.5);
+            opacity: 0;
+          }
+          30% {
+            transform: scale(1);
+            opacity: 1;
+          }
+          100% {
+            transform: scale(0.9);
+            opacity: 0.7;
           }
         }
       `}</style>
