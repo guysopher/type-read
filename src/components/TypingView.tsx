@@ -84,6 +84,13 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   // Auto-pause and detailed stats
   const [isPaused, setIsPaused] = useState(false);
   const [showStats, setShowStats] = useState(false);
+
+  // Chase game mode state
+  const [monsterPosition, setMonsterPosition] = useState(0);
+  const [gameScore, setGameScore] = useState(0);
+  const [isGameOver, setIsGameOver] = useState(false);
+  const [monsterSpeed, setMonsterSpeed] = useState(0.5); // characters per second
+  const monsterIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [detailedStats, setDetailedStats] = useState<DetailedStats>(
     savedData?.detailedStats || createEmptyDetailedStats()
   );
@@ -315,21 +322,56 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     localStorage.setItem('typeread_finger_hint_position', fingerHintPosition);
   }, [fingerHintPosition]);
 
-  // Auto-pause detection
+  // Auto-pause detection (disabled in chase mode - monster doesn't pause!)
   useEffect(() => {
-    if (isComplete || isPaused || !stats.startTime) return;
+    if (isComplete || isPaused || !stats.startTime || isGameOver) return;
 
     const checkActivity = setInterval(() => {
       const timeSinceActivity = Date.now() - lastActivityRef.current;
       if (timeSinceActivity >= AUTO_PAUSE_DELAY) {
-        // Auto-pause
+        // Auto-pause - but NOT in chase mode, the monster keeps coming!
         setIsPaused(true);
         pauseStartRef.current = Date.now();
       }
     }, 1000);
 
     return () => clearInterval(checkActivity);
-  }, [isComplete, isPaused, stats.startTime]);
+  }, [isComplete, isPaused, stats.startTime, isGameOver]);
+
+  // Monster chase game loop
+  useEffect(() => {
+    if (!stats.startTime || isComplete || isGameOver || isPaused) {
+      if (monsterIntervalRef.current) {
+        clearInterval(monsterIntervalRef.current);
+        monsterIntervalRef.current = null;
+      }
+      return;
+    }
+
+    // Monster moves every 50ms for smooth animation
+    monsterIntervalRef.current = setInterval(() => {
+      setMonsterPosition(prev => {
+        const newPos = prev + (monsterSpeed / 20); // 20 updates per second
+
+        // Check if monster caught the player
+        if (newPos >= absolutePosition) {
+          setIsGameOver(true);
+          return prev;
+        }
+        return newPos;
+      });
+
+      // Slowly increase monster speed over time
+      setMonsterSpeed(prev => Math.min(prev + 0.001, 5)); // Cap at 5 chars/sec
+    }, 50);
+
+    return () => {
+      if (monsterIntervalRef.current) {
+        clearInterval(monsterIntervalRef.current);
+        monsterIntervalRef.current = null;
+      }
+    };
+  }, [stats.startTime, isComplete, isGameOver, isPaused, absolutePosition, monsterSpeed]);
 
   // WPM sampling
   useEffect(() => {
@@ -657,6 +699,9 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           }
         }
 
+        // Update game score: correct word = +word.length points, incorrect = -1
+        setGameScore(prev => isCorrect ? prev + currentWord.length : prev - 1);
+
         // Update stats
         setStats((s) => ({
           ...s,
@@ -743,12 +788,29 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
               {visibleText.split("").map((char, i) => {
                 const globalPos = startPos + i;
                 const wordStartPos = absolutePosition - cursorInWord;
+                const monsterAtThisPos = Math.floor(monsterPosition) === globalPos;
 
                 let className = "inline-block transition-all duration-75 ";
-                let displayChar = char;
+                let displayChar: string | React.ReactNode = char;
                 let isCorrect = true;
 
-                if (globalPos < wordStartPos) {
+                // Monster overwrites the character at its position
+                if (monsterAtThisPos) {
+                  return (
+                    <span
+                      key={`${globalPos}-monster`}
+                      className="inline-block text-2xl sm:text-4xl animate-pulse"
+                      style={{ filter: 'drop-shadow(0 0 8px #ef4444)' }}
+                    >
+                      👾
+                    </span>
+                  );
+                }
+
+                // Characters eaten by monster are dark/destroyed
+                if (globalPos < monsterPosition) {
+                  className += "text-[var(--foreground)]/10";
+                } else if (globalPos < wordStartPos) {
                   className += "text-[var(--muted)]/40";
                 } else if (globalPos < absolutePosition) {
                   const charIndexInWord = globalPos - wordStartPos;
@@ -1051,6 +1113,9 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                   "💾"
                 )}
               </button>
+              <div className="text-xs sm:text-sm font-medium text-yellow-500 ml-1 sm:ml-2">
+                🏆 {gameScore}
+              </div>
               <div className="text-xs sm:text-sm font-medium text-[var(--muted)] ml-1 sm:ml-2">
                 {calculateWPM()} <span className="text-xs hidden sm:inline">WPM</span>
               </div>
@@ -1337,6 +1402,61 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         {/* Finger hint - bottom position */}
         {fingerHintPosition === 'bottom' && renderFingerHint()}
       </main>
+
+      {/* Game Over overlay */}
+      {isGameOver && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="text-center p-8 max-w-md">
+            <div className="text-6xl mb-4 animate-bounce">👾</div>
+            <h2 className="text-4xl font-bold text-red-500 mb-2">GAME OVER</h2>
+            <p className="text-[var(--muted)] mb-6">The monster caught you!</p>
+
+            <div className="bg-[var(--foreground)]/10 rounded-xl p-6 mb-6">
+              <div className="text-5xl font-bold text-yellow-500 mb-2">🏆 {gameScore}</div>
+              <div className="text-sm text-[var(--muted)]">Final Score</div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4 mb-8 text-sm">
+              <div>
+                <div className="text-2xl font-bold">{stats.wordsTyped}</div>
+                <div className="text-[var(--muted)]">Words</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold">{calculateWPM()}</div>
+                <div className="text-[var(--muted)]">WPM</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold">{calculateAccuracy()}%</div>
+                <div className="text-[var(--muted)]">Accuracy</div>
+              </div>
+            </div>
+
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={() => {
+                  setIsGameOver(false);
+                  setMonsterPosition(0);
+                  setMonsterSpeed(0.5);
+                  setGameScore(0);
+                  setCurrentWordIndex(0);
+                  setCurrentInput("");
+                  setTypedWords(new Map());
+                  setStats(s => ({ ...s, startTime: null, endTime: null, wordsTyped: 0, correctKeystrokes: 0, totalKeystrokes: 0 }));
+                }}
+                className="px-6 py-3 bg-[var(--foreground)] text-[var(--background)] rounded-xl font-medium hover:opacity-90 transition-opacity"
+              >
+                Play Again
+              </button>
+              <button
+                onClick={onReset}
+                className="px-6 py-3 border border-[var(--foreground)]/20 rounded-xl font-medium hover:bg-[var(--foreground)]/5 transition-colors"
+              >
+                New Text
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stats modal */}
       {showStats && (
