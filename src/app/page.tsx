@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import TypingView from "@/components/TypingView";
 import { SavedText, getSavedTexts, deleteText } from "@/lib/storage";
+import { ENGLISH_STORIES, HEBREW_STORIES, Story } from "@/lib/stories";
 
 const TUTORIAL_TEXT = `Welcome to TypeRead, the app that transforms reading into an active adventure. Instead of passively scrolling through articles, you will type every single word, engaging both your mind and your fingers in a dance of comprehension and muscle memory.
 
@@ -10,29 +11,13 @@ Here is how it works. You paste a URL or some text, and then you start typing. E
 
 The finger hints at the bottom of the screen show you which finger should press each key and in which direction to move from the home row. This is perfect for learning touch typing or refining your technique. You can toggle this feature off, move it to the top, or keep it at the bottom.
 
-Forgiving mode is your friend when you are just starting out. It ignores capitalization and punctuation, letting you focus on the flow of typing rather than perfect accuracy. Toggle it off when you are ready for a challenge.
-
-Your progress saves automatically every ten seconds, so you can close the browser and come back later. Pick up right where you left off, whether it is a quick news article or a lengthy essay.
-
-You can also highlight passages and add notes as you read. Click on a word to start selecting, click another to extend, and then write your thoughts. These annotations stay with your saved text, perfect for studying or collecting favorite quotes.
-
-The statistics page shows your words per minute over time, tracks your pauses, and gives you a detailed breakdown of your typing session. Watch yourself improve with every article you complete.
-
-Now stop reading this tutorial and start typing it. Feel the rhythm of the words beneath your fingers. Notice how your brain processes each sentence differently when you have to actively reproduce it. This is TypeRead, where every word counts because you typed it yourself.`;
+Now stop reading this tutorial and start typing it. Feel the rhythm of the words beneath your fingers. This is TypeRead, where every word counts because you typed it yourself.`;
 
 const TUTORIAL_TITLE = "Welcome to TypeRead";
 
 const HEBREW_TUTORIAL_TEXT = `ברוכים הבאים למשחק המרדף של טייפריד. כאן הקריאה הופכת להרפתקה מותחת עם מפלצת שרודפת אחריכם תוך כדי הקלדה.
 
 ככה זה עובד. אתם מתחילים להקליד את הטקסט מילה אחרי מילה. אחרי שלוש מילים המפלצת מתעוררת ומתחילה לרדוף אחריכם. היא נעה במהירות שמתאימה לקצב ההקלדה שלכם ותמיד מנסה להיות קצת יותר מהירה.
-
-בראש המסך תראו שני מספרים. המספר הירוק הוא המהירות שלכם בתווים לדקה. המספר הסגול הוא המהירות של המפלצת. אם המספר שלכם אדום זה אומר שהמפלצת מתקרבת אליכם.
-
-רצף מילים נכונות נותן לכם בונוס נקודות. אחרי חמש מילים רצופות תקבלו עשר נקודות בונוס. אחרי עשר מילים עשרים וחמש נקודות. ככל שהרצף ארוך יותר הבונוס גדול יותר.
-
-אם עשיתם טעות אפשר למחוק עם מקש הבקספייס ולתקן. אבל זכרו שהמפלצת ממשיכה להתקדם גם כשאתם מתקנים טעויות.
-
-בהגדרות אפשר לכבות או להדליק את המוזיקה ואת אפקטי הצליל בנפרד. יש גם מצב סלחני שמתעלם מאותיות גדולות וסימני פיסוק.
 
 עכשיו תפסיקו לקרוא ותתחילו להקליד. המפלצת כבר מחכה לכם. בהצלחה.`;
 
@@ -41,36 +26,22 @@ const HEBREW_TUTORIAL_TITLE = "מדריך משחק המרדף";
 // Clean text for easier typing - remove markdown, lists, etc.
 function cleanTextForTyping(text: string): string {
   return text
-    // Remove markdown headers (# ## ### etc.)
     .replace(/^#{1,6}\s+/gm, '')
-    // Remove markdown bold/italic (**text**, *text*, __text__, _text_)
     .replace(/(\*\*|__)(.*?)\1/g, '$2')
     .replace(/(\*|_)(.*?)\1/g, '$2')
-    // Remove markdown links [text](url) -> text
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    // Remove markdown images ![alt](url)
     .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
-    // Remove inline code `code`
     .replace(/`([^`]+)`/g, '$1')
-    // Remove code blocks ```code```
     .replace(/```[\s\S]*?```/g, '')
-    // Remove bullet points (-, *, •) at start of lines
     .replace(/^[\s]*[-*•]\s+/gm, '')
-    // Remove numbered lists (1. 2. 3. etc.) at start of lines
     .replace(/^[\s]*\d+\.\s+/gm, '')
-    // Remove blockquotes >
     .replace(/^>\s*/gm, '')
-    // Remove horizontal rules (---, ***, ___)
     .replace(/^[-*_]{3,}\s*$/gm, '')
-    // Remove HTML tags
     .replace(/<[^>]+>/g, '')
-    // Normalize multiple newlines to double newline (paragraph break)
     .replace(/\n{3,}/g, '\n\n')
-    // Trim each line
     .split('\n')
     .map(line => line.trim())
     .join('\n')
-    // Remove empty lines at start/end
     .trim();
 }
 
@@ -84,6 +55,8 @@ export default function Home() {
   const [savedTexts, setSavedTexts] = useState<SavedText[]>([]);
   const [activeSaved, setActiveSaved] = useState<SavedText | null>(null);
   const [customTitle, setCustomTitle] = useState("");
+  const [showStories, setShowStories] = useState(false);
+  const [storyLanguage, setStoryLanguage] = useState<'en' | 'he'>('en');
 
   useEffect(() => {
     setSavedTexts(getSavedTexts());
@@ -170,6 +143,13 @@ export default function Home() {
     setActiveSaved(null);
   };
 
+  const handleStartStory = (story: Story) => {
+    setText(story.text);
+    setTitle(story.title);
+    setActiveSaved(null);
+    setShowStories(false);
+  };
+
   const handleDelete = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     deleteText(id);
@@ -181,7 +161,7 @@ export default function Home() {
     const percent = Math.round(
       (saved.progress.currentWordIndex / words.length) * 100
     );
-    return `${percent}%`;
+    return percent;
   };
 
   const formatTime = (ms: number) => {
@@ -190,6 +170,8 @@ export default function Home() {
     const minutes = Math.floor(seconds / 60);
     return `${minutes}m ${seconds % 60}s`;
   };
+
+  const lastPlayed = savedTexts.length > 0 ? savedTexts[0] : null;
 
   if (text) {
     return (
@@ -202,201 +184,293 @@ export default function Home() {
     );
   }
 
+  const stories = storyLanguage === 'en' ? ENGLISH_STORIES : HEBREW_STORIES;
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8">
-      <div className="w-full max-w-xl">
-        <header className="text-center mb-8 sm:mb-12">
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2 sm:mb-3">TypeRead</h1>
-          <p className="text-[var(--muted)] text-base sm:text-lg">
-            Read articles by typing them. Word by word.
-          </p>
-        </header>
-
-        <div className="flex gap-1 mb-4 sm:mb-6 p-1 bg-[var(--foreground)]/5 rounded-lg w-fit mx-auto">
-          <button
-            type="button"
-            onClick={() => setInputMode("url")}
-            className={`px-3 sm:px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              inputMode === "url"
-                ? "bg-[var(--foreground)] text-[var(--background)]"
-                : "text-[var(--muted)] hover:text-[var(--foreground)]"
-            }`}
-          >
-            URL
-          </button>
-          <button
-            type="button"
-            onClick={() => setInputMode("text")}
-            className={`px-3 sm:px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              inputMode === "text"
-                ? "bg-[var(--foreground)] text-[var(--background)]"
-                : "text-[var(--muted)] hover:text-[var(--foreground)]"
-            }`}
-          >
-            Text
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
-          {inputMode === "url" ? (
-            <input
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Paste article URL..."
-              className="w-full px-3 sm:px-4 py-3 sm:py-4 text-base sm:text-lg border border-[var(--foreground)]/10 rounded-xl bg-transparent focus:border-[var(--foreground)]/30 transition-colors"
-              disabled={loading}
-              autoFocus
-            />
-          ) : (
-            <div className="space-y-3">
-              <input
-                type="text"
-                value={customTitle}
-                onChange={(e) => setCustomTitle(e.target.value)}
-                placeholder="Title (optional)"
-                className="w-full px-3 sm:px-4 py-2 text-sm border border-[var(--foreground)]/10 rounded-lg bg-transparent focus:border-[var(--foreground)]/30 transition-colors"
-                disabled={loading}
-              />
-              <textarea
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                placeholder="Paste your text here..."
-                rows={6}
-                className="w-full px-3 sm:px-4 py-3 sm:py-4 text-base sm:text-lg border border-[var(--foreground)]/10 rounded-xl bg-transparent focus:border-[var(--foreground)]/30 transition-colors resize-none"
-                disabled={loading}
-                autoFocus
-              />
-            </div>
-          )}
-
-          {error && (
-            <p className="text-[var(--error)] text-sm text-center">{error}</p>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading || !inputValue.trim()}
-            className="w-full py-3 sm:py-4 text-base sm:text-lg font-medium bg-[var(--foreground)] text-[var(--background)] rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                    fill="none"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  />
-                </svg>
-                Extracting...
-              </span>
-            ) : (
-              "Start Typing"
-            )}
-          </button>
-        </form>
-
-        {/* Tutorial / Try it out */}
-        <div className="mt-6 sm:mt-8 text-center">
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-[var(--foreground)]/10"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-[var(--background)] text-[var(--muted)]">or</span>
+    <div className="min-h-screen flex flex-col bg-[#0a0a0a] text-green-400 font-mono">
+      {/* Pixel art header */}
+      <header className="border-b-4 border-green-500 bg-[#111] py-4 px-4">
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-3xl">👾</span>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-wider text-green-400" style={{ textShadow: '2px 2px 0 #065f46' }}>
+                TYPEREAD
+              </h1>
+              <p className="text-xs text-green-600">LEVEL UP YOUR TYPING</p>
             </div>
           </div>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center mt-4 sm:mt-6">
-            <button
-              onClick={handleStartTutorial}
-              className="px-5 sm:px-6 py-2.5 sm:py-3 text-sm font-medium border border-[var(--foreground)]/20 rounded-xl hover:border-[var(--foreground)]/40 hover:bg-[var(--foreground)]/5 transition-all"
-            >
-              Try the tutorial
-            </button>
-            <button
-              onClick={handleStartHebrewTutorial}
-              className="px-5 sm:px-6 py-2.5 sm:py-3 text-sm font-medium border border-[var(--foreground)]/20 rounded-xl hover:border-[var(--foreground)]/40 hover:bg-[var(--foreground)]/5 transition-all"
-              dir="rtl"
-            >
-              מדריך בעברית 👾
-            </button>
+          <div className="text-right text-xs text-green-600">
+            <div>GAMES</div>
+            <div className="text-green-400 text-lg">
+              {savedTexts.length}
+            </div>
           </div>
-          <p className="mt-2 text-xs text-[var(--muted)]">
-            Learn how TypeRead works by typing through a quick introduction
-          </p>
         </div>
+      </header>
 
-        {/* Saved Texts */}
-        {savedTexts.length > 0 && (
-          <div className="mt-8 sm:mt-12">
-            <h2 className="text-sm font-medium text-[var(--muted)] mb-3 sm:mb-4">
-              Continue Reading
-            </h2>
-            <div className="space-y-2">
-              {savedTexts.map((saved) => (
-                <button
-                  key={saved.id}
-                  onClick={() => handleResume(saved)}
-                  className="w-full text-left p-3 sm:p-4 border border-[var(--foreground)]/10 rounded-xl hover:border-[var(--foreground)]/30 transition-colors group"
-                >
-                  <div className="flex items-start justify-between gap-2 sm:gap-4">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium truncate text-sm sm:text-base">{saved.title}</h3>
-                      <div className="flex items-center gap-2 sm:gap-3 mt-1 text-xs sm:text-sm text-[var(--muted)]">
-                        <span>{formatProgress(saved)} complete</span>
-                        <span>·</span>
-                        <span>{formatTime(saved.progress.totalTime)}</span>
+      <main className="flex-1 flex flex-col items-center p-4 sm:p-8">
+        <div className="w-full max-w-2xl">
+
+          {/* Continue Game - Most prominent if there's a saved game */}
+          {lastPlayed && (
+            <div className="mb-8 animate-pulse">
+              <button
+                onClick={() => handleResume(lastPlayed)}
+                className="w-full p-6 bg-green-900/30 border-4 border-green-500 rounded-lg hover:bg-green-900/50 transition-all group"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <span className="text-4xl group-hover:animate-bounce">▶</span>
+                    <div className="text-left">
+                      <div className="text-xs text-green-600 mb-1">CONTINUE GAME</div>
+                      <div className="text-xl text-green-400 truncate max-w-[200px] sm:max-w-[300px]">
+                        {lastPlayed.title || "Untitled"}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-12 sm:w-16 h-1 bg-[var(--foreground)]/10 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-[var(--foreground)] rounded-full"
-                          style={{
-                            width: formatProgress(saved),
-                          }}
-                        />
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl text-yellow-400">{formatProgress(lastPlayed)}%</div>
+                    <div className="text-xs text-green-600">{formatTime(lastPlayed.progress.totalTime)}</div>
+                  </div>
+                </div>
+                {/* Progress bar */}
+                <div className="mt-4 h-3 bg-[#0a0a0a] border-2 border-green-700 rounded">
+                  <div
+                    className="h-full bg-green-500 transition-all"
+                    style={{ width: `${formatProgress(lastPlayed)}%` }}
+                  />
+                </div>
+              </button>
+            </div>
+          )}
+
+          {/* Main Menu Grid */}
+          <div className="grid grid-cols-2 gap-4 mb-8">
+            {/* New Game */}
+            <button
+              onClick={() => setShowStories(true)}
+              className="p-6 bg-[#111] border-4 border-purple-500 rounded-lg hover:bg-purple-900/20 hover:border-purple-400 transition-all group"
+            >
+              <span className="text-3xl block mb-2 group-hover:scale-110 transition-transform">📚</span>
+              <div className="text-purple-400 font-bold">NEW GAME</div>
+              <div className="text-xs text-purple-600">Classic Stories</div>
+            </button>
+
+            {/* Custom Text */}
+            <button
+              onClick={() => {
+                setInputMode("text");
+                const el = document.getElementById("custom-input");
+                if (el) el.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="p-6 bg-[#111] border-4 border-cyan-500 rounded-lg hover:bg-cyan-900/20 hover:border-cyan-400 transition-all group"
+            >
+              <span className="text-3xl block mb-2 group-hover:scale-110 transition-transform">✏️</span>
+              <div className="text-cyan-400 font-bold">CUSTOM</div>
+              <div className="text-xs text-cyan-600">Paste Your Text</div>
+            </button>
+
+            {/* URL Mode */}
+            <button
+              onClick={() => {
+                setInputMode("url");
+                const el = document.getElementById("custom-input");
+                if (el) el.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="p-6 bg-[#111] border-4 border-orange-500 rounded-lg hover:bg-orange-900/20 hover:border-orange-400 transition-all group"
+            >
+              <span className="text-3xl block mb-2 group-hover:scale-110 transition-transform">🔗</span>
+              <div className="text-orange-400 font-bold">URL</div>
+              <div className="text-xs text-orange-600">Import Article</div>
+            </button>
+
+            {/* Tutorial */}
+            <button
+              onClick={handleStartTutorial}
+              className="p-6 bg-[#111] border-4 border-yellow-500 rounded-lg hover:bg-yellow-900/20 hover:border-yellow-400 transition-all group"
+            >
+              <span className="text-3xl block mb-2 group-hover:scale-110 transition-transform">🎮</span>
+              <div className="text-yellow-400 font-bold">TUTORIAL</div>
+              <div className="text-xs text-yellow-600">Learn to Play</div>
+            </button>
+          </div>
+
+          {/* Stories Panel */}
+          {showStories && (
+            <div className="mb-8 bg-[#111] border-4 border-purple-500 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg text-purple-400 font-bold">SELECT STORY</h2>
+                <button
+                  onClick={() => setShowStories(false)}
+                  className="text-purple-600 hover:text-purple-400"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Language Toggle */}
+              <div className="flex gap-2 mb-4">
+                <button
+                  onClick={() => setStoryLanguage('en')}
+                  className={`px-4 py-2 rounded border-2 transition-all ${
+                    storyLanguage === 'en'
+                      ? 'border-purple-400 bg-purple-900/30 text-purple-400'
+                      : 'border-purple-800 text-purple-600 hover:border-purple-600'
+                  }`}
+                >
+                  🇬🇧 English
+                </button>
+                <button
+                  onClick={() => setStoryLanguage('he')}
+                  className={`px-4 py-2 rounded border-2 transition-all ${
+                    storyLanguage === 'he'
+                      ? 'border-purple-400 bg-purple-900/30 text-purple-400'
+                      : 'border-purple-800 text-purple-600 hover:border-purple-600'
+                  }`}
+                >
+                  🇮🇱 עברית
+                </button>
+              </div>
+
+              {/* Story List */}
+              <div className="max-h-64 overflow-y-auto space-y-2">
+                {stories.map((story) => (
+                  <button
+                    key={story.id}
+                    onClick={() => handleStartStory(story)}
+                    className="w-full text-left p-3 bg-[#0a0a0a] border-2 border-purple-800 rounded hover:border-purple-500 hover:bg-purple-900/20 transition-all"
+                    dir={story.language === 'he' ? 'rtl' : 'ltr'}
+                  >
+                    <div className="text-purple-400 font-bold truncate">{story.title}</div>
+                    <div className="text-xs text-purple-600">{story.author}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Custom Input Section */}
+          <div id="custom-input" className="bg-[#111] border-4 border-green-700 rounded-lg p-4 mb-8">
+            <div className="flex gap-2 mb-4">
+              <button
+                onClick={() => setInputMode("url")}
+                className={`px-4 py-2 rounded border-2 transition-all ${
+                  inputMode === "url"
+                    ? 'border-green-400 bg-green-900/30 text-green-400'
+                    : 'border-green-800 text-green-600 hover:border-green-600'
+                }`}
+              >
+                🔗 URL
+              </button>
+              <button
+                onClick={() => setInputMode("text")}
+                className={`px-4 py-2 rounded border-2 transition-all ${
+                  inputMode === "text"
+                    ? 'border-green-400 bg-green-900/30 text-green-400'
+                    : 'border-green-800 text-green-600 hover:border-green-600'
+                }`}
+              >
+                ✏️ TEXT
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {inputMode === "url" ? (
+                <input
+                  type="text"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  placeholder="PASTE URL HERE..."
+                  className="w-full px-4 py-3 bg-[#0a0a0a] border-2 border-green-700 rounded text-green-400 placeholder-green-800 focus:border-green-500 focus:outline-none"
+                  disabled={loading}
+                />
+              ) : (
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    value={customTitle}
+                    onChange={(e) => setCustomTitle(e.target.value)}
+                    placeholder="TITLE (OPTIONAL)"
+                    className="w-full px-4 py-2 bg-[#0a0a0a] border-2 border-green-700 rounded text-green-400 placeholder-green-800 focus:border-green-500 focus:outline-none text-sm"
+                    disabled={loading}
+                  />
+                  <textarea
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    placeholder="PASTE YOUR TEXT HERE..."
+                    rows={4}
+                    className="w-full px-4 py-3 bg-[#0a0a0a] border-2 border-green-700 rounded text-green-400 placeholder-green-800 focus:border-green-500 focus:outline-none resize-none"
+                    disabled={loading}
+                  />
+                </div>
+              )}
+
+              {error && (
+                <p className="text-red-500 text-sm border border-red-800 bg-red-900/20 rounded p-2">
+                  ERROR: {error}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading || !inputValue.trim()}
+                className="w-full py-3 bg-green-600 text-[#0a0a0a] font-bold rounded border-2 border-green-400 hover:bg-green-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? "LOADING..." : "START GAME ▶"}
+              </button>
+            </form>
+          </div>
+
+          {/* Saved Games */}
+          {savedTexts.length > 1 && (
+            <div className="bg-[#111] border-4 border-blue-700 rounded-lg p-4">
+              <h2 className="text-lg text-blue-400 font-bold mb-4">SAVED GAMES</h2>
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {savedTexts.slice(1).map((saved) => (
+                  <button
+                    key={saved.id}
+                    onClick={() => handleResume(saved)}
+                    className="w-full text-left p-3 bg-[#0a0a0a] border-2 border-blue-800 rounded hover:border-blue-500 hover:bg-blue-900/20 transition-all group"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-blue-400 truncate">{saved.title || "Untitled"}</div>
+                        <div className="text-xs text-blue-600">
+                          {formatProgress(saved)}% • {formatTime(saved.progress.totalTime)}
+                        </div>
                       </div>
                       <button
                         onClick={(e) => handleDelete(saved.id, e)}
-                        className="p-1 text-[var(--muted)] hover:text-[var(--error)] sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
-                        title="Delete"
+                        className="ml-2 text-blue-800 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
                       >
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M6 18L18 6M6 6l12 12"
-                          />
-                        </svg>
+                        ✕
                       </button>
                     </div>
-                  </div>
-                </button>
-              ))}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <footer className="mt-10 sm:mt-16 text-center text-xs sm:text-sm text-[var(--muted)]">
-          <p>Type each word to advance. Improve your speed while you read.</p>
-        </footer>
-      </div>
+          {/* Hebrew Tutorial Link */}
+          <div className="mt-8 text-center">
+            <button
+              onClick={handleStartHebrewTutorial}
+              className="text-sm text-green-700 hover:text-green-500 transition-colors"
+              dir="rtl"
+            >
+              👾 מדריך בעברית
+            </button>
+          </div>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="border-t-4 border-green-800 bg-[#111] py-4 px-4 text-center text-xs text-green-700">
+        <p>TYPE EACH WORD TO ADVANCE • ESCAPE THE MONSTER • LEVEL UP</p>
+        <p className="mt-1 text-green-800">INSERT COIN TO CONTINUE...</p>
+      </footer>
     </div>
   );
 }
