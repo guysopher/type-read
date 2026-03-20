@@ -86,10 +86,11 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   const [showStats, setShowStats] = useState(false);
 
   // Chase game mode state
-  const [monsterPosition, setMonsterPosition] = useState(0);
+  const [monsterPosition, setMonsterPosition] = useState(-1); // -1 means not started
   const [gameScore, setGameScore] = useState(0);
   const [isGameOver, setIsGameOver] = useState(false);
-  const [monsterSpeed, setMonsterSpeed] = useState(0.5); // characters per second
+  const [monsterSpeed, setMonsterSpeed] = useState(2); // characters per second (will be set based on WPM)
+  const [monsterStarted, setMonsterStarted] = useState(false);
   const monsterIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [detailedStats, setDetailedStats] = useState<DetailedStats>(
     savedData?.detailedStats || createEmptyDetailedStats()
@@ -338,9 +339,26 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     return () => clearInterval(checkActivity);
   }, [isComplete, isPaused, stats.startTime, isGameOver]);
 
+  // Start monster chase after player has typed a few words
+  useEffect(() => {
+    // Start the monster after 3 words typed, position it 2 words behind
+    if (!monsterStarted && stats.wordsTyped >= 3 && stats.startTime) {
+      const currentWpm = calculateWPM();
+      // Convert WPM to chars/sec: WPM * 5 chars/word / 60 sec = WPM / 12
+      // Start at 85% of player speed
+      const playerCharsPerSec = Math.max(currentWpm / 12, 1);
+      setMonsterSpeed(playerCharsPerSec * 0.85);
+
+      // Position monster 2 words behind (roughly 12 characters)
+      const startPosition = Math.max(0, absolutePosition - 12);
+      setMonsterPosition(startPosition);
+      setMonsterStarted(true);
+    }
+  }, [stats.wordsTyped, stats.startTime, monsterStarted, calculateWPM, absolutePosition]);
+
   // Monster chase game loop
   useEffect(() => {
-    if (!stats.startTime || isComplete || isGameOver || isPaused) {
+    if (!monsterStarted || isComplete || isGameOver || isPaused) {
       if (monsterIntervalRef.current) {
         clearInterval(monsterIntervalRef.current);
         monsterIntervalRef.current = null;
@@ -351,6 +369,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     // Monster moves every 50ms for smooth animation
     monsterIntervalRef.current = setInterval(() => {
       setMonsterPosition(prev => {
+        if (prev < 0) return prev; // Not started yet
         const newPos = prev + (monsterSpeed / 20); // 20 updates per second
 
         // Check if monster caught the player
@@ -361,8 +380,8 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         return newPos;
       });
 
-      // Slowly increase monster speed over time
-      setMonsterSpeed(prev => Math.min(prev + 0.001, 5)); // Cap at 5 chars/sec
+      // Slowly increase monster speed over time (0.5% per second)
+      setMonsterSpeed(prev => Math.min(prev + 0.00025, 10)); // Cap at 10 chars/sec
     }, 50);
 
     return () => {
@@ -371,7 +390,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         monsterIntervalRef.current = null;
       }
     };
-  }, [stats.startTime, isComplete, isGameOver, isPaused, absolutePosition, monsterSpeed]);
+  }, [monsterStarted, isComplete, isGameOver, isPaused, absolutePosition, monsterSpeed]);
 
   // WPM sampling
   useEffect(() => {
@@ -788,7 +807,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
               {visibleText.split("").map((char, i) => {
                 const globalPos = startPos + i;
                 const wordStartPos = absolutePosition - cursorInWord;
-                const monsterAtThisPos = Math.floor(monsterPosition) === globalPos;
+                const monsterAtThisPos = monsterPosition >= 0 && Math.floor(monsterPosition) === globalPos;
 
                 let className = "inline-block transition-all duration-75 ";
                 let displayChar: string | React.ReactNode = char;
@@ -808,7 +827,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                 }
 
                 // Characters eaten by monster are dark/destroyed
-                if (globalPos < monsterPosition) {
+                if (monsterPosition >= 0 && globalPos < monsterPosition) {
                   className += "text-[var(--foreground)]/10";
                 } else if (globalPos < wordStartPos) {
                   className += "text-[var(--muted)]/40";
@@ -1435,8 +1454,9 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
               <button
                 onClick={() => {
                   setIsGameOver(false);
-                  setMonsterPosition(0);
-                  setMonsterSpeed(0.5);
+                  setMonsterPosition(-1);
+                  setMonsterSpeed(2);
+                  setMonsterStarted(false);
                   setGameScore(0);
                   setCurrentWordIndex(0);
                   setCurrentInput("");
