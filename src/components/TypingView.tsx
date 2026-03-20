@@ -71,19 +71,31 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     const saved = localStorage.getItem('typeread_forgiving_mode');
     return saved !== null ? saved === 'true' : true;
   });
-  const [muted, setMuted] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return localStorage.getItem('typeread_muted') === 'true';
+  const [soundEffects, setSoundEffects] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    const saved = localStorage.getItem('typeread_sound_effects');
+    return saved !== null ? saved === 'true' : true;
+  });
+  const [musicEnabled, setMusicEnabled] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    const saved = localStorage.getItem('typeread_music');
+    return saved !== null ? saved === 'true' : true;
   });
   const [fingerHintPosition, setFingerHintPosition] = useState<'off' | 'top' | 'bottom'>(() => {
     if (typeof window === 'undefined') return 'bottom';
     const saved = localStorage.getItem('typeread_finger_hint_position');
     return (saved as 'off' | 'top' | 'bottom') || 'bottom';
   });
+  const [allowMistakes, setAllowMistakes] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    const saved = localStorage.getItem('typeread_allow_mistakes');
+    return saved !== null ? saved === 'true' : true;
+  });
 
   // Auto-pause and detailed stats
   const [isPaused, setIsPaused] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   // Chase game mode state
   const [monsterPosition, setMonsterPosition] = useState(-1); // -1 means not started
@@ -92,6 +104,14 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   const [monsterSpeed, setMonsterSpeed] = useState(2); // characters per second (will be set based on WPM)
   const [monsterStarted, setMonsterStarted] = useState(false);
   const monsterIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Streak tracking
+  const [currentStreak, setCurrentStreak] = useState(0);
+  const [bestStreak, setBestStreak] = useState(0);
+  const [streakBonus, setStreakBonus] = useState<{ amount: number; timestamp: number } | null>(null);
+
+  // Rolling speed tracking for adaptive monster
+  const recentKeystrokesRef = useRef<number[]>([]); // timestamps of recent keystrokes
   const [detailedStats, setDetailedStats] = useState<DetailedStats>(
     savedData?.detailedStats || createEmptyDetailedStats()
   );
@@ -266,6 +286,24 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     return Math.round(stats.wordsTyped / minutes);
   }, [stats, accumulatedTime, detailedStats.totalPauseTime]);
 
+  // Calculate recent typing speed (chars/sec) from last 3 seconds of keystrokes
+  const calculateRecentSpeed = useCallback(() => {
+    const now = Date.now();
+    const windowMs = 3000; // 3 second window
+
+    // Filter to keystrokes in the last 3 seconds
+    const recentKeystrokes = recentKeystrokesRef.current.filter(ts => now - ts < windowMs);
+    recentKeystrokesRef.current = recentKeystrokes; // Clean up old ones
+
+    if (recentKeystrokes.length < 2) return 0;
+
+    // Calculate chars per second based on keystrokes in window
+    const timeSpan = (now - recentKeystrokes[0]) / 1000; // in seconds
+    if (timeSpan < 0.1) return 0;
+
+    return recentKeystrokes.length / timeSpan;
+  }, []);
+
   const calculateAccuracy = useCallback(() => {
     if (stats.totalKeystrokes === 0) return 100;
     return Math.round((stats.correctKeystrokes / stats.totalKeystrokes) * 100);
@@ -316,28 +354,36 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   }, [forgivingMode]);
 
   useEffect(() => {
-    localStorage.setItem('typeread_muted', String(muted));
-  }, [muted]);
+    localStorage.setItem('typeread_sound_effects', String(soundEffects));
+  }, [soundEffects]);
+
+  useEffect(() => {
+    localStorage.setItem('typeread_music', String(musicEnabled));
+  }, [musicEnabled]);
 
   useEffect(() => {
     localStorage.setItem('typeread_finger_hint_position', fingerHintPosition);
   }, [fingerHintPosition]);
 
-  // Auto-pause detection (disabled in chase mode - monster doesn't pause!)
   useEffect(() => {
-    if (isComplete || isPaused || !stats.startTime || isGameOver) return;
+    localStorage.setItem('typeread_allow_mistakes', String(allowMistakes));
+  }, [allowMistakes]);
+
+  // Auto-pause detection - completely disabled in chase mode (monster never pauses!)
+  useEffect(() => {
+    // No auto-pause once the monster has started - you can't pause, only escape!
+    if (isComplete || isPaused || !stats.startTime || isGameOver || monsterStarted) return;
 
     const checkActivity = setInterval(() => {
       const timeSinceActivity = Date.now() - lastActivityRef.current;
       if (timeSinceActivity >= AUTO_PAUSE_DELAY) {
-        // Auto-pause - but NOT in chase mode, the monster keeps coming!
         setIsPaused(true);
         pauseStartRef.current = Date.now();
       }
     }, 1000);
 
     return () => clearInterval(checkActivity);
-  }, [isComplete, isPaused, stats.startTime, isGameOver]);
+  }, [isComplete, isPaused, stats.startTime, isGameOver, monsterStarted]);
 
   // Start monster chase after player has typed a few words
   useEffect(() => {
@@ -345,18 +391,18 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     if (!monsterStarted && stats.wordsTyped >= 3 && stats.startTime) {
       const currentWpm = calculateWPM();
       // Convert WPM to chars/sec: WPM * 5 chars/word / 60 sec = WPM / 12
-      // Start at 85% of player speed
-      const playerCharsPerSec = Math.max(currentWpm / 12, 1);
-      setMonsterSpeed(playerCharsPerSec * 0.85);
+      // Start at player's current speed - will quickly adapt from there
+      const playerCharsPerSec = Math.max(currentWpm / 12, 2);
+      setMonsterSpeed(playerCharsPerSec);
 
-      // Position monster 2 words behind (roughly 12 characters)
-      const startPosition = Math.max(0, absolutePosition - 12);
+      // Position monster 3 words behind (roughly 18 characters)
+      const startPosition = Math.max(0, absolutePosition - 18);
       setMonsterPosition(startPosition);
       setMonsterStarted(true);
       // Start the chase music!
-      if (!muted) playBackgroundMusic();
+      if (musicEnabled) playBackgroundMusic();
     }
-  }, [stats.wordsTyped, stats.startTime, monsterStarted, calculateWPM, absolutePosition, muted]);
+  }, [stats.wordsTyped, stats.startTime, monsterStarted, calculateWPM, absolutePosition, musicEnabled]);
 
   // Handle music based on game state
   useEffect(() => {
@@ -364,15 +410,15 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
       stopBackgroundMusic();
     } else if (isPaused) {
       pauseBackgroundMusic();
-    } else if (monsterStarted && !muted) {
+    } else if (monsterStarted && musicEnabled) {
       resumeBackgroundMusic();
     }
-  }, [isGameOver, isComplete, isPaused, monsterStarted, muted]);
+  }, [isGameOver, isComplete, isPaused, monsterStarted, musicEnabled]);
 
   // Sync mute state with music
   useEffect(() => {
-    setMusicMuted(muted);
-  }, [muted]);
+    setMusicMuted(!musicEnabled);
+  }, [musicEnabled]);
 
   // Stop music on unmount
   useEffect(() => {
@@ -393,7 +439,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
 
     // Monster moves every 50ms for smooth animation
     monsterIntervalRef.current = setInterval(() => {
-      setMonsterPosition(prev => {
+      setMonsterPosition((prev: number) => {
         if (prev < 0) return prev; // Not started yet
         const newPos = prev + (monsterSpeed / 20); // 20 updates per second
 
@@ -405,8 +451,26 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         return newPos;
       });
 
-      // Slowly increase monster speed over time (0.5% per second)
-      setMonsterSpeed(prev => Math.min(prev + 0.00025, 10)); // Cap at 10 chars/sec
+      // Monster speed: adapts to player's recent typing speed
+      const recentSpeed = calculateRecentSpeed(); // chars/sec from last 3 seconds
+      const avgSpeed = Math.max(calculateWPM() / 12, 2); // overall avg as fallback
+
+      setMonsterSpeed((prev: number) => {
+        // Use recent speed if available, otherwise use average
+        const playerSpeed = recentSpeed > 0 ? recentSpeed : avgSpeed;
+
+        // Monster tries to be 5% faster than player's recent speed
+        const targetSpeed = playerSpeed * 1.05;
+
+        // Smoothly approach target speed (easing)
+        const easedSpeed = prev + (targetSpeed - prev) * 0.02;
+
+        // Also add a tiny constant increase to prevent stalling
+        const increased = easedSpeed + 0.001;
+
+        // Clamp between minimum (2 c/s) and maximum (25 c/s)
+        return Math.min(Math.max(increased, 2), 25);
+      });
     }, 50);
 
     return () => {
@@ -415,7 +479,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         monsterIntervalRef.current = null;
       }
     };
-  }, [monsterStarted, isComplete, isGameOver, isPaused, absolutePosition, monsterSpeed]);
+  }, [monsterStarted, isComplete, isGameOver, isPaused, absolutePosition, monsterSpeed, calculateWPM]);
 
   // WPM sampling
   useEffect(() => {
@@ -723,6 +787,39 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         const lastChar = currentWord[currentWord.length - 1];
         const hasPunctuation = /[.,!?;:]/.test(lastChar);
 
+        // Count mistakes in the word
+        let mistakeCount = 0;
+        const minLen = Math.min(typedWord.length, currentWord.length);
+        for (let i = 0; i < minLen; i++) {
+          const inputChar = typedWord[i];
+          const expectedChar = currentWord[i];
+          const isNonAlpha = /[^a-zA-Z\u0590-\u05FF]/.test(expectedChar);
+          let charCorrect: boolean;
+          if (forgivingMode && isNonAlpha) {
+            charCorrect = true;
+          } else if (forgivingMode) {
+            charCorrect = inputChar.toLowerCase() === expectedChar.toLowerCase();
+          } else {
+            charCorrect = inputChar === expectedChar;
+          }
+          if (!charCorrect) mistakeCount++;
+        }
+        // Extra or missing characters count as mistakes
+        mistakeCount += Math.abs(typedWord.length - currentWord.length);
+
+        // Word must be fully typed (same length as target) to be completed
+        const isFullyTyped = typedWord.length === currentWord.length;
+
+        // Block completion if: not fully typed, or more than 3 mistakes, or (mistakes not allowed and has any mistakes)
+        if (!isFullyTyped || mistakeCount > 3 || (!allowMistakes && !isCorrect)) {
+          if (soundEffects) playErrorSound();
+          setShake(true);
+          setTimeout(() => setShake(false), 300);
+          // Remove the trailing space
+          setCurrentInput(typedWord);
+          return;
+        }
+
         // Track what was typed for this word
         setTypedWords(prev => {
           const newMap = new Map(prev);
@@ -731,7 +828,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         });
 
         // Play appropriate sound
-        if (!muted) {
+        if (soundEffects) {
           if (isCorrect) {
             if (hasPunctuation) {
               playPunctuationSound();
@@ -743,8 +840,35 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           }
         }
 
-        // Update game score: correct word = +word.length points, incorrect = -1
-        setGameScore(prev => isCorrect ? prev + currentWord.length : prev - 1);
+        // Update streak and score
+        if (isCorrect) {
+          const newStreak = currentStreak + 1;
+          setCurrentStreak(newStreak);
+          setBestStreak((prev: number) => Math.max(prev, newStreak));
+
+          // Award streak bonus at milestones
+          let bonus = 0;
+          if (newStreak === 5) bonus = 10;
+          else if (newStreak === 10) bonus = 25;
+          else if (newStreak === 20) bonus = 50;
+          else if (newStreak === 50) bonus = 150;
+          else if (newStreak === 100) bonus = 500;
+          else if (newStreak % 25 === 0 && newStreak > 100) bonus = 100;
+
+          if (bonus > 0) {
+            setStreakBonus({ amount: bonus, timestamp: Date.now() });
+            setTimeout(() => setStreakBonus(null), 1500);
+          }
+
+          // Update game score: word.length + streak multiplier + bonus
+          const streakMultiplier = Math.min(1 + Math.floor(newStreak / 5) * 0.1, 2); // Up to 2x at 50+ streak
+          setGameScore((prev: number) => prev + Math.round(currentWord.length * streakMultiplier) + bonus);
+        } else {
+          // Word has mistakes but allowMistakes is true
+          setCurrentStreak(0);
+          // Lose 1 point per mistake
+          setGameScore((prev: number) => Math.max(0, prev - mistakeCount));
+        }
 
         // Update stats
         setStats((s) => ({
@@ -782,7 +906,10 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
             isCorrect = newChar === expectedChar;
           }
 
-          if (!muted) {
+          // Record keystroke for rolling speed calculation
+          recentKeystrokesRef.current.push(Date.now());
+
+          if (soundEffects) {
             if (isCorrect) {
               playCorrectSound();
             } else {
@@ -791,14 +918,14 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           }
         } else if (newCharIndex >= currentWord.length) {
           // Typing beyond word length - always an error
-          if (!muted) playErrorSound();
+          if (soundEffects) playErrorSound();
           setShake(true);
           setTimeout(() => setShake(false), 300);
         }
         setCurrentInput(value);
       }
     },
-    [currentWord, currentWordIndex, words.length, stats.startTime, compareStrings, forgivingMode, muted, getActiveTime, isPaused, resumeFromPause]
+    [currentWord, currentWordIndex, words.length, stats.startTime, compareStrings, forgivingMode, soundEffects, getActiveTime, isPaused, resumeFromPause, allowMistakes, currentStreak]
   );
 
   // Sliding text bar renderer
@@ -809,13 +936,31 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     const charWidth = isMobile ? 14 : 22;
     const availableWidth = slidingBarWidth - 32; // Account for padding and gradients
     const windowSize = Math.max(20, Math.floor(availableWidth / charWidth));
-    const centerOffset = Math.floor(windowSize * 0.4); // Keep cursor at 40% from left
+    // Keep cursor at exact center of the screen
+    const centerOffset = Math.floor(windowSize / 2);
 
-    const startPos = Math.max(0, absolutePosition - centerOffset);
-    const endPos = Math.min(fullTextStream.length, startPos + windowSize);
-    const visibleText = fullTextStream.slice(startPos, endPos);
+    // Calculate visible window with padding for centering
+    const rawStartPos = absolutePosition - centerOffset;
+    const startPos = Math.max(0, rawStartPos);
+
+    // Add padding spaces at the beginning if cursor is near the start
+    const leadingPadding = rawStartPos < 0 ? Math.abs(rawStartPos) : 0;
+
+    // Calculate how many actual characters to show (accounting for leading padding)
+    const charsToShow = windowSize - leadingPadding;
+    const endPos = Math.min(fullTextStream.length, startPos + charsToShow);
+
+    // Add padding spaces at the end if cursor is near the end
+    const actualChars = endPos - startPos;
+    const trailingPadding = windowSize - leadingPadding - actualChars;
+
+    const visibleText = ' '.repeat(leadingPadding) + fullTextStream.slice(startPos, endPos) + ' '.repeat(trailingPadding);
 
     const cursorInWord = currentInput.length;
+
+    // Check if monster is off-screen (behind the visible area)
+    const monsterOffScreen = monsterPosition >= 0 && monsterPosition < startPos;
+    const monsterDistance = monsterOffScreen ? Math.floor(startPos - monsterPosition) : 0;
 
     return (
       <div ref={slidingBarRef}>
@@ -823,37 +968,62 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           className={`relative overflow-hidden py-2 sm:py-4 ${
             shake ? "animate-[shake_0.3s_ease-in-out]" : ""
           }`}
+          dir={isRTL ? "rtl" : "ltr"}
         >
+          {/* Monster off-screen indicator - position depends on text direction */}
+          {monsterOffScreen && (
+            <div className={`absolute top-1/2 -translate-y-1/2 flex items-center gap-1 text-purple-500 z-10 ${
+              isRTL ? 'right-2 sm:right-4 flex-row-reverse' : 'left-2 sm:left-4'
+            }`}>
+              <span className="text-lg sm:text-xl">👾</span>
+              <span className="text-xs sm:text-sm font-mono font-bold">{isRTL ? `${monsterDistance}→` : `←${monsterDistance}`}</span>
+            </div>
+          )}
+
           <div className="flex justify-center items-center">
             <div
               className="font-mono text-2xl sm:text-4xl tracking-wide whitespace-pre"
-              dir={isRTL ? "rtl" : "ltr"}
             >
-              {visibleText.split("").map((char, i) => {
-                const globalPos = startPos + i;
+              {visibleText.split("").map((char: string, i: number) => {
+                // Account for leading padding when calculating global position
+                const globalPos = startPos + i - leadingPadding;
+                const isPadding = i < leadingPadding || i >= visibleText.length - trailingPadding;
                 const wordStartPos = absolutePosition - cursorInWord;
                 const monsterAtThisPos = monsterPosition >= 0 && Math.floor(monsterPosition) === globalPos;
 
-                let className = "inline-block transition-all duration-75 ";
-                let displayChar: string | React.ReactNode = char;
-                let isCorrect = true;
+                // Render padding as invisible space
+                if (isPadding) {
+                  return (
+                    <span key={`padding-${i}`} className="inline-block opacity-0">
+                      {"\u00A0"}
+                    </span>
+                  );
+                }
 
-                // Monster overwrites the character at its position
+                // Monster replaces the character at its position
                 if (monsterAtThisPos) {
+                  const gap = absolutePosition - monsterPosition;
+                  const isClose = gap < 10;
                   return (
                     <span
                       key={`${globalPos}-monster`}
-                      className="inline-block text-2xl sm:text-4xl animate-pulse"
-                      style={{ filter: 'drop-shadow(0 0 8px #ef4444)' }}
+                      className={`inline-block ${isClose ? 'animate-pulse' : ''}`}
+                      style={{
+                        filter: isClose ? 'drop-shadow(0 0 8px #ef4444)' : 'drop-shadow(0 0 4px #a855f7)',
+                      }}
                     >
                       👾
                     </span>
                   );
                 }
 
-                // Characters eaten by monster are dark/destroyed
+                let className = "inline-block transition-all duration-75 ";
+                let displayChar: string | React.ReactNode = char;
+                let isCorrect = true;
+
+                // Characters eaten by monster are struck through
                 if (monsterPosition >= 0 && globalPos < monsterPosition) {
-                  className += "text-[var(--foreground)]/10";
+                  className += "text-[var(--foreground)]/20 line-through decoration-red-500/50 decoration-2";
                 } else if (globalPos < wordStartPos) {
                   className += "text-[var(--muted)]/40";
                 } else if (globalPos < absolutePosition) {
@@ -1071,8 +1241,8 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
-      {/* Pause banner */}
-      {isPaused && (
+      {/* Pause banner - only shown before chase mode starts */}
+      {isPaused && !monsterStarted && (
         <div
           className="flex-shrink-0 bg-[var(--foreground)] text-[var(--background)] py-2 sm:py-3 px-4 sm:px-6 flex items-center justify-center gap-2 sm:gap-4 cursor-pointer hover:opacity-90 transition-opacity"
           onClick={resumeFromPause}
@@ -1085,61 +1255,18 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
       )}
 
       {/* Header with progress */}
-      <header className="flex-shrink-0 bg-[var(--background)] border-b border-[var(--foreground)]/5 z-10">
+      <header className="flex-shrink-0 bg-[var(--background)] border-b border-[var(--foreground)]/5 z-10" dir={isRTL ? "rtl" : "ltr"}>
         <div className="max-w-4xl mx-auto px-3 sm:px-6 py-2 sm:py-4">
           <div className="flex items-center justify-between mb-2 sm:mb-3">
             <button
               onClick={onReset}
               className="text-xs sm:text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
             >
-              ← Back
+              {isRTL ? 'חזרה →' : '← Back'}
             </button>
             {title && <h1 className="text-xs sm:text-sm font-medium truncate max-w-[30%] sm:max-w-[40%]">{title}</h1>}
             <div className="flex items-center gap-1 sm:gap-2">
-              <button
-                onClick={() => setForgivingMode(!forgivingMode)}
-                className={`hidden sm:block px-3 py-1 text-xs font-medium rounded transition-all ${
-                  forgivingMode
-                    ? "bg-[var(--foreground)] text-[var(--background)]"
-                    : "bg-[var(--foreground)]/10 text-[var(--muted)] hover:bg-[var(--foreground)]/20"
-                }`}
-                title={forgivingMode ? "Forgiving mode ON: only a-z and space count (click to toggle)" : "Strict mode: exact match required (click to toggle)"}
-              >
-                {forgivingMode ? "Forgiving" : "Strict"}
-              </button>
-              <button
-                onClick={() => setForgivingMode(!forgivingMode)}
-                className={`sm:hidden px-2 py-1 text-xs rounded transition-all ${
-                  forgivingMode
-                    ? "bg-[var(--foreground)] text-[var(--background)]"
-                    : "bg-[var(--foreground)]/10 text-[var(--muted)] hover:bg-[var(--foreground)]/20"
-                }`}
-                title={forgivingMode ? "Forgiving mode" : "Strict mode"}
-              >
-                {forgivingMode ? "✓" : "!"}
-              </button>
-              <button
-                onClick={() => setMuted(!muted)}
-                className={`px-2 py-1 text-xs rounded transition-all ${
-                  muted
-                    ? "bg-[var(--foreground)]/10 text-[var(--muted)] hover:bg-[var(--foreground)]/20"
-                    : "bg-[var(--foreground)] text-[var(--background)]"
-                }`}
-                title={muted ? "Sound off (click to unmute)" : "Sound on (click to mute)"}
-              >
-                {muted ? "🔇" : "🔊"}
-              </button>
-              <button
-                onClick={() => setFingerHintPosition(p => p === 'off' ? 'top' : p === 'top' ? 'bottom' : 'off')}
-                className={`hidden sm:block px-2 py-1 text-xs rounded transition-all ${
-                  fingerHintPosition !== 'off'
-                    ? "bg-[var(--foreground)] text-[var(--background)]"
-                    : "bg-[var(--foreground)]/10 text-[var(--muted)] hover:bg-[var(--foreground)]/20"
-                }`}
-                title={`Finger hints: ${fingerHintPosition} (click to cycle)`}
-              >
-                {fingerHintPosition === 'off' ? '✋' : fingerHintPosition === 'top' ? '☝️' : '👇'}
-              </button>
+              {/* Stats button */}
               <button
                 onClick={() => setShowStats(true)}
                 className="px-2 py-1 text-xs rounded bg-[var(--foreground)]/10 text-[var(--muted)] hover:bg-[var(--foreground)]/20 transition-all"
@@ -1147,21 +1274,129 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
               >
                 📊
               </button>
+              {/* Save button */}
               <button
                 onClick={handleSave}
-                className="hidden sm:block px-2 py-1 text-xs rounded bg-[var(--foreground)]/10 text-[var(--muted)] hover:bg-[var(--foreground)]/20 transition-all"
+                className="px-2 py-1 text-xs rounded bg-[var(--foreground)]/10 text-[var(--muted)] hover:bg-[var(--foreground)]/20 transition-all"
               >
-                {showSaved ? (
-                  <span className="text-[var(--success)]">Saved ✓</span>
-                ) : (
-                  "💾"
-                )}
+                {showSaved ? <span className="text-[var(--success)]">✓</span> : "💾"}
               </button>
-              <div className="text-xs sm:text-sm font-medium text-yellow-500 ml-1 sm:ml-2">
-                🏆 {gameScore}
+              {/* Settings button */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowSettings(!showSettings)}
+                  className={`px-2 py-1 text-xs rounded transition-all ${
+                    showSettings
+                      ? "bg-[var(--foreground)] text-[var(--background)]"
+                      : "bg-[var(--foreground)]/10 text-[var(--muted)] hover:bg-[var(--foreground)]/20"
+                  }`}
+                  title="Settings"
+                >
+                  ⚙️
+                </button>
+                {/* Settings dropdown */}
+                {showSettings && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowSettings(false)} />
+                    <div className={`absolute top-full mt-2 w-56 bg-[var(--background)] border border-[var(--foreground)]/10 rounded-xl shadow-xl z-50 py-2 ${isRTL ? 'left-0' : 'right-0'}`} dir="ltr">
+                      <div className="px-3 py-2 border-b border-[var(--foreground)]/5">
+                        <span className="text-xs font-medium text-[var(--muted)]">Settings</span>
+                      </div>
+                      {/* Forgiving mode */}
+                      <button
+                        onClick={() => setForgivingMode(!forgivingMode)}
+                        className="w-full px-3 py-2 flex items-center justify-between hover:bg-[var(--foreground)]/5 transition-colors"
+                      >
+                        <span className="text-sm">Forgiving mode</span>
+                        <span className={`text-xs px-2 py-0.5 rounded ${forgivingMode ? 'bg-green-500/20 text-green-600' : 'bg-[var(--foreground)]/10 text-[var(--muted)]'}`}>
+                          {forgivingMode ? 'ON' : 'OFF'}
+                        </span>
+                      </button>
+                      {/* Allow mistakes */}
+                      <button
+                        onClick={() => setAllowMistakes(!allowMistakes)}
+                        className="w-full px-3 py-2 flex items-center justify-between hover:bg-[var(--foreground)]/5 transition-colors"
+                      >
+                        <span className="text-sm">Allow mistakes</span>
+                        <span className={`text-xs px-2 py-0.5 rounded ${allowMistakes ? 'bg-green-500/20 text-green-600' : 'bg-[var(--foreground)]/10 text-[var(--muted)]'}`}>
+                          {allowMistakes ? 'ON' : 'OFF'}
+                        </span>
+                      </button>
+                      {/* Sound Effects */}
+                      <button
+                        onClick={() => setSoundEffects(!soundEffects)}
+                        className="w-full px-3 py-2 flex items-center justify-between hover:bg-[var(--foreground)]/5 transition-colors"
+                      >
+                        <span className="text-sm">Sound effects</span>
+                        <span className={`text-xs px-2 py-0.5 rounded ${soundEffects ? 'bg-green-500/20 text-green-600' : 'bg-[var(--foreground)]/10 text-[var(--muted)]'}`}>
+                          {soundEffects ? 'ON' : 'OFF'}
+                        </span>
+                      </button>
+                      {/* Music */}
+                      <button
+                        onClick={() => setMusicEnabled(!musicEnabled)}
+                        className="w-full px-3 py-2 flex items-center justify-between hover:bg-[var(--foreground)]/5 transition-colors"
+                      >
+                        <span className="text-sm">Music</span>
+                        <span className={`text-xs px-2 py-0.5 rounded ${musicEnabled ? 'bg-green-500/20 text-green-600' : 'bg-[var(--foreground)]/10 text-[var(--muted)]'}`}>
+                          {musicEnabled ? 'ON' : 'OFF'}
+                        </span>
+                      </button>
+                      {/* Finger hints */}
+                      <button
+                        onClick={() => setFingerHintPosition(p => p === 'off' ? 'bottom' : p === 'bottom' ? 'top' : 'off')}
+                        className="w-full px-3 py-2 flex items-center justify-between hover:bg-[var(--foreground)]/5 transition-colors"
+                      >
+                        <span className="text-sm">Finger hints</span>
+                        <span className={`text-xs px-2 py-0.5 rounded ${fingerHintPosition !== 'off' ? 'bg-green-500/20 text-green-600' : 'bg-[var(--foreground)]/10 text-[var(--muted)]'}`}>
+                          {fingerHintPosition === 'off' ? 'OFF' : fingerHintPosition.toUpperCase()}
+                        </span>
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
-              <div className="text-xs sm:text-sm font-medium text-[var(--muted)] ml-1 sm:ml-2">
-                {calculateWPM()} <span className="text-xs hidden sm:inline">WPM</span>
+              {/* Score display */}
+              <div className="flex items-center gap-2 sm:gap-3 ml-2 sm:ml-3">
+                <div className="relative flex items-center gap-1 px-2 sm:px-3 py-1 bg-yellow-500/10 rounded-lg">
+                  <span className="text-base sm:text-lg">🏆</span>
+                  <span className="text-base sm:text-xl font-bold text-yellow-600 dark:text-yellow-400 tabular-nums">{gameScore}</span>
+                  {streakBonus && (
+                    <span
+                      className="absolute -top-4 left-1/2 -translate-x-1/2 text-sm font-bold text-green-500 whitespace-nowrap"
+                      style={{ animation: 'floatUp 1s ease-out forwards' }}
+                    >
+                      +{streakBonus.amount}
+                    </span>
+                  )}
+                </div>
+                {currentStreak >= 3 && (
+                  <div className="flex items-center gap-0.5 px-2 py-1 bg-orange-500/10 rounded-lg">
+                    <span className="text-sm">🔥</span>
+                    <span className="text-sm font-bold text-orange-500 tabular-nums">{currentStreak}</span>
+                  </div>
+                )}
+                {/* Speed comparison display */}
+                {monsterStarted && (() => {
+                  const recentSpeed = calculateRecentSpeed();
+                  const playerCpm = recentSpeed > 0 ? Math.round(recentSpeed * 60) : calculateWPM() * 5;
+                  const monsterCpm = Math.round(monsterSpeed * 60);
+                  const isAhead = playerCpm > monsterCpm;
+                  return (
+                    <div className="flex items-center gap-1 px-2 py-1 bg-purple-500/10 rounded-lg">
+                      <span className={`text-xs sm:text-sm font-bold tabular-nums ${isAhead ? 'text-green-500' : 'text-red-500'}`}>
+                        {playerCpm}
+                      </span>
+                      <span className="text-xs text-[var(--muted)]">vs</span>
+                      <span className="text-xs sm:text-sm font-bold text-purple-500 tabular-nums">{monsterCpm}</span>
+                      <span className="text-sm">👾</span>
+                      <span className="text-xs text-[var(--muted)] hidden sm:inline">c/m</span>
+                    </div>
+                  );
+                })()}
+                <span className="text-xs sm:text-sm font-medium text-[var(--muted)] tabular-nums">
+                  {calculateWPM()} <span className="text-xs hidden sm:inline">WPM</span>
+                </span>
               </div>
             </div>
           </div>
@@ -1174,8 +1409,8 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         </div>
       </header>
 
-      {/* Sliding text bar - full width */}
-      <div className="flex-shrink-0 w-full px-2 sm:px-4 py-1 sm:py-8">
+      {/* Sliding text bar */}
+      <div className="flex-shrink-0 w-full px-2 sm:px-4 py-2 sm:py-6">
         {renderSlidingTextBar()}
       </div>
 
@@ -1200,8 +1435,8 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         />
 
         {/* Content area with side notes */}
-        <div className="flex-1 flex min-h-0 overflow-hidden">
-          {/* Left spacer for symmetry on desktop */}
+        <div className={`flex-1 flex min-h-0 overflow-hidden ${isRTL ? 'flex-row-reverse' : ''}`}>
+          {/* Spacer for symmetry on desktop */}
           <div className="hidden lg:block w-64 flex-shrink-0" />
 
           {/* Main text content */}
@@ -1460,7 +1695,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
               <div className="text-sm text-[var(--muted)]">Final Score</div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4 mb-8 text-sm">
+            <div className="grid grid-cols-4 gap-3 mb-8 text-sm">
               <div>
                 <div className="text-2xl font-bold">{stats.wordsTyped}</div>
                 <div className="text-[var(--muted)]">Words</div>
@@ -1473,6 +1708,10 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                 <div className="text-2xl font-bold">{calculateAccuracy()}%</div>
                 <div className="text-[var(--muted)]">Accuracy</div>
               </div>
+              <div>
+                <div className="text-2xl font-bold text-orange-400">🔥 {bestStreak}</div>
+                <div className="text-[var(--muted)]">Best Streak</div>
+              </div>
             </div>
 
             <div className="flex gap-4 justify-center">
@@ -1483,10 +1722,13 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                   setMonsterSpeed(2);
                   setMonsterStarted(false);
                   setGameScore(0);
+                  setCurrentStreak(0);
+                  setBestStreak(0);
+                  setStreakBonus(null);
                   setCurrentWordIndex(0);
                   setCurrentInput("");
                   setTypedWords(new Map());
-                  setStats(s => ({ ...s, startTime: null, endTime: null, wordsTyped: 0, correctKeystrokes: 0, totalKeystrokes: 0 }));
+                  setStats((s: Stats) => ({ ...s, startTime: null, endTime: null, wordsTyped: 0, correctKeystrokes: 0, totalKeystrokes: 0 }));
                 }}
                 className="px-6 py-3 bg-[var(--foreground)] text-[var(--background)] rounded-xl font-medium hover:opacity-90 transition-opacity"
               >
@@ -1525,6 +1767,16 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           }
           75% {
             transform: translateX(4px);
+          }
+        }
+        @keyframes floatUp {
+          0% {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+          }
+          100% {
+            opacity: 0;
+            transform: translateX(-50%) translateY(-30px);
           }
         }
       `}</style>

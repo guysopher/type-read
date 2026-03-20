@@ -22,6 +22,22 @@ Now stop reading this tutorial and start typing it. Feel the rhythm of the words
 
 const TUTORIAL_TITLE = "Welcome to TypeRead";
 
+const HEBREW_TUTORIAL_TEXT = `ברוכים הבאים למשחק המרדף של טייפריד. כאן הקריאה הופכת להרפתקה מותחת עם מפלצת שרודפת אחריכם תוך כדי הקלדה.
+
+ככה זה עובד. אתם מתחילים להקליד את הטקסט מילה אחרי מילה. אחרי שלוש מילים המפלצת מתעוררת ומתחילה לרדוף אחריכם. היא נעה במהירות שמתאימה לקצב ההקלדה שלכם ותמיד מנסה להיות קצת יותר מהירה.
+
+בראש המסך תראו שני מספרים. המספר הירוק הוא המהירות שלכם בתווים לדקה. המספר הסגול הוא המהירות של המפלצת. אם המספר שלכם אדום זה אומר שהמפלצת מתקרבת אליכם.
+
+רצף מילים נכונות נותן לכם בונוס נקודות. אחרי חמש מילים רצופות תקבלו עשר נקודות בונוס. אחרי עשר מילים עשרים וחמש נקודות. ככל שהרצף ארוך יותר הבונוס גדול יותר.
+
+אם עשיתם טעות אפשר למחוק עם מקש הבקספייס ולתקן. אבל זכרו שהמפלצת ממשיכה להתקדם גם כשאתם מתקנים טעויות.
+
+בהגדרות אפשר לכבות או להדליק את המוזיקה ואת אפקטי הצליל בנפרד. יש גם מצב סלחני שמתעלם מאותיות גדולות וסימני פיסוק.
+
+עכשיו תפסיקו לקרוא ותתחילו להקליד. המפלצת כבר מחכה לכם. בהצלחה.`;
+
+const HEBREW_TUTORIAL_TITLE = "מדריך משחק המרדף";
+
 // Clean text for easier typing - remove markdown, lists, etc.
 function cleanTextForTyping(text: string): string {
   return text
@@ -145,6 +161,12 @@ export default function Home() {
   const handleStartTutorial = () => {
     setText(TUTORIAL_TEXT);
     setTitle(TUTORIAL_TITLE);
+    setActiveSaved(null);
+  };
+
+  const handleStartHebrewTutorial = () => {
+    setText(HEBREW_TUTORIAL_TEXT);
+    setTitle(HEBREW_TUTORIAL_TITLE);
     setActiveSaved(null);
   };
 
@@ -293,12 +315,21 @@ export default function Home() {
               <span className="px-4 bg-[var(--background)] text-[var(--muted)]">or</span>
             </div>
           </div>
-          <button
-            onClick={handleStartTutorial}
-            className="mt-4 sm:mt-6 px-5 sm:px-6 py-2.5 sm:py-3 text-sm font-medium border border-[var(--foreground)]/20 rounded-xl hover:border-[var(--foreground)]/40 hover:bg-[var(--foreground)]/5 transition-all"
-          >
-            Try the tutorial
-          </button>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center mt-4 sm:mt-6">
+            <button
+              onClick={handleStartTutorial}
+              className="px-5 sm:px-6 py-2.5 sm:py-3 text-sm font-medium border border-[var(--foreground)]/20 rounded-xl hover:border-[var(--foreground)]/40 hover:bg-[var(--foreground)]/5 transition-all"
+            >
+              Try the tutorial
+            </button>
+            <button
+              onClick={handleStartHebrewTutorial}
+              className="px-5 sm:px-6 py-2.5 sm:py-3 text-sm font-medium border border-[var(--foreground)]/20 rounded-xl hover:border-[var(--foreground)]/40 hover:bg-[var(--foreground)]/5 transition-all"
+              dir="rtl"
+            >
+              מדריך בעברית 👾
+            </button>
+          </div>
           <p className="mt-2 text-xs text-[var(--muted)]">
             Learn how TypeRead works by typing through a quick introduction
           </p>
