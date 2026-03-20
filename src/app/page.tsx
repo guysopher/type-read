@@ -23,7 +23,6 @@ const HEBREW_TUTORIAL_TEXT = `ברוכים הבאים למשחק המרדף של
 
 const HEBREW_TUTORIAL_TITLE = "מדריך משחק המרדף";
 
-// Clean text for easier typing - remove markdown, lists, etc.
 function cleanTextForTyping(text: string): string {
   return text
     .replace(/^#{1,6}\s+/gm, '')
@@ -158,10 +157,7 @@ export default function Home() {
 
   const formatProgress = (saved: SavedText) => {
     const words = saved.text.split(/\s+/).filter((w) => w.length > 0);
-    const percent = Math.round(
-      (saved.progress.currentWordIndex / words.length) * 100
-    );
-    return percent;
+    return Math.round((saved.progress.currentWordIndex / words.length) * 100);
   };
 
   const formatTime = (ms: number) => {
@@ -187,290 +183,260 @@ export default function Home() {
   const stories = storyLanguage === 'en' ? ENGLISH_STORIES : HEBREW_STORIES;
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0a0a0a] text-green-400 font-mono">
-      {/* Pixel art header */}
-      <header className="border-b-4 border-green-500 bg-[#111] py-4 px-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="text-3xl">👾</span>
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-wider text-green-400" style={{ textShadow: '2px 2px 0 #065f46' }}>
-                TYPEREAD
-              </h1>
-              <p className="text-xs text-green-600">LEVEL UP YOUR TYPING</p>
-            </div>
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8">
+      <div className="w-full max-w-xl">
+        {/* Header */}
+        <header className="text-center mb-8 sm:mb-12">
+          <div className="flex items-center justify-center gap-3 mb-3">
+            <span
+              className="text-4xl"
+              style={{
+                animation: 'bounce 1s ease-in-out infinite',
+                display: 'inline-block'
+              }}
+            >
+              👾
+            </span>
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">TypeRead</h1>
           </div>
-          <div className="text-right text-xs text-green-600">
-            <div>GAMES</div>
-            <div className="text-green-400 text-lg">
-              {savedTexts.length}
+          <p className="text-[var(--muted)] text-base sm:text-lg">
+            Read by typing. Escape the monster.
+          </p>
+        </header>
+
+        {/* Continue Button - if there's a saved game */}
+        {lastPlayed && (
+          <button
+            onClick={() => handleResume(lastPlayed)}
+            className="w-full mb-6 p-4 bg-[var(--foreground)] text-[var(--background)] rounded-xl hover:opacity-90 transition-all group"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl group-hover:scale-110 transition-transform">▶</span>
+                <div className="text-left">
+                  <div className="text-xs opacity-70">Continue</div>
+                  <div className="font-medium truncate max-w-[180px] sm:max-w-[280px]">
+                    {lastPlayed.title || "Untitled"}
+                  </div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-lg font-bold">{formatProgress(lastPlayed)}%</div>
+                <div className="text-xs opacity-70">{formatTime(lastPlayed.progress.totalTime)}</div>
+              </div>
             </div>
-          </div>
+          </button>
+        )}
+
+        {/* Quick Actions */}
+        <div className="flex gap-3 mb-6">
+          <button
+            onClick={() => setShowStories(true)}
+            className="flex-1 py-3 px-4 text-sm font-medium border border-[var(--foreground)]/20 rounded-xl hover:border-[var(--foreground)]/40 hover:bg-[var(--foreground)]/5 transition-all"
+          >
+            📚 Stories
+          </button>
+          <button
+            onClick={handleStartTutorial}
+            className="flex-1 py-3 px-4 text-sm font-medium border border-[var(--foreground)]/20 rounded-xl hover:border-[var(--foreground)]/40 hover:bg-[var(--foreground)]/5 transition-all"
+          >
+            🎮 Tutorial
+          </button>
+          <button
+            onClick={handleStartHebrewTutorial}
+            className="py-3 px-4 text-sm font-medium border border-[var(--foreground)]/20 rounded-xl hover:border-[var(--foreground)]/40 hover:bg-[var(--foreground)]/5 transition-all"
+            title="Hebrew Tutorial"
+          >
+            🇮🇱
+          </button>
         </div>
-      </header>
 
-      <main className="flex-1 flex flex-col items-center p-4 sm:p-8">
-        <div className="w-full max-w-2xl">
-
-          {/* Continue Game - Most prominent if there's a saved game */}
-          {lastPlayed && (
-            <div className="mb-8 animate-pulse">
-              <button
-                onClick={() => handleResume(lastPlayed)}
-                className="w-full p-6 bg-green-900/30 border-4 border-green-500 rounded-lg hover:bg-green-900/50 transition-all group"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <span className="text-4xl group-hover:animate-bounce">▶</span>
-                    <div className="text-left">
-                      <div className="text-xs text-green-600 mb-1">CONTINUE GAME</div>
-                      <div className="text-xl text-green-400 truncate max-w-[200px] sm:max-w-[300px]">
-                        {lastPlayed.title || "Untitled"}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-2xl text-yellow-400">{formatProgress(lastPlayed)}%</div>
-                    <div className="text-xs text-green-600">{formatTime(lastPlayed.progress.totalTime)}</div>
-                  </div>
-                </div>
-                {/* Progress bar */}
-                <div className="mt-4 h-3 bg-[#0a0a0a] border-2 border-green-700 rounded">
-                  <div
-                    className="h-full bg-green-500 transition-all"
-                    style={{ width: `${formatProgress(lastPlayed)}%` }}
-                  />
-                </div>
-              </button>
-            </div>
-          )}
-
-          {/* Main Menu Grid */}
-          <div className="grid grid-cols-2 gap-4 mb-8">
-            {/* New Game */}
-            <button
-              onClick={() => setShowStories(true)}
-              className="p-6 bg-[#111] border-4 border-purple-500 rounded-lg hover:bg-purple-900/20 hover:border-purple-400 transition-all group"
-            >
-              <span className="text-3xl block mb-2 group-hover:scale-110 transition-transform">📚</span>
-              <div className="text-purple-400 font-bold">NEW GAME</div>
-              <div className="text-xs text-purple-600">Classic Stories</div>
-            </button>
-
-            {/* Custom Text */}
-            <button
-              onClick={() => {
-                setInputMode("text");
-                const el = document.getElementById("custom-input");
-                if (el) el.scrollIntoView({ behavior: "smooth" });
-              }}
-              className="p-6 bg-[#111] border-4 border-cyan-500 rounded-lg hover:bg-cyan-900/20 hover:border-cyan-400 transition-all group"
-            >
-              <span className="text-3xl block mb-2 group-hover:scale-110 transition-transform">✏️</span>
-              <div className="text-cyan-400 font-bold">CUSTOM</div>
-              <div className="text-xs text-cyan-600">Paste Your Text</div>
-            </button>
-
-            {/* URL Mode */}
-            <button
-              onClick={() => {
-                setInputMode("url");
-                const el = document.getElementById("custom-input");
-                if (el) el.scrollIntoView({ behavior: "smooth" });
-              }}
-              className="p-6 bg-[#111] border-4 border-orange-500 rounded-lg hover:bg-orange-900/20 hover:border-orange-400 transition-all group"
-            >
-              <span className="text-3xl block mb-2 group-hover:scale-110 transition-transform">🔗</span>
-              <div className="text-orange-400 font-bold">URL</div>
-              <div className="text-xs text-orange-600">Import Article</div>
-            </button>
-
-            {/* Tutorial */}
-            <button
-              onClick={handleStartTutorial}
-              className="p-6 bg-[#111] border-4 border-yellow-500 rounded-lg hover:bg-yellow-900/20 hover:border-yellow-400 transition-all group"
-            >
-              <span className="text-3xl block mb-2 group-hover:scale-110 transition-transform">🎮</span>
-              <div className="text-yellow-400 font-bold">TUTORIAL</div>
-              <div className="text-xs text-yellow-600">Learn to Play</div>
-            </button>
-          </div>
-
-          {/* Stories Panel */}
-          {showStories && (
-            <div className="mb-8 bg-[#111] border-4 border-purple-500 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg text-purple-400 font-bold">SELECT STORY</h2>
+        {/* Stories Modal */}
+        {showStories && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="w-full max-w-lg bg-[var(--background)] rounded-2xl shadow-2xl border border-[var(--foreground)]/10 overflow-hidden">
+              <div className="flex items-center justify-between p-4 border-b border-[var(--foreground)]/10">
+                <h2 className="text-lg font-semibold">Choose a Story</h2>
                 <button
                   onClick={() => setShowStories(false)}
-                  className="text-purple-600 hover:text-purple-400"
+                  className="p-1 hover:bg-[var(--foreground)]/10 rounded-lg transition-colors"
                 >
-                  ✕
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
                 </button>
               </div>
 
               {/* Language Toggle */}
-              <div className="flex gap-2 mb-4">
+              <div className="flex gap-2 p-4 border-b border-[var(--foreground)]/5">
                 <button
                   onClick={() => setStoryLanguage('en')}
-                  className={`px-4 py-2 rounded border-2 transition-all ${
+                  className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
                     storyLanguage === 'en'
-                      ? 'border-purple-400 bg-purple-900/30 text-purple-400'
-                      : 'border-purple-800 text-purple-600 hover:border-purple-600'
+                      ? 'bg-[var(--foreground)] text-[var(--background)]'
+                      : 'bg-[var(--foreground)]/5 hover:bg-[var(--foreground)]/10'
                   }`}
                 >
-                  🇬🇧 English
+                  English
                 </button>
                 <button
                   onClick={() => setStoryLanguage('he')}
-                  className={`px-4 py-2 rounded border-2 transition-all ${
+                  className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
                     storyLanguage === 'he'
-                      ? 'border-purple-400 bg-purple-900/30 text-purple-400'
-                      : 'border-purple-800 text-purple-600 hover:border-purple-600'
+                      ? 'bg-[var(--foreground)] text-[var(--background)]'
+                      : 'bg-[var(--foreground)]/5 hover:bg-[var(--foreground)]/10'
                   }`}
                 >
-                  🇮🇱 עברית
+                  עברית
                 </button>
               </div>
 
               {/* Story List */}
-              <div className="max-h-64 overflow-y-auto space-y-2">
+              <div className="max-h-80 overflow-y-auto p-2">
                 {stories.map((story) => (
                   <button
                     key={story.id}
                     onClick={() => handleStartStory(story)}
-                    className="w-full text-left p-3 bg-[#0a0a0a] border-2 border-purple-800 rounded hover:border-purple-500 hover:bg-purple-900/20 transition-all"
+                    className="w-full text-left p-3 rounded-lg hover:bg-[var(--foreground)]/5 transition-colors"
                     dir={story.language === 'he' ? 'rtl' : 'ltr'}
                   >
-                    <div className="text-purple-400 font-bold truncate">{story.title}</div>
-                    <div className="text-xs text-purple-600">{story.author}</div>
+                    <div className="font-medium">{story.title}</div>
+                    <div className="text-sm text-[var(--muted)]">{story.author}</div>
                   </button>
                 ))}
               </div>
             </div>
-          )}
-
-          {/* Custom Input Section */}
-          <div id="custom-input" className="bg-[#111] border-4 border-green-700 rounded-lg p-4 mb-8">
-            <div className="flex gap-2 mb-4">
-              <button
-                onClick={() => setInputMode("url")}
-                className={`px-4 py-2 rounded border-2 transition-all ${
-                  inputMode === "url"
-                    ? 'border-green-400 bg-green-900/30 text-green-400'
-                    : 'border-green-800 text-green-600 hover:border-green-600'
-                }`}
-              >
-                🔗 URL
-              </button>
-              <button
-                onClick={() => setInputMode("text")}
-                className={`px-4 py-2 rounded border-2 transition-all ${
-                  inputMode === "text"
-                    ? 'border-green-400 bg-green-900/30 text-green-400'
-                    : 'border-green-800 text-green-600 hover:border-green-600'
-                }`}
-              >
-                ✏️ TEXT
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {inputMode === "url" ? (
-                <input
-                  type="text"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  placeholder="PASTE URL HERE..."
-                  className="w-full px-4 py-3 bg-[#0a0a0a] border-2 border-green-700 rounded text-green-400 placeholder-green-800 focus:border-green-500 focus:outline-none"
-                  disabled={loading}
-                />
-              ) : (
-                <div className="space-y-3">
-                  <input
-                    type="text"
-                    value={customTitle}
-                    onChange={(e) => setCustomTitle(e.target.value)}
-                    placeholder="TITLE (OPTIONAL)"
-                    className="w-full px-4 py-2 bg-[#0a0a0a] border-2 border-green-700 rounded text-green-400 placeholder-green-800 focus:border-green-500 focus:outline-none text-sm"
-                    disabled={loading}
-                  />
-                  <textarea
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    placeholder="PASTE YOUR TEXT HERE..."
-                    rows={4}
-                    className="w-full px-4 py-3 bg-[#0a0a0a] border-2 border-green-700 rounded text-green-400 placeholder-green-800 focus:border-green-500 focus:outline-none resize-none"
-                    disabled={loading}
-                  />
-                </div>
-              )}
-
-              {error && (
-                <p className="text-red-500 text-sm border border-red-800 bg-red-900/20 rounded p-2">
-                  ERROR: {error}
-                </p>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading || !inputValue.trim()}
-                className="w-full py-3 bg-green-600 text-[#0a0a0a] font-bold rounded border-2 border-green-400 hover:bg-green-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? "LOADING..." : "START GAME ▶"}
-              </button>
-            </form>
           </div>
+        )}
 
-          {/* Saved Games */}
-          {savedTexts.length > 1 && (
-            <div className="bg-[#111] border-4 border-blue-700 rounded-lg p-4">
-              <h2 className="text-lg text-blue-400 font-bold mb-4">SAVED GAMES</h2>
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {savedTexts.slice(1).map((saved) => (
-                  <button
-                    key={saved.id}
-                    onClick={() => handleResume(saved)}
-                    className="w-full text-left p-3 bg-[#0a0a0a] border-2 border-blue-800 rounded hover:border-blue-500 hover:bg-blue-900/20 transition-all group"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1 min-w-0">
-                        <div className="text-blue-400 truncate">{saved.title || "Untitled"}</div>
-                        <div className="text-xs text-blue-600">
-                          {formatProgress(saved)}% • {formatTime(saved.progress.totalTime)}
-                        </div>
-                      </div>
-                      <button
-                        onClick={(e) => handleDelete(saved.id, e)}
-                        className="ml-2 text-blue-800 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Hebrew Tutorial Link */}
-          <div className="mt-8 text-center">
-            <button
-              onClick={handleStartHebrewTutorial}
-              className="text-sm text-green-700 hover:text-green-500 transition-colors"
-              dir="rtl"
-            >
-              👾 מדריך בעברית
-            </button>
+        {/* Divider */}
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-[var(--foreground)]/10"></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-4 bg-[var(--background)] text-[var(--muted)]">or paste your own</span>
           </div>
         </div>
-      </main>
 
-      {/* Footer */}
-      <footer className="border-t-4 border-green-800 bg-[#111] py-4 px-4 text-center text-xs text-green-700">
-        <p>TYPE EACH WORD TO ADVANCE • ESCAPE THE MONSTER • LEVEL UP</p>
-        <p className="mt-1 text-green-800">INSERT COIN TO CONTINUE...</p>
-      </footer>
+        {/* Input Mode Toggle */}
+        <div className="flex gap-1 mb-4 p-1 bg-[var(--foreground)]/5 rounded-lg w-fit mx-auto">
+          <button
+            onClick={() => setInputMode("url")}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              inputMode === "url"
+                ? "bg-[var(--foreground)] text-[var(--background)]"
+                : "text-[var(--muted)] hover:text-[var(--foreground)]"
+            }`}
+          >
+            URL
+          </button>
+          <button
+            onClick={() => setInputMode("text")}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              inputMode === "text"
+                ? "bg-[var(--foreground)] text-[var(--background)]"
+                : "text-[var(--muted)] hover:text-[var(--foreground)]"
+            }`}
+          >
+            Text
+          </button>
+        </div>
+
+        {/* Input Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {inputMode === "url" ? (
+            <input
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              placeholder="Paste article URL..."
+              className="w-full px-4 py-3 text-base border border-[var(--foreground)]/10 rounded-xl bg-transparent focus:border-[var(--foreground)]/30 transition-colors"
+              disabled={loading}
+              autoFocus
+            />
+          ) : (
+            <div className="space-y-3">
+              <input
+                type="text"
+                value={customTitle}
+                onChange={(e) => setCustomTitle(e.target.value)}
+                placeholder="Title (optional)"
+                className="w-full px-4 py-2 text-sm border border-[var(--foreground)]/10 rounded-lg bg-transparent focus:border-[var(--foreground)]/30 transition-colors"
+                disabled={loading}
+              />
+              <textarea
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder="Paste your text here..."
+                rows={4}
+                className="w-full px-4 py-3 text-base border border-[var(--foreground)]/10 rounded-xl bg-transparent focus:border-[var(--foreground)]/30 transition-colors resize-none"
+                disabled={loading}
+                autoFocus
+              />
+            </div>
+          )}
+
+          {error && (
+            <p className="text-[var(--error)] text-sm text-center">{error}</p>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading || !inputValue.trim()}
+            className="w-full py-3 text-base font-medium bg-[var(--foreground)] text-[var(--background)] rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? "Loading..." : "Start Typing"}
+          </button>
+        </form>
+
+        {/* Saved Texts */}
+        {savedTexts.length > 1 && (
+          <div className="mt-8">
+            <h2 className="text-sm font-medium text-[var(--muted)] mb-3">
+              Previous Sessions
+            </h2>
+            <div className="space-y-2">
+              {savedTexts.slice(1, 4).map((saved) => (
+                <button
+                  key={saved.id}
+                  onClick={() => handleResume(saved)}
+                  className="w-full text-left p-3 border border-[var(--foreground)]/10 rounded-xl hover:border-[var(--foreground)]/20 transition-colors group"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium truncate text-sm">{saved.title || "Untitled"}</div>
+                      <div className="text-xs text-[var(--muted)]">
+                        {formatProgress(saved)}% · {formatTime(saved.progress.totalTime)}
+                      </div>
+                    </div>
+                    <button
+                      onClick={(e) => handleDelete(saved.id, e)}
+                      className="p-1 text-[var(--muted)] hover:text-[var(--error)] opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Footer */}
+        <footer className="mt-12 text-center text-xs text-[var(--muted)]">
+          <p>Type each word to advance. The monster is always watching.</p>
+        </footer>
+      </div>
+
+      <style jsx>{`
+        @keyframes bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-6px); }
+        }
+      `}</style>
     </div>
   );
 }
