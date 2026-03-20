@@ -1,10 +1,61 @@
 let audioContext: AudioContext | null = null;
+let bgMusic: HTMLAudioElement | null = null;
 
 function getAudioContext(): AudioContext {
   if (!audioContext) {
     audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
   }
   return audioContext;
+}
+
+export function playBackgroundMusic(): void {
+  try {
+    if (!bgMusic) {
+      bgMusic = new Audio('/Pixel Pogo Loop.mp3');
+      bgMusic.loop = true;
+      bgMusic.volume = 0.3;
+    }
+    bgMusic.play();
+  } catch {
+    // Audio not supported
+  }
+}
+
+export function stopBackgroundMusic(): void {
+  try {
+    if (bgMusic) {
+      bgMusic.pause();
+      bgMusic.currentTime = 0;
+    }
+  } catch {
+    // Audio not supported
+  }
+}
+
+export function pauseBackgroundMusic(): void {
+  try {
+    if (bgMusic) {
+      bgMusic.pause();
+    }
+  } catch {
+    // Audio not supported
+  }
+}
+
+export function resumeBackgroundMusic(): void {
+  try {
+    if (bgMusic && bgMusic.paused) {
+      bgMusic.play();
+    }
+  } catch {
+    // Audio not supported
+  }
+}
+
+export function setMusicMuted(muted: boolean): void {
+  if (bgMusic) {
+    bgMusic.muted = muted;
+  }
 }
 
 export function playCorrectSound(): void {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { SavedText, saveText, generateId, DetailedStats, WPMSample, PauseEvent, createEmptyDetailedStats, Highlight } from "@/lib/storage";
-import { playCorrectSound, playErrorSound, playWordCompleteSound, playPunctuationSound } from "@/lib/sounds";
+import { playCorrectSound, playErrorSound, playWordCompleteSound, playPunctuationSound, playBackgroundMusic, stopBackgroundMusic, pauseBackgroundMusic, resumeBackgroundMusic, setMusicMuted } from "@/lib/sounds";
 import StatsView from "./StatsView";
 
 interface TypingViewProps {
@@ -353,8 +353,33 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
       const startPosition = Math.max(0, absolutePosition - 12);
       setMonsterPosition(startPosition);
       setMonsterStarted(true);
+      // Start the chase music!
+      if (!muted) playBackgroundMusic();
     }
-  }, [stats.wordsTyped, stats.startTime, monsterStarted, calculateWPM, absolutePosition]);
+  }, [stats.wordsTyped, stats.startTime, monsterStarted, calculateWPM, absolutePosition, muted]);
+
+  // Handle music based on game state
+  useEffect(() => {
+    if (isGameOver || isComplete) {
+      stopBackgroundMusic();
+    } else if (isPaused) {
+      pauseBackgroundMusic();
+    } else if (monsterStarted && !muted) {
+      resumeBackgroundMusic();
+    }
+  }, [isGameOver, isComplete, isPaused, monsterStarted, muted]);
+
+  // Sync mute state with music
+  useEffect(() => {
+    setMusicMuted(muted);
+  }, [muted]);
+
+  // Stop music on unmount
+  useEffect(() => {
+    return () => {
+      stopBackgroundMusic();
+    };
+  }, []);
 
   // Monster chase game loop
   useEffect(() => {
