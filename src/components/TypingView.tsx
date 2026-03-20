@@ -389,10 +389,12 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   useEffect(() => {
     // Start the monster after 3 words typed, position it 2 words behind
     if (!monsterStarted && stats.wordsTyped >= 3 && stats.startTime) {
-      const currentWpm = calculateWPM();
-      // Convert WPM to chars/sec: WPM * 5 chars/word / 60 sec = WPM / 12
-      // Start at player's current speed - will quickly adapt from there
-      const playerCharsPerSec = Math.max(currentWpm / 12, 2);
+      // Calculate chars per second from the first 3 words typed
+      const elapsedMs = Date.now() - stats.startTime;
+      const elapsedSec = elapsedMs / 1000;
+      // Use actual keystrokes for the first 3 words
+      const charsTyped = stats.correctKeystrokes;
+      const playerCharsPerSec = elapsedSec > 0 ? Math.max(charsTyped / elapsedSec, 2) : 2;
       setMonsterSpeed(playerCharsPerSec);
 
       // Position monster 3 words behind (roughly 18 characters)
