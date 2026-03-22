@@ -101,6 +101,11 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     const saved = localStorage.getItem('typeread_autosave');
     return saved !== null ? saved === 'true' : true;
   });
+  const [allowMistakes, setAllowMistakes] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const saved = localStorage.getItem('typeread_allow_mistakes');
+    return saved !== null ? saved === 'true' : false;
+  });
 
   // Auto-pause and detailed stats
   const [isPaused, setIsPaused] = useState(false);
@@ -395,6 +400,10 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   useEffect(() => {
     localStorage.setItem('typeread_autosave', String(autosaveEnabled));
   }, [autosaveEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem('typeread_allow_mistakes', String(allowMistakes));
+  }, [allowMistakes]);
 
   // Auto-pause detection - completely disabled in chase/monster mode
   // Since this is always a chase game, we never pause
@@ -862,8 +871,14 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         // Word must be fully typed
         const isFullyTyped = strippedTyped.length === strippedTarget.length;
 
-        // Block completion if: not fully typed, or more than 3 mistakes, or not correct
-        if (!isFullyTyped || mistakeCount > 3 || !isCorrect) {
+        // Block completion based on allowMistakes setting
+        // If allowMistakes is OFF: block if not fully typed, or more than 3 mistakes, or not correct
+        // If allowMistakes is ON: only block if not fully typed
+        const shouldBlock = allowMistakes
+          ? !isFullyTyped
+          : (!isFullyTyped || mistakeCount > 3 || !isCorrect);
+
+        if (shouldBlock) {
           if (soundEffects) playErrorSound();
           setShake(true);
           setTimeout(() => setShake(false), 300);
@@ -1456,6 +1471,20 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                         </div>
                         <span className={`text-xs px-2 py-0.5 rounded ${autosaveEnabled ? 'bg-green-500/20 text-green-600' : 'bg-[var(--foreground)]/10 text-[var(--muted)]'}`}>
                           {autosaveEnabled ? 'ON' : 'OFF'}
+                        </span>
+                      </button>
+                      {/* Allow Mistakes */}
+                      <button
+                        onClick={() => setAllowMistakes(!allowMistakes)}
+                        className="w-full px-3 py-2 flex items-center justify-between hover:bg-[var(--foreground)]/5 transition-colors group"
+                        title="Allow completing words with mistakes"
+                      >
+                        <div className="flex flex-col items-start">
+                          <span className="text-sm">Allow Mistakes</span>
+                          <span className="text-[10px] text-[var(--muted)] opacity-0 group-hover:opacity-100 transition-opacity">Space works even with typos</span>
+                        </div>
+                        <span className={`text-xs px-2 py-0.5 rounded ${allowMistakes ? 'bg-green-500/20 text-green-600' : 'bg-[var(--foreground)]/10 text-[var(--muted)]'}`}>
+                          {allowMistakes ? 'ON' : 'OFF'}
                         </span>
                       </button>
                     </div>
