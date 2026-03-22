@@ -534,9 +534,10 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
       const lastMinuteSpeed = calculateLastMinuteSpeed(); // chars/sec from last 60 seconds
 
       if (lastMinuteSpeed > 0 && monsterStartTimeRef.current) {
-        // Calculate progressive speed bonus: +1 cpm every 10 seconds
+        // Calculate logarithmic speed bonus: 0-10s: +1, 10-20s: +2, 20-30s: +4, 30-40s: +8, etc.
         const elapsedSeconds = (Date.now() - monsterStartTimeRef.current) / 1000;
-        const bonusCpm = Math.floor(elapsedSeconds / 10); // +1 cpm every 10 seconds
+        const intervalCount = Math.floor(elapsedSeconds / 10);
+        const bonusCpm = intervalCount > 0 ? Math.pow(2, intervalCount) - 1 : 0;
         const bonusCps = bonusCpm / 60; // Convert cpm to chars/sec
 
         // Monster speed = player's last minute average + progressive bonus
