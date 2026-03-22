@@ -423,20 +423,15 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     return;
   }, []);
 
-  // Monster starts one word behind the pointer and waits for 10 seconds
-  // Start the 10-second countdown when typing begins
+  // Monster starts at the beginning of the previous word and waits for 10 seconds
+  // Start the 10-second countdown when first char is typed
   const startMonsterCountdown = useCallback(() => {
     if (!monsterMode || monsterCountdown !== null || monsterStarted) return;
+    // Set monster position to start of previous word - it stays frozen here until countdown ends
+    setMonsterPosition(oneWordBehindPosition);
     // Start the 10-second grace period countdown
     setMonsterCountdown(10);
-  }, [monsterMode, monsterCountdown, monsterStarted]);
-
-  // Keep monster at "one word behind" position during grace period
-  useEffect(() => {
-    if (monsterMode && !monsterStarted) {
-      setMonsterPosition(oneWordBehindPosition);
-    }
-  }, [monsterMode, monsterStarted, oneWordBehindPosition]);
+  }, [monsterMode, monsterCountdown, monsterStarted, oneWordBehindPosition]);
 
   // Handle monster countdown timer
   useEffect(() => {
