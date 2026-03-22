@@ -316,26 +316,28 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     return Math.round(stats.wordsTyped / minutes);
   }, [stats, accumulatedTime, detailedStats.totalPauseTime]);
 
-  // Calculate typing speed (chars/sec) from last 60 seconds of keystrokes
+  // Track CORRECT keystrokes for accurate speed calculation
+  const correctKeystrokesRef = useRef<number[]>([]);
+
+  // Calculate typing speed (chars/sec) from correctly typed chars over last 60 seconds
   const calculateLastMinuteSpeed = useCallback(() => {
     const now = Date.now();
     const windowMs = 60000; // 60 second window (1 minute)
 
-    // Filter to keystrokes in the last minute
-    const recentKeystrokes = recentKeystrokesRef.current.filter(ts => now - ts < windowMs);
-    recentKeystrokesRef.current = recentKeystrokes; // Clean up old ones
+    // Filter to correct keystrokes in the last minute
+    const recentCorrect = correctKeystrokesRef.current.filter(ts => now - ts < windowMs);
+    correctKeystrokesRef.current = recentCorrect; // Clean up old ones
 
-    if (recentKeystrokes.length < 2) return 0;
+    if (recentCorrect.length < 2) return 0;
 
-    // Calculate chars per second based on keystrokes in the last minute
-    // Use the actual time span within the window for accuracy
-    const oldestInWindow = recentKeystrokes[0];
-    const timeSpanSec = (now - oldestInWindow) / 1000; // in seconds
+    // Calculate chars per second based on correct keystrokes only
+    const oldest = recentCorrect[0];
+    const timeSpanSec = (now - oldest) / 1000;
 
     if (timeSpanSec < 1) return 0;
 
-    // Return chars per second
-    return recentKeystrokes.length / timeSpanSec;
+    // Return correctly typed chars per second
+    return recentCorrect.length / timeSpanSec;
   }, []);
 
   const calculateAccuracy = useCallback(() => {
@@ -900,6 +902,15 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           return;
         }
 
+        // Word completion successful - record the space keystroke for accurate CPM calculation
+        // (The individual letter keystrokes are already recorded when typed)
+        const now = Date.now();
+        correctKeystrokesRef.current.push(now);
+        recentKeystrokesRef.current.push(now);
+        if (!monsterStarted) {
+          allKeystrokesRef.current.push(now);
+        }
+
         // Track what was typed for this word
         setTypedWords(prev => {
           const newMap = new Map(prev);
@@ -992,6 +1003,10 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           // Also track all keystrokes for initial monster speed calculation
           if (!monsterStarted) {
             allKeystrokesRef.current.push(now);
+          }
+          // Track CORRECT keystrokes only for accurate CPM calculation
+          if (isCorrect) {
+            correctKeystrokesRef.current.push(now);
           }
 
           if (soundEffects) {
