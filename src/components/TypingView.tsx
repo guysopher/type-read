@@ -413,13 +413,12 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     return;
   }, []);
 
-  // Monster is visible from the start at position 0 (waiting)
-  // Countdown starts on first correct keystroke
+  // Monster starts one word behind the pointer and waits for 10 seconds
+  // Start the 10-second countdown when typing begins
   const startMonsterCountdown = useCallback(() => {
     if (!monsterMode || monsterCountdown !== null || monsterStarted) return;
-
-    // Start the 5-second countdown!
-    setMonsterCountdown(5);
+    // Start the 10-second grace period countdown
+    setMonsterCountdown(10);
   }, [monsterMode, monsterCountdown, monsterStarted]);
 
   // Handle monster countdown timer
@@ -427,8 +426,8 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     if (monsterCountdown === null || monsterCountdown < 0) return;
 
     if (monsterCountdown === 0) {
-      // Countdown finished, start the monster chasing!
-      // Calculate initial speed from keystrokes during countdown
+      // Countdown finished - monster wakes up!
+      // Calculate initial speed from keystrokes during the 10-second grace period
       const keystrokes = allKeystrokesRef.current;
       let playerCharsPerSec = 2; // default minimum
 
@@ -1028,9 +1027,10 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
 
     const cursorInWord = currentInput.length;
 
-    // Check if monster is off-screen (behind the visible area) - only when chasing
-    const monsterOffScreen = monsterStarted && monsterPosition >= 0 && monsterPosition < startPos;
+    // Check if monster is off-screen (behind the visible area) - show when waiting or chasing
+    const monsterOffScreen = monsterMode && monsterPosition >= 0 && monsterPosition < startPos;
     const monsterDistance = monsterOffScreen ? Math.floor(startPos - monsterPosition) : 0;
+    const isMonsterWaiting = !monsterStarted;
 
     return (
       <div ref={slidingBarRef}>
@@ -1042,11 +1042,21 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         >
           {/* Monster off-screen indicator - position depends on text direction */}
           {monsterOffScreen && (
-            <div className={`absolute top-1/2 -translate-y-1/2 flex items-center gap-1 text-purple-500 z-10 ${
-              isRTL ? 'right-2 sm:right-4 flex-row-reverse' : 'left-2 sm:left-4'
-            }`}>
-              <span className="text-lg sm:text-xl">👾</span>
-              <span className="text-xs sm:text-sm font-mono font-bold">{isRTL ? `${monsterDistance}→` : `←${monsterDistance}`}</span>
+            <div className={`absolute top-1/2 -translate-y-1/2 flex items-center gap-1 z-10 ${
+              isMonsterWaiting ? 'text-gray-400' : 'text-purple-500'
+            } ${isRTL ? 'right-2 sm:right-4 flex-row-reverse' : 'left-2 sm:left-4'}`}>
+              <div className="relative">
+                <span className={`text-lg sm:text-xl ${isMonsterWaiting ? 'opacity-50' : ''}`}>👾</span>
+                {/* Countdown above off-screen monster */}
+                {monsterCountdown !== null && monsterCountdown > 0 && (
+                  <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-sm font-bold text-purple-500 whitespace-nowrap">
+                    {monsterCountdown}s
+                  </span>
+                )}
+              </div>
+              <span className="text-xs sm:text-sm font-mono font-bold">
+                {isMonsterWaiting ? '💤' : (isRTL ? `${monsterDistance}→` : `←${monsterDistance}`)}
+              </span>
             </div>
           )}
 
@@ -1079,7 +1089,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                   return (
                     <span
                       key={`${globalPos}-monster`}
-                      className={`inline-block relative ${isClose ? 'animate-pulse' : ''}`}
+                      className={`inline-block relative ${isClose ? 'animate-pulse' : ''} ${isWaiting ? 'opacity-60' : ''}`}
                       style={{
                         filter: isClose ? 'drop-shadow(0 0 8px #ef4444)' : isWaiting ? 'drop-shadow(0 0 4px #666)' : 'drop-shadow(0 0 4px #a855f7)',
                       }}
@@ -1087,11 +1097,15 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                       {/* Countdown above monster */}
                       {monsterCountdown !== null && monsterCountdown > 0 && (
                         <span
-                          className="absolute -top-6 left-1/2 -translate-x-1/2 text-sm font-bold text-purple-500"
+                          className="absolute -top-8 left-1/2 -translate-x-1/2 text-base font-bold text-purple-500 whitespace-nowrap"
                           style={{ textShadow: '0 0 8px rgba(168, 85, 247, 0.5)' }}
                         >
-                          {monsterCountdown}
+                          {monsterCountdown}s
                         </span>
+                      )}
+                      {/* Sleeping indicator when waiting and no countdown yet */}
+                      {isWaiting && monsterCountdown === null && (
+                        <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-xs">💤</span>
                       )}
                       👾
                     </span>
