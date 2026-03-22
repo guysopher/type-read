@@ -294,6 +294,16 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     return pos + currentInput.length;
   }, [currentWordIndex, currentInput.length, words]);
 
+  // Calculate monster's "one word behind" position
+  const oneWordBehindPosition = useMemo(() => {
+    const prevWordIndex = Math.max(0, currentWordIndex - 1);
+    let pos = 0;
+    for (let i = 0; i < prevWordIndex; i++) {
+      pos += words[i].length + 1;
+    }
+    return pos;
+  }, [currentWordIndex, words]);
+
   // Calculate current WPM
   const calculateWPM = useCallback(() => {
     if (!stats.startTime) return 0;
@@ -421,6 +431,13 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     setMonsterCountdown(10);
   }, [monsterMode, monsterCountdown, monsterStarted]);
 
+  // Keep monster at "one word behind" position during grace period
+  useEffect(() => {
+    if (monsterMode && !monsterStarted) {
+      setMonsterPosition(oneWordBehindPosition);
+    }
+  }, [monsterMode, monsterStarted, oneWordBehindPosition]);
+
   // Handle monster countdown timer
   useEffect(() => {
     if (monsterCountdown === null || monsterCountdown < 0) return;
@@ -441,14 +458,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         }
       }
 
-      // Position monster one word behind the player
-      const prevWordIndex = Math.max(0, currentWordIndex - 1);
-      let monsterStartPos = 0;
-      for (let i = 0; i < prevWordIndex; i++) {
-        monsterStartPos += words[i].length + 1; // +1 for space
-      }
-      setMonsterPosition(monsterStartPos);
-
+      // Monster position is already at "one word behind" from the useEffect
       setMonsterSpeed(playerCharsPerSec);
       setMonsterStarted(true);
       setMonsterCountdown(null);
@@ -464,7 +474,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [monsterCountdown, musicEnabled, currentWordIndex, words]);
+  }, [monsterCountdown, musicEnabled]);
 
   // Handle music based on game state
   useEffect(() => {
