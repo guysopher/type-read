@@ -423,13 +423,15 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     return;
   }, []);
 
-  // Initialize monster position to one word behind when monster mode is on and not started
-  // This ensures the monster is visible from the start, even for saved sessions
+  // Keep monster at "one word behind" position until countdown starts
+  // This ensures the monster is visible from the start and tracks player position
+  const hasCountdown = monsterCountdown !== null;
   useEffect(() => {
-    if (monsterMode && !monsterStarted && monsterCountdown === null) {
+    // Only update position if monster mode is on, not started, and no countdown
+    if (monsterMode && !monsterStarted && !hasCountdown) {
       setMonsterPosition(oneWordBehindPosition);
     }
-  }, [monsterMode, monsterStarted, monsterCountdown, oneWordBehindPosition]);
+  }, [monsterMode, monsterStarted, hasCountdown, oneWordBehindPosition]);
 
   // Monster starts at the beginning of the previous word and waits for 10 seconds
   // Start the 10-second countdown when first char is typed
