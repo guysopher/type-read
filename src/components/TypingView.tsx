@@ -1894,27 +1894,25 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
             <div className="flex gap-4 justify-center">
               <button
                 onClick={() => {
+                  // Continue from where the user got caught - just reset monster state
                   setIsGameOver(false);
-                  setMonsterPosition(0); // Reset to waiting position
+                  setMonsterPosition(oneWordBehindPosition); // Start one word behind current position
                   setMonsterSpeed(2);
                   setMonsterStarted(false);
                   setMonsterCountdown(null);
-                  setGameScore(0);
+                  // Keep the score but reset streak
                   setCurrentStreak(0);
-                  setBestStreak(0);
                   setStreakBonus(null);
-                  setCurrentWordIndex(0);
-                  setCurrentInput("");
-                  setTypedWords(new Map());
-                  setStats((s: Stats) => ({ ...s, startTime: null, endTime: null, wordsTyped: 0, correctKeystrokes: 0, totalKeystrokes: 0 }));
-                  // Reset keystroke tracking and monster start time
+                  // Reset keystroke tracking for new attempt
                   recentKeystrokesRef.current = [];
                   allKeystrokesRef.current = [];
                   monsterStartTimeRef.current = null;
+                  // Clear current input to start fresh on current word
+                  setCurrentInput("");
                 }}
                 className="px-6 py-3 bg-[var(--foreground)] text-[var(--background)] rounded-xl font-medium hover:opacity-90 transition-opacity"
               >
-                Play Again
+                Try Again
               </button>
               <button
                 onClick={onReset}
