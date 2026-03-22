@@ -1083,19 +1083,10 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                 const globalPos = startPos + i - leadingPadding;
                 const isPadding = i < leadingPadding || i >= visibleText.length - trailingPadding;
                 const wordStartPos = absolutePosition - cursorInWord;
-                const monsterAtThisPos = monsterPosition >= 0 && Math.floor(monsterPosition) === globalPos;
+                const monsterAtThisPos = monsterMode && monsterPosition >= 0 && Math.floor(monsterPosition) === globalPos;
 
-                // Render padding as invisible space
-                if (isPadding) {
-                  return (
-                    <span key={`padding-${i}`} className="inline-block opacity-0">
-                      {"\u00A0"}
-                    </span>
-                  );
-                }
-
-                // Monster replaces the character at its position
-                if (monsterAtThisPos && monsterMode) {
+                // Monster replaces the character at its position (check BEFORE padding so monster is always visible)
+                if (monsterAtThisPos) {
                   const gap = absolutePosition - monsterPosition;
                   const isClose = gap < 10 && monsterStarted;
                   const isWaiting = !monsterStarted;
@@ -1121,6 +1112,15 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                         <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-xs">💤</span>
                       )}
                       👾
+                    </span>
+                  );
+                }
+
+                // Render padding as invisible space (after monster check so monster is always visible)
+                if (isPadding) {
+                  return (
+                    <span key={`padding-${i}`} className="inline-block opacity-0">
+                      {"\u00A0"}
                     </span>
                   );
                 }
