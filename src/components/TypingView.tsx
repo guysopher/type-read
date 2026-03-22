@@ -1048,7 +1048,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     return (
       <div ref={slidingBarRef}>
         <div
-          className={`relative overflow-hidden py-2 sm:py-4 ${
+          className={`relative overflow-visible pt-8 pb-2 sm:pt-10 sm:pb-4 ${
             shake ? "animate-[shake_0.3s_ease-in-out]" : ""
           }`}
           dir={isRTL ? "rtl" : "ltr"}
