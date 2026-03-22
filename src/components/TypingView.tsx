@@ -441,6 +441,14 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         }
       }
 
+      // Position monster one word behind the player
+      const prevWordIndex = Math.max(0, currentWordIndex - 1);
+      let monsterStartPos = 0;
+      for (let i = 0; i < prevWordIndex; i++) {
+        monsterStartPos += words[i].length + 1; // +1 for space
+      }
+      setMonsterPosition(monsterStartPos);
+
       setMonsterSpeed(playerCharsPerSec);
       setMonsterStarted(true);
       setMonsterCountdown(null);
@@ -456,7 +464,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [monsterCountdown, musicEnabled]);
+  }, [monsterCountdown, musicEnabled, currentWordIndex, words]);
 
   // Handle music based on game state
   useEffect(() => {
