@@ -1990,8 +1990,8 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                   className += "text-[var(--foreground)]";
                 }
               } else if (index === currentWordIndex) {
-                // Current word - highlighted with box
-                className += "px-3 py-2 bg-white border-3 border-[var(--ink-black)] pixel-corners shadow-retro";
+                // Current word - subtle highlight
+                className += "px-1";
                 wordContent = (
                   <>
                     {word.split('').map((char, charIndex) => {
