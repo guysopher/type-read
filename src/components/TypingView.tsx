@@ -957,6 +957,37 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     autosaveEnabled,
   ]);
 
+  // Save final progress when game completes or ends
+  useEffect(() => {
+    if ((isComplete || isGameOver) && stats.startTime && autosaveEnabled) {
+      const sessionTime = stats.startTime ? Date.now() - stats.startTime : 0;
+      const totalTime = accumulatedTime + sessionTime;
+
+      const savedText: SavedText = {
+        id: saveId,
+        title,
+        text,
+        progress: {
+          currentWordIndex,
+          wordsTyped: stats.wordsTyped,
+          correctKeystrokes: stats.correctKeystrokes,
+          totalKeystrokes: stats.totalKeystrokes,
+          totalTime,
+        },
+        detailedStats: {
+          ...detailedStats,
+          totalActiveTime: getActiveTime(),
+        },
+        highlights,
+        createdAt: savedData?.createdAt || Date.now(),
+        updatedAt: Date.now(),
+      };
+
+      saveText(savedText);
+      setLastSavedTime(Date.now());
+    }
+  }, [isComplete, isGameOver, stats, accumulatedTime, saveId, title, text, currentWordIndex, detailedStats, highlights, getActiveTime, savedData?.createdAt, autosaveEnabled]);
+
   const resumeFromPause = useCallback(() => {
     if (pauseStartRef.current) {
       const pauseDuration = Date.now() - pauseStartRef.current;
