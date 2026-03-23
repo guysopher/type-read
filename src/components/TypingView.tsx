@@ -203,9 +203,10 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   const [bestStreak, setBestStreak] = useState(0);
   const [streakBonus, setStreakBonus] = useState<{ amount: number; timestamp: number } | null>(null);
 
-  // Monster countdown before chase begins
+  // Monster countdown before chase begins (character-based, not time-based)
   const [monsterCountdown, setMonsterCountdown] = useState<number | null>(null);
   const monsterStartTimeRef = useRef<number | null>(null); // When monster started chasing
+  const alphanumericCharsTyped = useRef(0); // Count of alphanumeric chars typed during warmup
 
   // Rolling speed tracking for adaptive monster
   const recentKeystrokesRef = useRef<number[]>([]); // timestamps of recent keystrokes
@@ -584,50 +585,41 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     }
   }, [monsterMode, monsterStarted, hasCountdown, oneWordBehindPosition]);
 
-  // Monster starts at the beginning of the previous word and waits for 10 seconds
-  // Start the 10-second countdown when first char is typed
+  // Monster waits for 12 alphanumeric characters to be typed before starting
+  // Start the character countdown when first char is typed
   const startMonsterCountdown = useCallback(() => {
     if (!monsterMode || monsterCountdown !== null || monsterStarted) return;
-    // Start the 10-second grace period countdown (position is already set)
-    setMonsterCountdown(10);
+    // Start the 12-character grace period countdown (position is already set)
+    setMonsterCountdown(12);
+    alphanumericCharsTyped.current = 0;
   }, [monsterMode, monsterCountdown, monsterStarted]);
 
-  // Handle monster countdown timer
-  useEffect(() => {
-    if (monsterCountdown === null || monsterCountdown < 0) return;
+  // Handle monster warmup completion (character-based, triggered by typing)
+  const checkMonsterWarmup = useCallback(() => {
+    if (monsterCountdown === null || monsterCountdown > 0) return;
 
-    if (monsterCountdown === 0) {
-      // Countdown finished - monster wakes up!
-      // Calculate initial speed from keystrokes during the 10-second grace period
-      const keystrokes = allKeystrokesRef.current;
-      let playerCharsPerSec = 2; // default minimum
+    // 12 alphanumeric chars typed - monster wakes up!
+    // Calculate initial speed from keystrokes during the grace period
+    const keystrokes = allKeystrokesRef.current;
+    let playerCharsPerSec = 2; // default minimum
 
-      if (keystrokes.length >= 2) {
-        const firstKeystroke = keystrokes[0];
-        const lastKeystroke = keystrokes[keystrokes.length - 1];
-        const activeTypingTime = (lastKeystroke - firstKeystroke) / 1000;
+    if (keystrokes.length >= 2) {
+      const firstKeystroke = keystrokes[0];
+      const lastKeystroke = keystrokes[keystrokes.length - 1];
+      const activeTypingTime = (lastKeystroke - firstKeystroke) / 1000;
 
-        if (activeTypingTime > 0.5) {
-          playerCharsPerSec = Math.max(keystrokes.length / activeTypingTime, 2);
-        }
+      if (activeTypingTime > 0.5) {
+        playerCharsPerSec = Math.max(keystrokes.length / activeTypingTime, 2);
       }
-
-      // Monster position is already at "one word behind" from the useEffect
-      setMonsterSpeed(playerCharsPerSec);
-      setMonsterStarted(true);
-      setMonsterCountdown(null);
-      monsterStartTimeRef.current = Date.now();
-      // Start the chase music!
-      if (musicEnabled) playBackgroundMusic();
-      return;
     }
 
-    // Tick down every second
-    const timer = setTimeout(() => {
-      setMonsterCountdown(monsterCountdown - 1);
-    }, 1000);
-
-    return () => clearTimeout(timer);
+    // Monster position is already at "one word behind" from the useEffect
+    setMonsterSpeed(playerCharsPerSec);
+    setMonsterStarted(true);
+    setMonsterCountdown(null);
+    monsterStartTimeRef.current = Date.now();
+    // Start the chase music!
+    if (musicEnabled) playBackgroundMusic();
   }, [monsterCountdown, musicEnabled]);
 
   // Handle music based on game state
@@ -1368,6 +1360,21 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           if (isCorrect && monsterMode && monsterCountdown === null && !monsterStarted) {
             startMonsterCountdown();
           }
+
+          // Track alphanumeric characters during monster warmup
+          if (isCorrect && monsterMode && monsterCountdown !== null && monsterCountdown > 0 && !monsterStarted) {
+            const isAlphanumeric = /[a-zA-Z0-9]/.test(newChar);
+            if (isAlphanumeric) {
+              alphanumericCharsTyped.current += 1;
+              const remaining = 12 - alphanumericCharsTyped.current;
+              setMonsterCountdown(remaining);
+
+              // Check if warmup is complete
+              if (remaining <= 0) {
+                checkMonsterWarmup();
+              }
+            }
+          }
         } else if (newCharIndex >= currentWord.length) {
           // Typing beyond word length - always an error
           if (soundEffects) playErrorSound();
@@ -1377,7 +1384,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         setCurrentInput(value);
       }
     },
-    [currentWord, currentWordIndex, words.length, stats.startTime, compareStrings, forgiveCapitals, forgiveNonAlpha, soundEffects, getActiveTime, isPaused, resumeFromPause, currentStreak, monsterMode, monsterCountdown, monsterStarted, startMonsterCountdown]
+    [currentWord, currentWordIndex, words.length, stats.startTime, compareStrings, forgiveCapitals, forgiveNonAlpha, soundEffects, getActiveTime, isPaused, resumeFromPause, currentStreak, monsterMode, monsterCountdown, monsterStarted, startMonsterCountdown, checkMonsterWarmup]
   );
 
   // Sliding text bar renderer
@@ -1433,7 +1440,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                 {/* Countdown above off-screen monster */}
                 {monsterCountdown !== null && monsterCountdown > 0 && (
                   <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-sm font-bold text-purple-500 whitespace-nowrap">
-                    {monsterCountdown}s
+                    {monsterCountdown}
                   </span>
                 )}
               </div>
@@ -1474,7 +1481,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                           className="absolute -top-8 left-1/2 -translate-x-1/2 text-base font-bold text-purple-500 whitespace-nowrap"
                           style={{ textShadow: '0 0 8px rgba(168, 85, 247, 0.5)' }}
                         >
-                          {monsterCountdown}s
+                          {monsterCountdown}
                         </span>
                       )}
                       {/* Sleeping indicator when waiting and no countdown yet */}

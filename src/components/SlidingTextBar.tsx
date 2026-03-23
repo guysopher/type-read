@@ -112,7 +112,7 @@ export default function SlidingTextBar({
               </span>
               {monsterCountdown !== null && monsterCountdown > 0 && (
                 <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-sm font-bold text-purple-500 whitespace-nowrap">
-                  {monsterCountdown}s
+                  {monsterCountdown}
                 </span>
               )}
             </div>
@@ -157,7 +157,7 @@ export default function SlidingTextBar({
                         className="absolute -top-8 left-1/2 -translate-x-1/2 text-base font-bold text-purple-500 whitespace-nowrap"
                         style={{ textShadow: '0 0 8px rgba(168, 85, 247, 0.5)' }}
                       >
-                        {monsterCountdown}s
+                        {monsterCountdown}
                       </span>
                     )}
                     {isWaiting && monsterCountdown === null && (
