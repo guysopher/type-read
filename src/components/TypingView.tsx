@@ -2332,31 +2332,31 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         const powerUpInfo = {
           freezeMonster: {
             icon: '❄️',
-            name: 'Freeze Monster',
-            description: 'Monster frozen for 10 seconds!',
+            title: 'MONSTER FREEZE ACTIVATED',
+            duration: 'Active for 10 seconds',
             color: 'from-cyan-500 to-blue-500'
           },
           shield: {
             icon: '🛡️',
-            name: 'Shield',
-            description: 'Protected from next monster attack!',
+            title: 'SHIELD ACTIVATED',
+            duration: 'Blocks next monster attack',
             color: 'from-yellow-500 to-orange-500'
           },
           slowMo: {
             icon: '⏱️',
-            name: 'Slow Motion',
-            description: 'Monster slowed down for 15 seconds!',
+            title: 'SLOW MOTION ACTIVATED',
+            duration: 'Active for 15 seconds',
             color: 'from-purple-500 to-pink-500'
           }
         }[powerUpNotification.type];
 
         return (
           <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 animate-[slideDown_0.3s_ease-out]">
-            <div className={`bg-gradient-to-r ${powerUpInfo.color} text-white px-6 py-4 rounded-lg shadow-2xl flex items-center gap-4 min-w-[300px]`}>
-              <div className="text-4xl animate-bounce">{powerUpInfo.icon}</div>
-              <div>
-                <div className="font-bold text-lg">{powerUpInfo.name}</div>
-                <div className="text-sm opacity-90">{powerUpInfo.description}</div>
+            <div className={`bg-gradient-to-r ${powerUpInfo.color} text-white px-8 py-5 rounded-xl shadow-2xl flex items-center gap-5 min-w-[400px]`}>
+              <div className="text-5xl animate-bounce">{powerUpInfo.icon}</div>
+              <div className="flex-1">
+                <div className="font-bold text-xl tracking-wide">{powerUpInfo.title}</div>
+                <div className="text-base mt-1 font-medium">{powerUpInfo.duration}</div>
               </div>
             </div>
           </div>
@@ -2367,21 +2367,21 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
       {monsterMode && (activePowerUps.freeze || activePowerUps.shield || activePowerUps.slowMo) && (
         <div className="fixed top-4 right-4 z-40 flex flex-col gap-2">
           {activePowerUps.freeze && (
-            <div className="bg-cyan-500/90 text-white px-3 py-2 rounded-lg shadow-lg flex items-center gap-2 text-sm font-medium animate-pulse">
-              <span className="text-lg">❄️</span>
-              <span>Frozen</span>
+            <div className="bg-cyan-500/90 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 text-sm font-bold animate-pulse">
+              <span className="text-xl">❄️</span>
+              <span>Monster Frozen (10s)</span>
             </div>
           )}
           {activePowerUps.shield && (
-            <div className="bg-yellow-500/90 text-white px-3 py-2 rounded-lg shadow-lg flex items-center gap-2 text-sm font-medium">
-              <span className="text-lg">🛡️</span>
-              <span>Shielded</span>
+            <div className="bg-yellow-500/90 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 text-sm font-bold">
+              <span className="text-xl">🛡️</span>
+              <span>Shield Active</span>
             </div>
           )}
           {activePowerUps.slowMo && (
-            <div className="bg-purple-500/90 text-white px-3 py-2 rounded-lg shadow-lg flex items-center gap-2 text-sm font-medium animate-pulse">
-              <span className="text-lg">⏱️</span>
-              <span>Slow-Mo</span>
+            <div className="bg-purple-500/90 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 text-sm font-bold animate-pulse">
+              <span className="text-xl">⏱️</span>
+              <span>Slow Motion (15s)</span>
             </div>
           )}
         </div>
