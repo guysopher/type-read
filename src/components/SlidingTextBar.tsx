@@ -62,13 +62,13 @@ export default function SlidingTextBar({
     words.forEach((word, idx) => {
       stream += word;
 
-      // Check if next word has a power-up (show icon after current word)
-      const nextWordPowerUp = powerUpPlacements.get(idx + 1);
-      if (nextWordPowerUp && idx < words.length - 1) {
+      // Check if CURRENT word has a power-up (show icon after current word)
+      const currentWordPowerUp = powerUpPlacements.get(idx);
+      if (currentWordPowerUp && idx < words.length - 1) {
         stream += ' '; // Space before power-up
         const powerUpPosition = stream.length;
         stream += '•'; // Placeholder for power-up (single char for positioning)
-        powerUpPos.set(powerUpPosition, { type: nextWordPowerUp, wordIndex: idx + 1 });
+        powerUpPos.set(powerUpPosition, { type: currentWordPowerUp, wordIndex: idx });
         stream += ' '; // Space after power-up
       } else if (idx < words.length - 1) {
         stream += ' '; // Normal space between words
