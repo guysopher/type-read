@@ -341,7 +341,8 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   const fingerHint = getFingerHint(nextCharToType);
 
   // Build the full text stream for the sliding view with powerup icons embedded
-  const fullTextStream = useMemo(() => {
+  // Also track word start positions for accurate cursor positioning
+  const { fullTextStream, wordStartPositions } = useMemo(() => {
     const POWER_UP_ICONS = {
       freezeMonster: '❄️',
       shield: '🛡️',
@@ -349,6 +350,8 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     };
 
     let stream = '';
+    const positions = new Map<number, number>();
+
     words.forEach((word, idx) => {
       if (idx > 0) {
         stream += ' ';
@@ -358,45 +361,28 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
       const powerUpType = powerUpPlacements.get(idx);
       if (powerUpType) {
         const icon = POWER_UP_ICONS[powerUpType];
-        stream += icon + ' ' + word;
-      } else {
-        stream += word;
+        stream += icon + ' ';
       }
+
+      // Record where this word starts in the stream
+      positions.set(idx, stream.length);
+      stream += word;
     });
 
-    return stream;
+    return { fullTextStream: stream, wordStartPositions: positions };
   }, [words, powerUpPlacements]);
 
-  // Calculate the absolute character position in the full text (accounting for powerup icons)
+  // Calculate the absolute character position in the full text using word positions
   const absolutePosition = useMemo(() => {
-    let pos = 0;
-    for (let i = 0; i < currentWordIndex; i++) {
-      pos += words[i].length + 1; // word + space
-      // Add 2 chars for icon if this word has a powerup (emoji + space)
-      if (powerUpPlacements.get(i)) {
-        pos += 2;
-      }
-    }
-    // Add icon offset for current word if it has a powerup
-    if (powerUpPlacements.get(currentWordIndex)) {
-      pos += 2;
-    }
-    return pos + currentInput.length;
-  }, [currentWordIndex, currentInput.length, words, powerUpPlacements]);
+    const wordStart = wordStartPositions.get(currentWordIndex) || 0;
+    return wordStart + currentInput.length;
+  }, [currentWordIndex, currentInput.length, wordStartPositions]);
 
-  // Calculate monster's "one word behind" position (accounting for powerup icons)
+  // Calculate monster's "one word behind" position using word positions
   const oneWordBehindPosition = useMemo(() => {
     const prevWordIndex = Math.max(0, currentWordIndex - 1);
-    let pos = 0;
-    for (let i = 0; i < prevWordIndex; i++) {
-      pos += words[i].length + 1;
-      // Add 2 chars for icon if this word has a powerup (emoji + space)
-      if (powerUpPlacements.get(i)) {
-        pos += 2;
-      }
-    }
-    return pos;
-  }, [currentWordIndex, words, powerUpPlacements]);
+    return wordStartPositions.get(prevWordIndex) || 0;
+  }, [currentWordIndex, wordStartPositions]);
 
   // Calculate current WPM
   const calculateWPM = useCallback(() => {
