@@ -85,7 +85,7 @@ Tests cover:
   - History maintenance (365 days)
 
 - **Player Progress**
-  - XP and leveling
+  - Level progression
   - Achievement unlocking
   - Power-up inventory
   - Monster skin management
@@ -96,7 +96,7 @@ Tests cover:
 - All localStorage operations
 - Progress protection (no overwriting newer data)
 - Achievement detection (26 achievements)
-- Level calculation from XP
+- Level calculation from score
 - Challenge completion tracking
 
 ### 4. Gamification System (100% ✅)

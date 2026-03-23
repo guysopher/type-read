@@ -28,24 +28,24 @@ Your typing game is now **super addictive** with complete Phase 1 & 2 gamificati
     - Combo (10x, 25x, 50x multipliers)
     - Special (Play 10, 50, 100 games)
   - **Rarity System**: Common, Rare, Epic, Legendary
-  - **XP Rewards**: Each achievement grants XP
+  - **Rewards**: Each achievement grants progression rewards
   - **Popup Celebrations**: Beautiful animated popups when unlocked
   - **Auto-detection**: Automatically checks achievements after each game
 
-### 3. Leveling with XP Bar ✅
+### 3. Leveling System ✅
 - **Location**: `src/components/GameHUD.tsx`
 - **Features**:
-  - **XP System**: Earn XP from scores, streaks, achievements
-  - **Level Progression**: Exponential curve (level 1 = 100 XP, level 2 = 200 XP, etc.)
-  - **Visual XP Bar**: Shows current progress in top-left HUD
+  - **Leveling System**: Earn progression from scores, streaks, achievements
+  - **Level Progression**: Exponential curve based on score
+  - **Visual Progress Bar**: Shows current progress in top-left HUD
   - **Level Up Celebration**: Animated popup with stars and effects
   - **Always Visible**: Displayed in GameHUD during gameplay
-  - **XP Sources**:
-    - Base XP from score (1 XP per 10 points)
-    - Accuracy bonuses (95%+ = 50 XP, 98%+ = 100 XP, 100% = 200 XP total)
-    - Survival bonus (100 XP for completing text)
-    - Streak bonuses (25+ = 50 XP, 50+ = 150 XP, 100+ = 350 XP total)
-    - Achievement rewards (50-1000 XP per achievement)
+  - **Progression Sources**:
+    - Base progression from score
+    - Accuracy bonuses (95%+, 98%+, 100% perfect)
+    - Survival bonus for completing text
+    - Streak bonuses (25+, 50+, 100+ word streaks)
+    - Achievement rewards
 
 ### 4. Power-Ups System ✅
 - **Location**: `src/components/GameHUD.tsx`, integrated in TypingView
