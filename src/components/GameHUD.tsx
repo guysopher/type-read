@@ -30,32 +30,36 @@ export default function GameHUD({ onUsePowerUp, combo = 1, currentWPM = 0 }: Gam
   const wpmPercentage = Math.min(100, (currentWPM / maxWPM) * 100);
 
   return (
-    <div className="fixed top-4 left-4 z-40 space-y-2">
-      {/* WPM Status Bar */}
-      <div className="bg-white border-2 border-black p-2 pixel-corners shadow-retro min-w-[220px]">
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-xs font-bold pixel-text">{wpmStatus.name}</span>
-          <span className="text-xs text-gray-600">
-            {currentWPM} WPM
-          </span>
-        </div>
-        <div className="h-3 bg-gray-200 border-2 border-gray-400 pixel-corners overflow-hidden">
-          <div
-            className={`h-full bg-gradient-to-r ${wpmStatus.color} transition-all duration-500`}
-            style={{ width: `${wpmPercentage}%` }}
-          />
+    <>
+      {/* WPM Status Bar - Top Left */}
+      <div className="fixed top-4 left-4 z-40">
+        <div className="bg-white border-2 border-black p-2 pixel-corners shadow-retro min-w-[220px]">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs font-bold pixel-text">{wpmStatus.name}</span>
+            <span className="text-xs text-gray-600">
+              {currentWPM} WPM
+            </span>
+          </div>
+          <div className="h-3 bg-gray-200 border-2 border-gray-400 pixel-corners overflow-hidden">
+            <div
+              className={`h-full bg-gradient-to-r ${wpmStatus.color} transition-all duration-500`}
+              style={{ width: `${wpmPercentage}%` }}
+            />
+          </div>
         </div>
       </div>
 
-      {/* Combo Multiplier */}
+      {/* Combo Multiplier - Top Right */}
       {combo > 1 && (
-        <div className="bg-gradient-to-r from-orange-100 to-red-100 border-2 border-orange-500 p-2 pixel-corners shadow-retro animate-pulse-subtle">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">💥</span>
-            <div>
-              <div className="text-xs text-gray-700">Combo</div>
-              <div className="text-lg font-bold text-orange-700 pixel-text">
-                {combo}x
+        <div className="fixed top-4 right-4 z-40">
+          <div className="bg-gradient-to-r from-orange-100 to-red-100 border-2 border-orange-500 p-2 pixel-corners shadow-retro animate-pulse-subtle">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">💥</span>
+              <div>
+                <div className="text-xs text-gray-700">Combo</div>
+                <div className="text-lg font-bold text-orange-700 pixel-text">
+                  {combo}x
+                </div>
               </div>
             </div>
           </div>
@@ -95,6 +99,6 @@ export default function GameHUD({ onUsePowerUp, combo = 1, currentWPM = 0 }: Gam
           box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.1);
         }
       `}</style>
-    </div>
+    </>
   );
 }
