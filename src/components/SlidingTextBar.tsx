@@ -57,6 +57,11 @@ export default function SlidingTextBar({
   // Use useMemo to recalculate when powerUpPlacements changes
   const fullTextStream = useMemo(() => {
     let stream = '';
+    let iconsAdded = 0;
+
+    console.log('[SlidingTextBar] Building text stream...');
+    console.log('[SlidingTextBar] powerUpPlacements size:', powerUpPlacements.size);
+    console.log('[SlidingTextBar] powerUpPlacements entries:', Array.from(powerUpPlacements.entries()));
 
     words.forEach((word, idx) => {
       if (idx > 0) {
@@ -67,11 +72,16 @@ export default function SlidingTextBar({
       const powerUpType = powerUpPlacements.get(idx);
       if (powerUpType) {
         const icon = POWER_UP_ICONS[powerUpType];
+        console.log(`[SlidingTextBar] Adding icon ${icon} before word "${word}" at index ${idx}`);
         stream += icon + ' ' + word;
+        iconsAdded++;
       } else {
         stream += word;
       }
     });
+
+    console.log('[SlidingTextBar] Total icons added:', iconsAdded);
+    console.log('[SlidingTextBar] First 100 chars of stream:', stream.substring(0, 100));
 
     return stream;
   }, [words, powerUpPlacements]);
