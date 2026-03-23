@@ -29,7 +29,7 @@ interface Stats {
 }
 
 const WPM_SAMPLE_INTERVAL = 3000; // Sample WPM every 3 seconds
-const AUTO_SAVE_INTERVAL = 10000; // Auto-save every 10 seconds
+const AUTO_SAVE_INTERVAL = 5000; // Auto-save every 5 seconds
 
 export default function TypingView({ text, title, onReset, savedData }: TypingViewProps) {
   // Split text into words while tracking paragraph breaks
@@ -1920,26 +1920,27 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                   </>
                 )}
               </div>
-              {/* Score display */}
-              <div className="flex items-center gap-2 sm:gap-3 ml-2 sm:ml-3">
-                <div className="relative flex items-center gap-1 px-2 sm:px-3 py-1 bg-yellow-500/10 rounded-lg">
-                  <span className="text-base sm:text-lg">🏆</span>
-                  <span className="text-base sm:text-xl font-bold text-yellow-600 dark:text-yellow-400 tabular-nums">{gameScore}</span>
-                  {streakBonus && (
-                    <span
-                      className="absolute -top-4 left-1/2 -translate-x-1/2 text-sm font-bold text-green-500 whitespace-nowrap"
-                      style={{ animation: 'floatUp 1s ease-out forwards' }}
-                    >
-                      +{streakBonus.amount}
-                    </span>
-                  )}
-                </div>
-                {currentStreak >= 3 && (
-                  <div className="flex items-center gap-0.5 px-2 py-1 bg-orange-500/10 rounded-lg">
-                    <span className="text-sm">🔥</span>
-                    <span className="text-sm font-bold text-orange-500 tabular-nums">{currentStreak}</span>
+              {/* Score display - only in monster mode */}
+              {monsterMode && (
+                <div className="flex items-center gap-2 sm:gap-3 ml-2 sm:ml-3">
+                  <div className="relative flex items-center gap-1 px-2 sm:px-3 py-1 bg-yellow-500/10 rounded-lg">
+                    <span className="text-base sm:text-lg">🏆</span>
+                    <span className="text-base sm:text-xl font-bold text-yellow-600 dark:text-yellow-400 tabular-nums">{gameScore}</span>
+                    {streakBonus && (
+                      <span
+                        className="absolute -top-4 left-1/2 -translate-x-1/2 text-sm font-bold text-green-500 whitespace-nowrap"
+                        style={{ animation: 'floatUp 1s ease-out forwards' }}
+                      >
+                        +{streakBonus.amount}
+                      </span>
+                    )}
                   </div>
-                )}
+                  {currentStreak >= 3 && (
+                    <div className="flex items-center gap-0.5 px-2 py-1 bg-orange-500/10 rounded-lg">
+                      <span className="text-sm">🔥</span>
+                      <span className="text-sm font-bold text-orange-500 tabular-nums">{currentStreak}</span>
+                    </div>
+                  )}
                 {/* Speed comparison display */}
                 {monsterStarted && (() => {
                   const lastMinuteSpeed = calculateLastMinuteSpeed();
@@ -1965,10 +1966,11 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                     </div>
                   );
                 })()}
-                <span className="text-xs sm:text-sm font-medium text-[var(--muted)] tabular-nums">
-                  {calculateWPM()} <span className="text-xs hidden sm:inline">WPM</span>
-                </span>
-              </div>
+                  <span className="text-xs sm:text-sm font-medium text-[var(--muted)] tabular-nums">
+                    {calculateWPM()} <span className="text-xs hidden sm:inline">WPM</span>
+                  </span>
+                </div>
+              )}
             </div>
           </div>
           <div className="h-1 bg-[var(--foreground)]/5 rounded-full overflow-hidden">
