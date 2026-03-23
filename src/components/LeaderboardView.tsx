@@ -13,23 +13,49 @@ import {
   getDailyStreak,
   getPlayerName,
   setPlayerName as savePlayerName,
+  addLeaderboardEntry,
   type LeaderboardEntry,
   type DailyStreak,
 } from '@/lib/storage';
+import { submitToGlobalLeaderboard } from '@/lib/api';
 import { fetchGlobalLeaderboard } from '@/lib/api';
 import { colors } from '@/styles/designTokens';
 
 type LeaderboardTab = 'daily' | 'weekly' | 'alltime' | 'personal' | 'global';
 type MetricType = 'score' | 'wpm' | 'streak' | 'accuracy';
 
-export default function LeaderboardView({ onClose }: { onClose: () => void }) {
-  const [activeTab, setActiveTab] = useState<LeaderboardTab>('daily');
+interface GameOverStats {
+  score: number;
+  wpm: number;
+  peakWpm: number;
+  accuracy: number;
+  streak: number;
+  wordsTyped: number;
+  duration: number;
+  survived: boolean;
+  textTitle: string;
+  language: 'he' | 'en';
+}
+
+interface LeaderboardViewProps {
+  onClose: () => void;
+  gameOverStats?: GameOverStats;
+}
+
+export default function LeaderboardView({ onClose, gameOverStats }: LeaderboardViewProps) {
+  const [activeTab, setActiveTab] = useState<LeaderboardTab>(
+    gameOverStats ? 'alltime' : 'daily'
+  );
   const [metric, setMetric] = useState<MetricType>('score');
   const [playerName, setPlayerNameState] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
   const [dailyStreak, setDailyStreak] = useState<DailyStreak | null>(null);
   const [globalEntries, setGlobalEntries] = useState<LeaderboardEntry[]>([]);
   const [loadingGlobal, setLoadingGlobal] = useState(false);
+
+  // Game over state
+  const [newPlayerName, setNewPlayerName] = useState('');
+  const [hasSubmittedScore, setHasSubmittedScore] = useState(false);
 
   useEffect(() => {
     setPlayerNameState(getPlayerName());
@@ -55,6 +81,37 @@ export default function LeaderboardView({ onClose }: { onClose: () => void }) {
     }
   };
 
+  // Handle new high score submission
+  const handleNewScoreSubmit = (name: string) => {
+    if (!gameOverStats || hasSubmittedScore) return;
+
+    const trimmedName = name.trim().toUpperCase();
+    if (trimmedName.length === 0) return;
+
+    const entry: LeaderboardEntry = {
+      id: `${Date.now()}-${Math.random()}`,
+      playerName: trimmedName,
+      score: gameOverStats.score,
+      wpm: gameOverStats.wpm,
+      peakWpm: gameOverStats.peakWpm,
+      accuracy: gameOverStats.accuracy,
+      streak: gameOverStats.streak,
+      wordsTyped: gameOverStats.wordsTyped,
+      duration: gameOverStats.duration,
+      survived: gameOverStats.survived,
+      date: Date.now(),
+      textTitle: gameOverStats.textTitle,
+      language: gameOverStats.language,
+    };
+
+    addLeaderboardEntry(entry);
+    submitToGlobalLeaderboard(entry);
+
+    setHasSubmittedScore(true);
+    setNewPlayerName(trimmedName);
+    savePlayerName(trimmedName); // Save as default player name
+  };
+
   const getEntries = (): LeaderboardEntry[] => {
     if (activeTab === 'global') return globalEntries;
     if (activeTab === 'daily') return getDailyLeaderboard();
@@ -72,8 +129,39 @@ export default function LeaderboardView({ onClose }: { onClose: () => void }) {
     return [];
   };
 
-  const entries = getEntries();
+  let entries = getEntries();
   const personalBests = getPersonalBests(playerName);
+
+  // Handle game over state - show user's new score in context
+  let userRank: number | null = null;
+  let entriesToDisplay: (LeaderboardEntry | 'NEW_SCORE')[] = entries;
+
+  if (gameOverStats && activeTab === 'alltime' && metric === 'score' && !hasSubmittedScore) {
+    const topScores = getTopScores(10);
+
+    // Find where the user's score ranks
+    userRank = topScores.findIndex(e => gameOverStats.score > e.score);
+    if (userRank === -1) {
+      // User's score is lower than all top 10, or there are fewer than 10 scores
+      if (topScores.length < 10) {
+        userRank = topScores.length; // User goes after existing scores
+      } else {
+        userRank = 10; // User goes in position 11
+      }
+    }
+
+    if (userRank < 10) {
+      // User is in top 10 - insert placeholder in their position
+      entriesToDisplay = [
+        ...topScores.slice(0, userRank),
+        'NEW_SCORE' as const,
+        ...topScores.slice(userRank, 10)
+      ];
+    } else {
+      // User is position 11 - show top 10 + user
+      entriesToDisplay = [...topScores.slice(0, 10), 'NEW_SCORE' as const];
+    }
+  }
 
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
@@ -262,57 +350,139 @@ export default function LeaderboardView({ onClose }: { onClose: () => void }) {
             </div>
           ) : (
             <div className="space-y-2">
-              {entries.map((entry, index) => (
-                <div
-                  key={entry.id}
-                  className="flex items-center gap-3 p-3 rounded border transition-all"
-                  style={{
-                    backgroundColor: entry.playerName === playerName ? colors.accentFaded : '#fff',
-                    borderColor: entry.playerName === playerName ? colors.accent : colors.pencilLight
-                  }}
-                >
-                  <div
-                    className="text-sm font-bold w-8 text-center flex-shrink-0 margin-text"
-                    style={{ color: colors.pencil }}
-                  >
-                    {index + 1}.
-                  </div>
+              {entriesToDisplay.map((entry, index) => {
+                // Handle new score entry
+                if (entry === 'NEW_SCORE' && gameOverStats) {
+                  return (
+                    <div
+                      key="new-score"
+                      className="flex items-center gap-3 p-3 rounded border transition-all animate-pulse"
+                      style={{
+                        backgroundColor: colors.accent,
+                        borderColor: colors.accent,
+                        boxShadow: '0 4px 12px rgba(74, 144, 226, 0.3)'
+                      }}
+                    >
+                      <div
+                        className="text-sm font-bold w-8 text-center flex-shrink-0 margin-text"
+                        style={{ color: '#fff' }}
+                      >
+                        {index + 1}.
+                      </div>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-semibold truncate" style={{ color: colors.ink }}>
-                        {entry.playerName}
-                      </span>
-                      {entry.survived && <span className="text-xs">✅</span>}
-                      {entry.language === 'he' && <span className="text-xs">🇮🇱</span>}
-                    </div>
-                    <div className="text-xs truncate" style={{ color: colors.pencil }}>
-                      {entry.textTitle} · {formatDate(entry.date)}
-                    </div>
-                  </div>
+                      <div className="flex-1 min-w-0">
+                        <input
+                          type="text"
+                          value={newPlayerName}
+                          onChange={(e) => {
+                            const value = e.target.value.toUpperCase().replace(/[^A-Z]/g, '');
+                            if (value.length <= 5) {
+                              setNewPlayerName(value);
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && newPlayerName.length > 0) {
+                              handleNewScoreSubmit(newPlayerName);
+                            }
+                          }}
+                          maxLength={5}
+                          placeholder="NAME?"
+                          autoFocus
+                          className="w-full px-3 py-1 text-lg font-bold uppercase bg-white rounded border-2 focus:outline-none text-center"
+                          style={{
+                            fontFamily: '"Courier New", monospace',
+                            color: colors.ink,
+                            borderColor: '#fff',
+                            letterSpacing: '0.3em',
+                            maxWidth: '200px'
+                          }}
+                        />
+                        <div className="text-xs mt-1" style={{ color: '#fff', opacity: 0.9 }}>
+                          {gameOverStats.textTitle} · Just now
+                        </div>
+                      </div>
 
-                  <div className="flex gap-4 text-sm flex-shrink-0 margin-text">
-                    <div className="text-right">
-                      <div className="text-xs" style={{ color: colors.pencil }}>Score</div>
-                      <div className="font-bold" style={{ color: colors.ink }}>
-                        {entry.score.toLocaleString()}
+                      <div className="flex gap-4 text-sm flex-shrink-0 margin-text">
+                        <div className="text-right">
+                          <div className="text-xs" style={{ color: '#fff', opacity: 0.8 }}>Score</div>
+                          <div className="font-bold" style={{ color: '#fff' }}>
+                            {gameOverStats.score.toLocaleString()}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xs" style={{ color: '#fff', opacity: 0.8 }}>WPM</div>
+                          <div className="font-bold" style={{ color: '#fff' }}>
+                            {Math.round(gameOverStats.wpm)}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xs" style={{ color: '#fff', opacity: 0.8 }}>Streak</div>
+                          <div className="font-bold" style={{ color: '#fff' }}>
+                            {gameOverStats.streak} 🔥
+                          </div>
+                        </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-xs" style={{ color: colors.pencil }}>WPM</div>
-                      <div className="font-bold" style={{ color: colors.ink }}>
-                        {Math.round(entry.wpm)}
+                  );
+                }
+
+                // Regular entry
+                if (entry !== 'NEW_SCORE') {
+                  return (
+                    <div
+                      key={entry.id}
+                      className="flex items-center gap-3 p-3 rounded border transition-all"
+                      style={{
+                        backgroundColor: entry.playerName === playerName ? colors.accentFaded : '#fff',
+                        borderColor: entry.playerName === playerName ? colors.accent : colors.pencilLight
+                      }}
+                    >
+                      <div
+                        className="text-sm font-bold w-8 text-center flex-shrink-0 margin-text"
+                        style={{ color: colors.pencil }}
+                      >
+                        {index + 1}.
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-semibold truncate" style={{ color: colors.ink }}>
+                            {entry.playerName}
+                          </span>
+                          {entry.survived && <span className="text-xs">✅</span>}
+                          {entry.language === 'he' && <span className="text-xs">🇮🇱</span>}
+                        </div>
+                        <div className="text-xs truncate" style={{ color: colors.pencil }}>
+                          {entry.textTitle} · {formatDate(entry.date)}
+                        </div>
+                      </div>
+
+                      <div className="flex gap-4 text-sm flex-shrink-0 margin-text">
+                        <div className="text-right">
+                          <div className="text-xs" style={{ color: colors.pencil }}>Score</div>
+                          <div className="font-bold" style={{ color: colors.ink }}>
+                            {entry.score.toLocaleString()}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xs" style={{ color: colors.pencil }}>WPM</div>
+                          <div className="font-bold" style={{ color: colors.ink }}>
+                            {Math.round(entry.wpm)}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xs" style={{ color: colors.pencil }}>Streak</div>
+                          <div className="font-bold" style={{ color: colors.ink }}>
+                            {entry.streak} 🔥
+                          </div>
+                        </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-xs" style={{ color: colors.pencil }}>Streak</div>
-                      <div className="font-bold" style={{ color: colors.ink }}>
-                        {entry.streak} 🔥
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                  );
+                }
+
+                return null;
+              })}
             </div>
           )}
         </div>

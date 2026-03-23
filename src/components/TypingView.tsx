@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { SavedText, saveText, generateId, DetailedStats, WPMSample, PauseEvent, createEmptyDetailedStats, Highlight, addLeaderboardEntry, updateDailyStreak, getPlayerName, getPlayerProgress, updateGameStats, checkAndUnlockAchievements, markAchievementSeen, getTopScores } from "@/lib/storage";
+import { SavedText, saveText, generateId, DetailedStats, WPMSample, PauseEvent, createEmptyDetailedStats, Highlight, updateDailyStreak, getPlayerProgress, updateGameStats, checkAndUnlockAchievements, markAchievementSeen } from "@/lib/storage";
 import { playCorrectSound, playErrorSound, playWordCompleteSound, playPunctuationSound, playBackgroundMusic, stopBackgroundMusic, pauseBackgroundMusic, resumeBackgroundMusic, setMusicMuted } from "@/lib/sounds";
-import { submitToGlobalLeaderboard } from "@/lib/api";
 import { MONSTER_SKINS } from "@/lib/gamification";
 import type { Achievement } from "@/lib/gamification";
 import StatsView from "./StatsView";
@@ -12,7 +11,6 @@ import AchievementPopup from "./AchievementPopup";
 import LevelUpPopup from "./LevelUpPopup";
 import GameHUD from "./GameHUD";
 import DailyChallengesPanel from "./DailyChallengesPanel";
-import ArcadeNameEntry from "./ArcadeNameEntry";
 
 interface TypingViewProps {
   text: string;
@@ -177,8 +175,19 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   const [monsterPosition, setMonsterPosition] = useState(0); // Monster waits at position 0
   const [gameScore, setGameScore] = useState(0);
   const [isGameOver, setIsGameOver] = useState(false);
-  const [showArcadeNameEntry, setShowArcadeNameEntry] = useState(false);
   const [showLeaderboardAfterGame, setShowLeaderboardAfterGame] = useState(false);
+  const [gameOverStats, setGameOverStats] = useState<{
+    score: number;
+    wpm: number;
+    peakWpm: number;
+    accuracy: number;
+    streak: number;
+    wordsTyped: number;
+    duration: number;
+    survived: boolean;
+    textTitle: string;
+    language: 'he' | 'en';
+  } | null>(null);
   const [monsterSpeed, setMonsterSpeed] = useState(2); // characters per second (will be set based on WPM)
   const [monsterStarted, setMonsterStarted] = useState(false);
   const monsterIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -460,23 +469,8 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   const handleGameOver = useCallback(() => {
     setIsGameOver(true);
 
-    // Check if score is in top 10
-    const topScores = getTopScores(10);
-    const isInTop10 = topScores.length < 10 || gameScore > topScores[topScores.length - 1].score;
-
-    if (isInTop10) {
-      // Show arcade name entry
-      setShowArcadeNameEntry(true);
-    } else {
-      // Show leaderboard directly
-      setShowLeaderboardAfterGame(true);
-    }
-  }, [gameScore]);
-
-  // Handle arcade name submission
-  const handleNameSubmit = useCallback((playerName: string) => {
-    const entry = {
-      playerName,
+    // Prepare game over stats for leaderboard
+    const gameStats = {
       score: gameScore,
       wpm: calculateWPM(),
       peakWpm: detailedStats.peakWpm || 0,
@@ -484,22 +478,15 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
       streak: bestStreak,
       wordsTyped: stats.wordsTyped,
       duration: detailedStats.totalActiveTime || 0,
-      survived: false, // They got caught since isGameOver is true
-      date: Date.now(),
+      survived: false,
       textTitle: title,
       language: (isRTL ? 'he' : 'en') as 'he' | 'en',
     };
 
-    // Save to leaderboard
-    addLeaderboardEntry(entry);
-
-    // Also submit to global leaderboard
-    submitToGlobalLeaderboard(entry);
-
-    // Hide name entry and show leaderboard
-    setShowArcadeNameEntry(false);
+    setGameOverStats(gameStats);
     setShowLeaderboardAfterGame(true);
   }, [gameScore, bestStreak, stats.wordsTyped, title, isRTL, detailedStats, calculateWPM, calculateAccuracy]);
+
 
   // Get elapsed time since session start (excluding pauses)
   const getActiveTime = useCallback(() => {
@@ -811,9 +798,9 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     }
   }, [monsterStarted, monsterMode]);
 
-  // Save to leaderboard when game ends
+  // Handle text completion (user finished successfully)
   useEffect(() => {
-    if ((isGameOver || isComplete) && stats.wordsTyped > 0 && stats.startTime) {
+    if (isComplete && !gameOverStats && stats.wordsTyped > 0 && stats.startTime) {
       const activeTime = getActiveTime();
       const accuracy = stats.totalKeystrokes > 0
         ? (stats.correctKeystrokes / stats.totalKeystrokes) * 100
@@ -821,30 +808,23 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
 
       const avgWPM = detailedStats.averageWpm || calculateWPM();
 
-      const entry = {
-        playerName: getPlayerName(),
-        date: Date.now(),
+      const completionStats = {
         score: gameScore,
-        wordsTyped: stats.wordsTyped,
         wpm: avgWPM,
-        peakWpm: detailedStats.peakWpm,
+        peakWpm: detailedStats.peakWpm || 0,
         accuracy: accuracy,
         streak: bestStreak,
-        textTitle: title,
+        wordsTyped: stats.wordsTyped,
         duration: activeTime,
-        survived: isComplete && !isGameOver,
+        survived: true,
+        textTitle: title,
         language: (isRTL ? 'he' : 'en') as 'he' | 'en',
       };
 
-      // Save locally
-      addLeaderboardEntry(entry);
-
-      // Submit to global leaderboard (async, don't wait)
-      submitToGlobalLeaderboard(entry).catch(() => {
-        // Silently fail if global submission doesn't work
-      });
+      setGameOverStats(completionStats);
+      setShowLeaderboardAfterGame(true);
     }
-  }, [isGameOver, isComplete, stats, gameScore, bestStreak, detailedStats, calculateWPM, getActiveTime, title, isRTL]);
+  }, [isComplete, gameOverStats, stats, gameScore, bestStreak, detailedStats, calculateWPM, getActiveTime, title, isRTL]);
 
   // Load selected monster skin
   useEffect(() => {
@@ -2285,28 +2265,16 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         {fingerHintPosition === 'bottom' && renderFingerHint()}
       </main>
 
-      {/* Arcade Name Entry - shown if player got into top 10 */}
-      {showArcadeNameEntry && (
-        <ArcadeNameEntry
-          score={gameScore}
-          wpm={calculateWPM()}
-          accuracy={calculateAccuracy()}
-          streak={bestStreak}
-          wordsTyped={stats.wordsTyped}
-          onSubmit={handleNameSubmit}
-          onSkip={() => {
-            setShowArcadeNameEntry(false);
-            setShowLeaderboardAfterGame(true);
+      {/* Leaderboard after game */}
+      {showLeaderboardAfterGame && (
+        <LeaderboardView
+          gameOverStats={gameOverStats || undefined}
+          onClose={() => {
+            setShowLeaderboardAfterGame(false);
+            setGameOverStats(null);
+            onReset(); // Go back to text selection after closing leaderboard
           }}
         />
-      )}
-
-      {/* Leaderboard after game - shown immediately after game ends (or after name entry) */}
-      {showLeaderboardAfterGame && (
-        <LeaderboardView onClose={() => {
-          setShowLeaderboardAfterGame(false);
-          onReset(); // Go back to text selection after closing leaderboard
-        }} />
       )}
 
       {/* Stats modal */}
