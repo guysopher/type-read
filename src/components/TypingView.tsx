@@ -1269,12 +1269,10 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           setGameScore((prev: number) => Math.max(0, prev - mistakeCount));
         }
 
-        // Update stats
+        // Update stats (keystrokes are now tracked per character, so only update word count here)
         setStats((s) => ({
           ...s,
           wordsTyped: s.wordsTyped + 1,
-          correctKeystrokes: s.correctKeystrokes + (isCorrect ? typedWord.length : 0),
-          totalKeystrokes: s.totalKeystrokes + typedWord.length,
         }));
 
         // Always advance to next word
@@ -1317,6 +1315,13 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           if (isCorrect) {
             correctKeystrokesRef.current.push(now);
           }
+
+          // Update stats for WPM calculation on every keystroke
+          setStats((s) => ({
+            ...s,
+            totalKeystrokes: s.totalKeystrokes + 1,
+            correctKeystrokes: s.correctKeystrokes + (isCorrect ? 1 : 0),
+          }));
 
           if (soundEffects) {
             if (isCorrect) {
