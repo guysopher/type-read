@@ -36,15 +36,30 @@ body {
   color: var(--ink-black);
   font-family: var(--font-sans), system-ui, sans-serif;
 
-  /* Ruled notebook lines */
+  /* Subtle paper texture */
   background-image:
-    /* Horizontal ruled lines every 30px */
+    /* Noise texture for paper grain */
+    repeating-linear-gradient(
+      45deg,
+      transparent 0,
+      transparent 2px,
+      rgba(0, 0, 0, 0.01) 2px,
+      rgba(0, 0, 0, 0.01) 4px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent 0,
+      transparent 2px,
+      rgba(0, 0, 0, 0.01) 2px,
+      rgba(0, 0, 0, 0.01) 4px
+    ),
+    /* Very subtle color variation */
     repeating-linear-gradient(
       0deg,
-      transparent,
-      transparent 29px,
-      var(--notebook-line) 29px,
-      var(--notebook-line) 30px
+      transparent 0,
+      transparent 10px,
+      rgba(232, 220, 200, 0.3) 10px,
+      rgba(232, 220, 200, 0.3) 20px
     );
   background-attachment: fixed;
 }
