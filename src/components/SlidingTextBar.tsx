@@ -53,33 +53,27 @@ export default function SlidingTextBar({
   const slidingBarRef = useRef<HTMLDivElement>(null);
   const [slidingBarWidth, setSlidingBarWidth] = useState(0);
 
-  // Build text stream with power-up icons inserted between words
+  // Build text stream with power-up icons embedded in the word text
   // Use useMemo to recalculate when powerUpPlacements changes
-  const { fullTextStream, powerUpPositions } = useMemo(() => {
+  const fullTextStream = useMemo(() => {
     let stream = '';
-    const powerUpPos = new Map<number, { type: 'freezeMonster' | 'shield' | 'slowMo'; wordIndex: number }>();
 
     words.forEach((word, idx) => {
-      // Check if CURRENT word has a power-up (show icon BEFORE current word)
-      const currentWordPowerUp = powerUpPlacements.get(idx);
-      if (currentWordPowerUp && idx > 0) {
-        stream += ' '; // Space before power-up
-        const powerUpPosition = stream.length;
-        stream += '•'; // Placeholder for power-up (single char for positioning)
-        powerUpPos.set(powerUpPosition, { type: currentWordPowerUp, wordIndex: idx });
-        stream += ' '; // Space after power-up
-      } else if (idx > 0) {
-        stream += ' '; // Normal space between words
+      if (idx > 0) {
+        stream += ' ';
       }
 
-      stream += word;
+      // Check if CURRENT word has a power-up - prepend icon to word
+      const powerUpType = powerUpPlacements.get(idx);
+      if (powerUpType) {
+        const icon = POWER_UP_ICONS[powerUpType];
+        stream += icon + ' ' + word;
+      } else {
+        stream += word;
+      }
     });
 
-    console.log('SlidingTextBar: powerUpPlacements size:', powerUpPlacements.size);
-    console.log('SlidingTextBar: powerUpPositions size:', powerUpPos.size);
-    console.log('SlidingTextBar: First 5 powerup positions:', Array.from(powerUpPos.entries()).slice(0, 5));
-
-    return { fullTextStream: stream, powerUpPositions: powerUpPos };
+    return stream;
   }, [words, powerUpPlacements]);
 
   // Measure sliding bar width for responsive character count
@@ -163,34 +157,6 @@ export default function SlidingTextBar({
               const isPadding = i < leadingPadding || i >= visibleText.length - trailingPadding;
               const monsterAtThisPos =
                 monsterMode && monsterPosition >= 0 && Math.floor(monsterPosition) === globalPos;
-
-              // Check if this position has a power-up icon
-              const powerUp = powerUpPositions.get(globalPos);
-
-              // Power-up icon rendering (appears between words)
-              if (powerUp && globalPos > absolutePosition) {
-                // Uncollected power-up ahead of player
-                const powerUpIcon = POWER_UP_ICONS[powerUp.type];
-                return (
-                  <span
-                    key={`${globalPos}-powerup`}
-                    className="inline-block mx-1 text-2xl sm:text-3xl align-middle"
-                    style={{
-                      animation: 'bounce 1s ease-in-out infinite',
-                      filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
-                    }}
-                  >
-                    {powerUpIcon}
-                  </span>
-                );
-              } else if (powerUp && globalPos <= absolutePosition) {
-                // Collected power-up (behind player) - render as space
-                return (
-                  <span key={`${globalPos}-collected`} className="inline-block opacity-0">
-                    {'\u00A0'}
-                  </span>
-                );
-              }
 
               // Monster rendering
               if (monsterAtThisPos) {
