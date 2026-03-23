@@ -55,6 +55,12 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   useEffect(() => {
     if (words.length === 0) return;
 
+    // Only place power-ups in monster mode
+    if (!monsterMode) {
+      setPowerUpPlacements(new Map());
+      return;
+    }
+
     // Place 8-12 random power-ups throughout the text
     const placements = new Map<number, 'freezeMonster' | 'shield' | 'slowMo'>();
     const powerUpTypes: ('freezeMonster' | 'shield' | 'slowMo')[] = ['freezeMonster', 'shield', 'slowMo'];
@@ -77,7 +83,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     }
 
     setPowerUpPlacements(placements);
-  }, [text, words]);
+  }, [text, words, monsterMode]);
 
   const [currentWordIndex, setCurrentWordIndex] = useState(
     savedData?.progress.currentWordIndex || 0
@@ -2094,15 +2100,17 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                 className += " bg-[var(--foreground)]/10";
               }
 
-              // Check if this word has a power-up collectible and add background highlight
-              const powerUpType = powerUpPlacements.get(index);
-              if (powerUpType && index >= currentWordIndex) {
-                const powerUpHighlights = {
-                  freezeMonster: 'bg-cyan-400/40 px-1 rounded shadow-sm',
-                  shield: 'bg-yellow-400/40 px-1 rounded shadow-sm',
-                  slowMo: 'bg-purple-400/40 px-1 rounded shadow-sm',
-                };
-                className += ' ' + powerUpHighlights[powerUpType];
+              // Check if this word has a power-up collectible and add background highlight (only in monster mode)
+              if (monsterMode) {
+                const powerUpType = powerUpPlacements.get(index);
+                if (powerUpType && index >= currentWordIndex) {
+                  const powerUpHighlights = {
+                    freezeMonster: 'bg-cyan-400/40 px-1 rounded shadow-sm',
+                    shield: 'bg-yellow-400/40 px-1 rounded shadow-sm',
+                    slowMo: 'bg-purple-400/40 px-1 rounded shadow-sm',
+                  };
+                  className += ' ' + powerUpHighlights[powerUpType];
+                }
               }
 
               return (
@@ -2328,8 +2336,8 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         />
       )}
 
-      {/* Powerup activation notification */}
-      {powerUpNotification && (() => {
+      {/* Powerup activation notification - only in monster mode */}
+      {monsterMode && powerUpNotification && (() => {
         const powerUpInfo = {
           freezeMonster: {
             icon: '❄️',
