@@ -212,77 +212,113 @@ export default function Home() {
             </button>
           )}
 
-          {/* Spacer */}
-          <div className="my-6" />
-
-          {/* Navigation Links */}
-          <nav className="space-y-2 mb-8">
+          {/* Navigation Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
             <button
               onClick={() => setShowStories(true)}
-              className="w-full text-left py-3 px-2 rounded transition-all"
-              style={{ color: colors.ink }}
+              className="group p-6 bg-white rounded-lg border transition-all text-left"
+              style={{
+                borderColor: colors.pencilLight,
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
+              }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = colors.accentFaded;
-                e.currentTarget.style.paddingLeft = '12px';
+                e.currentTarget.style.borderColor = colors.accent;
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(74, 144, 226, 0.15)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.paddingLeft = '8px';
+                e.currentTarget.style.borderColor = colors.pencilLight;
+                e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)';
+                e.currentTarget.style.transform = 'translateY(0)';
               }}
             >
-              Stories
+              <div className="text-2xl mb-2">📚</div>
+              <div className="font-medium mb-1" style={{ color: colors.ink }}>Stories</div>
+              <div className="text-xs" style={{ color: colors.pencil }}>
+                Classic tales to practice with
+              </div>
             </button>
+
             <button
               onClick={() => setShowAddText(true)}
-              className="w-full text-left py-3 px-2 rounded transition-all"
-              style={{ color: colors.ink }}
+              className="group p-6 bg-white rounded-lg border transition-all text-left"
+              style={{
+                borderColor: colors.pencilLight,
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
+              }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = colors.accentFaded;
-                e.currentTarget.style.paddingLeft = '12px';
+                e.currentTarget.style.borderColor = colors.accent;
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(74, 144, 226, 0.15)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.paddingLeft = '8px';
+                e.currentTarget.style.borderColor = colors.pencilLight;
+                e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)';
+                e.currentTarget.style.transform = 'translateY(0)';
               }}
             >
-              Your Texts
+              <div className="text-2xl mb-2">📝</div>
+              <div className="font-medium mb-1" style={{ color: colors.ink }}>Your Texts</div>
+              <div className="text-xs" style={{ color: colors.pencil }}>
+                Add your own content
+              </div>
             </button>
+
             <button
               onClick={handleStartTutorial}
-              className="w-full text-left py-3 px-2 rounded transition-all"
-              style={{ color: colors.ink }}
+              className="group p-6 bg-white rounded-lg border transition-all text-left"
+              style={{
+                borderColor: colors.pencilLight,
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
+              }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = colors.accentFaded;
-                e.currentTarget.style.paddingLeft = '12px';
+                e.currentTarget.style.borderColor = colors.accent;
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(74, 144, 226, 0.15)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.paddingLeft = '8px';
+                e.currentTarget.style.borderColor = colors.pencilLight;
+                e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)';
+                e.currentTarget.style.transform = 'translateY(0)';
               }}
             >
-              Tutorial
+              <div className="text-2xl mb-2">🎮</div>
+              <div className="font-medium mb-1" style={{ color: colors.ink }}>Tutorial</div>
+              <div className="text-xs" style={{ color: colors.pencil }}>
+                Learn how to play
+              </div>
             </button>
+
             <button
               onClick={handleStartHebrewTutorial}
-              className="w-full text-left py-3 px-2 rounded transition-all"
-              style={{ color: colors.ink }}
+              className="group p-6 bg-white rounded-lg border transition-all text-left"
+              style={{
+                borderColor: colors.pencilLight,
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
+              }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = colors.accentFaded;
-                e.currentTarget.style.paddingLeft = '12px';
+                e.currentTarget.style.borderColor = colors.accent;
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(74, 144, 226, 0.15)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.paddingLeft = '8px';
+                e.currentTarget.style.borderColor = colors.pencilLight;
+                e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)';
+                e.currentTarget.style.transform = 'translateY(0)';
               }}
             >
-              מדריך עברית
+              <div className="text-2xl mb-2">🇮🇱</div>
+              <div className="font-medium mb-1" style={{ color: colors.ink }}>מדריך עברית</div>
+              <div className="text-xs" style={{ color: colors.pencil }}>
+                למד איך לשחק
+              </div>
             </button>
-          </nav>
+          </div>
 
           {/* Saved Texts Preview */}
           {savedTexts.length > 0 && (
-            <div className="mt-6">
-              <h2 className="text-xs uppercase tracking-wide mb-3" style={{ color: colors.pencil }}>
+            <div className="mt-8">
+              <h2 className="text-xs uppercase tracking-wide mb-3 font-medium" style={{ color: colors.pencil }}>
                 Recent Texts
               </h2>
               <div className="space-y-2">
@@ -290,14 +326,22 @@ export default function Home() {
                   <button
                     key={saved.id}
                     onClick={() => handleResume(saved)}
-                    className="w-full text-left p-3 rounded border transition-all group flex items-center justify-between"
+                    className="w-full text-left p-4 rounded-lg bg-white border transition-all group flex items-center justify-between"
                     style={{
                       borderColor: colors.pencilLight,
-                      borderWidth: '1px'
+                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = colors.accent;
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(74, 144, 226, 0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = colors.pencilLight;
+                      e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)';
                     }}
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium truncate text-sm" style={{ color: colors.ink }}>
+                      <div className="font-medium truncate text-sm mb-1" style={{ color: colors.ink }}>
                         {saved.title || "Untitled"}
                       </div>
                       <div className="text-xs" style={{ color: colors.pencil }}>
@@ -306,8 +350,14 @@ export default function Home() {
                     </div>
                     <button
                       onClick={(e) => handleDelete(saved.id, e)}
-                      className="p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="p-2 opacity-0 group-hover:opacity-100 transition-opacity rounded"
                       style={{ color: colors.error }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(231, 76, 60, 0.1)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
                     >
                       ✕
                     </button>
