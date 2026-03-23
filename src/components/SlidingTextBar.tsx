@@ -124,8 +124,7 @@ export default function SlidingTextBar({
 
         <div className="flex justify-center items-center">
           <div
-            className="reading-text text-2xl sm:text-4xl tracking-wide whitespace-pre"
-            style={{ fontFamily: 'Georgia, "Crimson Text", serif' }}
+            className="text-2xl sm:text-4xl tracking-wide whitespace-pre font-sans"
           >
             {visibleText.split('').map((char: string, i: number) => {
               const globalPos = startPos + i - leadingPadding;
