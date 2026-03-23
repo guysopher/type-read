@@ -212,36 +212,68 @@ export default function Home() {
             </button>
           )}
 
-          {/* Horizontal rule */}
-          <div className="my-8 h-px" style={{ backgroundColor: colors.pencilLight, opacity: 0.3 }} />
+          {/* Spacer */}
+          <div className="my-6" />
 
           {/* Navigation Links */}
-          <nav className="space-y-3 mb-8">
+          <nav className="space-y-2 mb-8">
             <button
               onClick={() => setShowStories(true)}
-              className="w-full text-left py-3 px-4 rounded transition-all underline-drawn"
+              className="w-full text-left py-3 px-2 rounded transition-all"
               style={{ color: colors.ink }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = colors.accentFaded;
+                e.currentTarget.style.paddingLeft = '12px';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.paddingLeft = '8px';
+              }}
             >
               Stories
             </button>
             <button
               onClick={() => setShowAddText(true)}
-              className="w-full text-left py-3 px-4 rounded transition-all underline-drawn"
+              className="w-full text-left py-3 px-2 rounded transition-all"
               style={{ color: colors.ink }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = colors.accentFaded;
+                e.currentTarget.style.paddingLeft = '12px';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.paddingLeft = '8px';
+              }}
             >
               Your Texts
             </button>
             <button
               onClick={handleStartTutorial}
-              className="w-full text-left py-3 px-4 rounded transition-all underline-drawn"
+              className="w-full text-left py-3 px-2 rounded transition-all"
               style={{ color: colors.ink }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = colors.accentFaded;
+                e.currentTarget.style.paddingLeft = '12px';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.paddingLeft = '8px';
+              }}
             >
               Tutorial
             </button>
             <button
               onClick={handleStartHebrewTutorial}
-              className="w-full text-left py-3 px-4 rounded transition-all underline-drawn"
+              className="w-full text-left py-3 px-2 rounded transition-all"
               style={{ color: colors.ink }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = colors.accentFaded;
+                e.currentTarget.style.paddingLeft = '12px';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.paddingLeft = '8px';
+              }}
             >
               מדריך עברית
             </button>
