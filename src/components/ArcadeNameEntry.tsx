@@ -55,8 +55,11 @@ export default function ArcadeNameEntry({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center paper-texture"
-      style={{ backgroundColor: colors.paper }}
+      className="fixed inset-0 z-[9999] flex items-center justify-center"
+      style={{
+        backgroundColor: colors.paper,
+        backdropFilter: 'blur(8px)'
+      }}
     >
       <div className="text-center p-8 max-w-2xl">
         {/* Title */}
