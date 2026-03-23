@@ -102,7 +102,7 @@ npm run test:coverage # Run tests with coverage report
   - `getPlayerProgress()`: Retrieval, daily challenge reset
   - `savePlayerProgress()`: Storage
   - `createDefaultProgress()`: Default structure
-  - `addXP()`: XP addition, level up detection
+  - `addXP()`: Level progression addition, level up detection
   - `checkAndUnlockAchievements()`: Achievement unlocking logic
   - `markAchievementSeen()`: Seen status tracking
   - `usePowerUp()`: Power-up consumption
@@ -134,11 +134,11 @@ npm run test:coverage # Run tests with coverage report
   - Progressive level requirements
   - Achievement-based unlocks
 
-- **XP & Leveling:**
-  - `getXPForLevel()`: Exponential XP curve
-  - `getLevelFromXP()`: Level calculation, XP distribution
+- **Leveling System:**
+  - `getXPForLevel()`: Exponential level curve
+  - `getLevelFromXP()`: Level calculation, score distribution
   - `calculateXPFromGame()`:
-    - Base XP from score
+    - Base progression from score
     - Accuracy bonuses (95%, 98%, 100%)
     - Survival bonus
     - Streak bonuses (25, 50, 100)
@@ -151,7 +151,7 @@ npm run test:coverage # Run tests with coverage report
     - Different challenges per day
     - Proper structure (words, wpm, streak)
     - Appropriate target ranges
-    - XP and power-up rewards
+    - Reward distribution
   - `shouldResetChallenges()`: Daily reset logic
 
 **Total Tests:** ~80 test cases
@@ -303,7 +303,7 @@ npm run test:coverage # Run tests with coverage report
 4. **Gamification**
    - 26 achievements
    - 7 monster skins
-   - XP and leveling system
+   - Leveling system
    - Daily challenges
 
 5. **Audio System**

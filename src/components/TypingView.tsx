@@ -378,16 +378,16 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         stream += ' ';
       }
 
-      // Check if word has a power-up - prepend icon to word
-      const powerUpType = powerUpPlacements.get(idx);
-      if (powerUpType) {
-        const icon = POWER_UP_ICONS[powerUpType];
-        stream += icon + ' ';
-      }
-
       // Record where this word starts in the stream
       positions.set(idx, stream.length);
       stream += word;
+
+      // Check if word has a power-up - append icon after word
+      const powerUpType = powerUpPlacements.get(idx);
+      if (powerUpType) {
+        const icon = POWER_UP_ICONS[powerUpType];
+        stream += ' ' + icon;
+      }
     });
 
     return { fullTextStream: stream, wordStartPositions: positions };

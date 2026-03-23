@@ -76,7 +76,7 @@ Complete coverage of:
 - ✅ All 26 achievements
 - ✅ Progressive requirements
 - ✅ 7 monster skins
-- ✅ XP formulas
+- ✅ Leveling formulas
 - ✅ Leveling system
 - ✅ Daily challenges
 - ✅ Reward distribution
@@ -214,7 +214,7 @@ Quick reference guide:
 | Finger Hints | ✅ Complete |
 | Storage/Persistence | ✅ Complete |
 | 26 Achievements | ✅ Complete |
-| Leveling/XP | ✅ Complete |
+| Leveling System | ✅ Complete |
 | Daily Challenges | ✅ Complete |
 | Monster Skins | ✅ Complete |
 | Audio System | ✅ Complete |

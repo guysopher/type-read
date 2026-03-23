@@ -30,7 +30,7 @@ This document provides a complete inventory of all files created for the TypeRea
 4. **`src/lib/gamification.test.ts`**
    - **Lines:** 550
    - **Tests:** ~80
-   - **Coverage:** 26 achievements, 7 skins, XP/leveling, daily challenges
+   - **Coverage:** 26 achievements, 7 skins, leveling system, daily challenges
 
 5. **`src/lib/sounds.test.ts`**
    - **Lines:** 290

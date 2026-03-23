@@ -117,22 +117,22 @@ Tests cover:
   - Achievement-based unlocks
   - Progressive requirements
 
-- **XP & Leveling**
-  - Exponential XP curve
+- **Leveling System**
+  - Exponential level curve
   - Level calculation
-  - Score-based XP
-  - Bonus XP (accuracy, survival, streaks)
+  - Score-based progression
+  - Bonus progression (accuracy, survival, streaks)
 
 - **Daily Challenges**
   - 3 challenges per day
   - Consistent seeding
   - Target ranges (words, WPM, streaks)
-  - XP and power-up rewards
+  - Reward distribution
   - Daily reset logic
 
 **Key Features Tested:**
 - All 26 achievement definitions
-- XP calculation algorithm
+- Level progression algorithm
 - Level progression formulas
 - Challenge generation
 - Reward distribution
@@ -319,7 +319,7 @@ Tests cover:
 | Finger Hints | 100% ✅ | fingerHints.test.ts |
 | Storage/Persistence | 100% ✅ | storage.test.ts |
 | Achievements | 100% ✅ | gamification.test.ts |
-| Leveling/XP | 100% ✅ | gamification.test.ts |
+| Leveling System | 100% ✅ | gamification.test.ts |
 | Daily Challenges | 100% ✅ | gamification.test.ts |
 | Audio System | 100% ✅ | sounds.test.ts |
 | Scoring/Combos | 100% ✅ | useGameScoring.test.ts |
