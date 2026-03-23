@@ -383,7 +383,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     return Math.max(0, absolutePosition - 1);
   }, [absolutePosition]);
 
-  // Calculate current WPM
+  // Calculate current WPM using standard formula: (characters / 5) / minutes
   const calculateWPM = useCallback(() => {
     if (!stats.startTime) return 0;
     const sessionTime = stats.startTime
@@ -392,7 +392,9 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     const totalTime = accumulatedTime + sessionTime - detailedStats.totalPauseTime;
     const minutes = totalTime / 60000;
     if (minutes < 0.01) return 0;
-    return Math.round(stats.wordsTyped / minutes);
+    // Standard WPM formula: all characters typed / 5 / minutes
+    // This gives the standard "words per minute" where a word = 5 characters
+    return Math.round((stats.totalKeystrokes / 5) / minutes);
   }, [stats, accumulatedTime, detailedStats.totalPauseTime]);
 
   // Track CORRECT keystrokes for accurate speed calculation
