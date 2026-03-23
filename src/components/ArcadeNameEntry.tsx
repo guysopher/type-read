@@ -9,6 +9,7 @@ interface ArcadeNameEntryProps {
   streak: number;
   wordsTyped: number;
   onSubmit: (name: string) => void;
+  onSkip: () => void;
 }
 
 export default function ArcadeNameEntry({
@@ -18,6 +19,7 @@ export default function ArcadeNameEntry({
   streak,
   wordsTyped,
   onSubmit,
+  onSkip,
 }: ArcadeNameEntryProps) {
   const [name, setName] = useState(''); // 5-letter name
   const inputRef = useRef<HTMLInputElement>(null);
@@ -104,15 +106,23 @@ export default function ArcadeNameEntry({
         </div>
 
         {/* Submit Button */}
-        <button
-          onClick={handleSubmit}
-          disabled={name.length === 0}
-          className={`ink-button px-12 py-4 text-xl pixel-corners shadow-retro-lg ${
-            name.length === 0 ? 'opacity-50 cursor-not-allowed' : ''
-          }`}
-        >
-          SUBMIT
-        </button>
+        <div className="flex gap-4 justify-center">
+          <button
+            onClick={handleSubmit}
+            disabled={name.length === 0}
+            className={`ink-button px-12 py-4 text-xl pixel-corners shadow-retro-lg ${
+              name.length === 0 ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+          >
+            SUBMIT
+          </button>
+          <button
+            onClick={onSkip}
+            className="px-8 py-4 text-xl border-2 border-[var(--ink-black)] text-[var(--ink-black)] hover:bg-[var(--ink-black)] hover:text-white transition-colors pixel-corners shadow-retro-lg"
+          >
+            SKIP
+          </button>
+        </div>
       </div>
 
       <style jsx>{`

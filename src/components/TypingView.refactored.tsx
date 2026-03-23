@@ -818,6 +818,10 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
       {showArcadeNameEntry && (
         <ArcadeNameEntry
           score={scoring.gameScore}
+          wpm={calculateWPM()}
+          accuracy={calculateAccuracy()}
+          streak={scoring.bestStreak}
+          wordsTyped={typingInput.stats.wordsTyped}
           onSubmit={handleNameSubmit}
           onSkip={() => {
             setShowArcadeNameEntry(false);

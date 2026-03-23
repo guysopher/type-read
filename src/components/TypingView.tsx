@@ -2227,6 +2227,10 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           streak={bestStreak}
           wordsTyped={stats.wordsTyped}
           onSubmit={handleNameSubmit}
+          onSkip={() => {
+            setShowArcadeNameEntry(false);
+            setShowLeaderboardAfterGame(true);
+          }}
         />
       )}
 
