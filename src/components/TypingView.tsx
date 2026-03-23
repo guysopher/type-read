@@ -63,8 +63,8 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     const numPowerUps = Math.floor(Math.random() * 3) + 3; // 3-5 power-ups
 
     for (let i = 0; i < numPowerUps; i++) {
-      // Place power-ups in the latter half of the text to make them rewards
-      const minIndex = Math.floor(words.length * 0.2);
+      // Place power-ups throughout the text (starting from 10% in)
+      const minIndex = Math.floor(words.length * 0.1);
       const maxIndex = words.length - 1;
       let wordIndex = Math.floor(Math.random() * (maxIndex - minIndex + 1)) + minIndex;
 
@@ -2051,8 +2051,11 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                   {/* Floating power-up icon */}
                   {powerUpIcon && index >= currentWordIndex && (
                     <span
-                      className="absolute -top-6 left-1/2 -translate-x-1/2 text-xl animate-bounce pointer-events-none"
-                      style={{ animation: 'bounce 1s ease-in-out infinite' }}
+                      className="absolute -top-8 left-1/2 -translate-x-1/2 text-2xl pointer-events-none z-10"
+                      style={{
+                        animation: 'bounce 1s ease-in-out infinite',
+                        filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
+                      }}
                     >
                       {powerUpIcon}
                     </span>
