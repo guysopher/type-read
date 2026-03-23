@@ -22,9 +22,16 @@ interface SlidingTextBarProps {
   powerUpPlacements?: Map<number, 'freezeMonster' | 'shield' | 'slowMo'>;
 }
 
+// Power-up icon mapping
+const POWER_UP_ICONS = {
+  freezeMonster: '❄️',
+  shield: '🛡️',
+  slowMo: '⏱️',
+};
+
 /**
  * Sliding text display with centered cursor, monster chase, and visual feedback
- * Power-up words are highlighted with colored backgrounds
+ * Power-up icons appear between words in the typing row
  */
 export default function SlidingTextBar({
   words,
@@ -46,31 +53,28 @@ export default function SlidingTextBar({
   const slidingBarRef = useRef<HTMLDivElement>(null);
   const [slidingBarWidth, setSlidingBarWidth] = useState(0);
 
-  // Build text stream and track word positions and powerups
-  const { fullTextStream, wordRanges } = useRef((() => {
+  // Build text stream with power-up icons inserted between words
+  const { fullTextStream, powerUpPositions } = useRef((() => {
     let stream = '';
-    const ranges = new Map<number, { start: number; end: number; hasPowerUp: boolean; powerUpType?: 'freezeMonster' | 'shield' | 'slowMo' }>();
+    const powerUpPos = new Map<number, { type: 'freezeMonster' | 'shield' | 'slowMo'; wordIndex: number }>();
 
     words.forEach((word, idx) => {
-      const startPos = stream.length;
       stream += word;
-      const endPos = stream.length;
 
-      // Check if this word has a power-up
-      const powerUpType = powerUpPlacements.get(idx);
-      ranges.set(idx, {
-        start: startPos,
-        end: endPos,
-        hasPowerUp: !!powerUpType,
-        powerUpType: powerUpType,
-      });
-
-      if (idx < words.length - 1) {
+      // Check if next word has a power-up (show icon after current word)
+      const nextWordPowerUp = powerUpPlacements.get(idx + 1);
+      if (nextWordPowerUp && idx < words.length - 1) {
+        stream += ' '; // Space before power-up
+        const powerUpPosition = stream.length;
+        stream += '•'; // Placeholder for power-up (single char for positioning)
+        powerUpPos.set(powerUpPosition, { type: nextWordPowerUp, wordIndex: idx + 1 });
+        stream += ' '; // Space after power-up
+      } else if (idx < words.length - 1) {
         stream += ' '; // Normal space between words
       }
     });
 
-    return { fullTextStream: stream, wordRanges: ranges };
+    return { fullTextStream: stream, powerUpPositions: powerUpPos };
   })()).current;
 
   // Measure sliding bar width for responsive character count
@@ -155,13 +159,32 @@ export default function SlidingTextBar({
               const monsterAtThisPos =
                 monsterMode && monsterPosition >= 0 && Math.floor(monsterPosition) === globalPos;
 
-              // Check if this position is in a word with a power-up
-              let wordWithPowerUp: { hasPowerUp: boolean; powerUpType?: 'freezeMonster' | 'shield' | 'slowMo' } | null = null;
-              for (const [_, range] of wordRanges) {
-                if (globalPos >= range.start && globalPos < range.end && range.hasPowerUp) {
-                  wordWithPowerUp = range;
-                  break;
-                }
+              // Check if this position has a power-up icon
+              const powerUp = powerUpPositions.get(globalPos);
+
+              // Power-up icon rendering (appears between words)
+              if (powerUp && globalPos > absolutePosition) {
+                // Uncollected power-up ahead of player
+                const powerUpIcon = POWER_UP_ICONS[powerUp.type];
+                return (
+                  <span
+                    key={`${globalPos}-powerup`}
+                    className="inline-block mx-1 text-2xl sm:text-3xl align-middle"
+                    style={{
+                      animation: 'bounce 1s ease-in-out infinite',
+                      filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
+                    }}
+                  >
+                    {powerUpIcon}
+                  </span>
+                );
+              } else if (powerUp && globalPos <= absolutePosition) {
+                // Collected power-up (behind player) - render as space
+                return (
+                  <span key={`${globalPos}-collected`} className="inline-block opacity-0">
+                    {'\u00A0'}
+                  </span>
+                );
               }
 
               // Monster rendering
@@ -211,16 +234,6 @@ export default function SlidingTextBar({
               // Regular character rendering
               let className = 'inline-block transition-all duration-75 ';
               let displayChar: string = char;
-
-              // Add powerup highlight background if this character is in a word with a powerup
-              if (wordWithPowerUp?.hasPowerUp && wordWithPowerUp.powerUpType && globalPos >= absolutePosition) {
-                const powerUpColors = {
-                  freezeMonster: 'bg-cyan-400/30 shadow-[0_0_8px_rgba(34,211,238,0.4)]',
-                  shield: 'bg-yellow-400/30 shadow-[0_0_8px_rgba(250,204,21,0.4)]',
-                  slowMo: 'bg-purple-400/30 shadow-[0_0_8px_rgba(192,132,252,0.4)]',
-                };
-                className += powerUpColors[wordWithPowerUp.powerUpType] + ' ';
-              }
 
               // Characters eaten by monster
               if (monsterPosition >= 0 && globalPos < monsterPosition) {
