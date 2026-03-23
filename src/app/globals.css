@@ -36,7 +36,7 @@ body {
   color: var(--ink-black);
   font-family: var(--font-sans), system-ui, sans-serif;
 
-  /* Subtle paper texture */
+  /* Subtle paper texture - just grain, no lines */
   background-image:
     /* Noise texture for paper grain */
     repeating-linear-gradient(
@@ -52,14 +52,6 @@ body {
       transparent 2px,
       rgba(0, 0, 0, 0.01) 2px,
       rgba(0, 0, 0, 0.01) 4px
-    ),
-    /* Very subtle color variation */
-    repeating-linear-gradient(
-      0deg,
-      transparent 0,
-      transparent 10px,
-      rgba(232, 220, 200, 0.3) 10px,
-      rgba(232, 220, 200, 0.3) 20px
     );
   background-attachment: fixed;
 }
