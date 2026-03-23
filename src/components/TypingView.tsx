@@ -2037,15 +2037,15 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                 className += " bg-[var(--foreground)]/10";
               }
 
-              // Check if this word has a power-up collectible and add subtle underline
+              // Check if this word has a power-up collectible and add background highlight
               const powerUpType = powerUpPlacements.get(index);
               if (powerUpType && index >= currentWordIndex) {
-                const powerUpUnderlines = {
-                  freezeMonster: 'border-b-2 border-cyan-400',
-                  shield: 'border-b-2 border-yellow-400',
-                  slowMo: 'border-b-2 border-purple-400',
+                const powerUpHighlights = {
+                  freezeMonster: 'bg-cyan-400/40 px-1 rounded shadow-sm',
+                  shield: 'bg-yellow-400/40 px-1 rounded shadow-sm',
+                  slowMo: 'bg-purple-400/40 px-1 rounded shadow-sm',
                 };
-                className += ' ' + powerUpUnderlines[powerUpType];
+                className += ' ' + powerUpHighlights[powerUpType];
               }
 
               return (

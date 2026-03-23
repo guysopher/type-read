@@ -122,7 +122,7 @@ export function useGameScoring({ onPowerUpCollected }: UseGameScoringProps = {})
 
   /**
    * Initialize power-up placements for the text
-   * Spreads powerups evenly throughout the text
+   * Spreads powerups evenly throughout the text with minimum distance enforcement
    */
   const initializePowerUps = useCallback((totalWords: number) => {
     const placements = new Map<number, 'freezeMonster' | 'shield' | 'slowMo'>();
@@ -138,16 +138,32 @@ export function useGameScoring({ onPowerUpCollected }: UseGameScoringProps = {})
     const maxIndex = totalWords - 1;
     const availableRange = maxIndex - minIndex;
     const spacing = Math.floor(availableRange / numPowerUps);
+    const minDistance = Math.max(10, Math.floor(spacing * 0.6)); // Minimum 10 words apart, or 60% of spacing
 
     for (let i = 0; i < numPowerUps; i++) {
-      // Place power-ups evenly with some randomness
+      // Place power-ups evenly with slight randomness (only 15% variation)
       const basePosition = minIndex + (i * spacing);
-      const randomOffset = Math.floor(Math.random() * Math.max(1, spacing / 2)) - Math.floor(spacing / 4);
+      const randomOffset = Math.floor((Math.random() - 0.5) * spacing * 0.3); // +/- 15% of spacing
       let wordIndex = Math.max(minIndex, Math.min(maxIndex, basePosition + randomOffset));
 
-      // Ensure we don't place multiple power-ups on the same word
-      while (placements.has(wordIndex) && wordIndex < maxIndex) {
-        wordIndex++;
+      // Ensure minimum distance from all existing power-ups
+      let attempts = 0;
+      while (attempts < 50) {
+        let tooClose = false;
+        for (const existingIndex of placements.keys()) {
+          if (Math.abs(wordIndex - existingIndex) < minDistance) {
+            tooClose = true;
+            break;
+          }
+        }
+
+        if (!tooClose && !placements.has(wordIndex)) {
+          break; // Found a good position
+        }
+
+        // Try next position
+        wordIndex = minIndex + Math.floor(Math.random() * availableRange);
+        attempts++;
       }
 
       // Randomly select a power-up type
