@@ -367,24 +367,36 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     return stream;
   }, [words, powerUpPlacements]);
 
-  // Calculate the absolute character position in the full text
+  // Calculate the absolute character position in the full text (accounting for powerup icons)
   const absolutePosition = useMemo(() => {
     let pos = 0;
     for (let i = 0; i < currentWordIndex; i++) {
-      pos += words[i].length + 1;
+      pos += words[i].length + 1; // word + space
+      // Add 2 chars for icon if this word has a powerup (emoji + space)
+      if (powerUpPlacements.get(i)) {
+        pos += 2;
+      }
+    }
+    // Add icon offset for current word if it has a powerup
+    if (powerUpPlacements.get(currentWordIndex)) {
+      pos += 2;
     }
     return pos + currentInput.length;
-  }, [currentWordIndex, currentInput.length, words]);
+  }, [currentWordIndex, currentInput.length, words, powerUpPlacements]);
 
-  // Calculate monster's "one word behind" position
+  // Calculate monster's "one word behind" position (accounting for powerup icons)
   const oneWordBehindPosition = useMemo(() => {
     const prevWordIndex = Math.max(0, currentWordIndex - 1);
     let pos = 0;
     for (let i = 0; i < prevWordIndex; i++) {
       pos += words[i].length + 1;
+      // Add 2 chars for icon if this word has a powerup (emoji + space)
+      if (powerUpPlacements.get(i)) {
+        pos += 2;
+      }
     }
     return pos;
-  }, [currentWordIndex, words]);
+  }, [currentWordIndex, words, powerUpPlacements]);
 
   // Calculate current WPM
   const calculateWPM = useCallback(() => {
