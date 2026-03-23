@@ -45,6 +45,7 @@ export interface UseTypingInputProps {
   onKeystroke?: (isCorrect: boolean, timestamp: number) => void;
   onComplete?: () => void;
   onStartTyping?: (timestamp: number) => void;
+  onIncorrectKeystroke?: () => void; // Called immediately on any incorrect key press
 }
 
 export function useTypingInput({
@@ -58,6 +59,7 @@ export function useTypingInput({
   onKeystroke,
   onComplete,
   onStartTyping,
+  onIncorrectKeystroke,
 }: UseTypingInputProps) {
   const [currentWordIndex, setCurrentWordIndex] = useState(initialWordIndex);
   const [currentInput, setCurrentInput] = useState('');
@@ -194,6 +196,7 @@ export function useTypingInput({
           // Track if any mistake was made
           if (!isCorrect) {
             currentWordMistakesRef.current = true;
+            onIncorrectKeystroke?.(); // Reset combo immediately
           }
 
           // Play sound
@@ -209,6 +212,7 @@ export function useTypingInput({
           onKeystroke?.(isCorrect, Date.now());
         } else if (newCharIndex >= currentWord.length) {
           // Typing beyond word length - always an error
+          onIncorrectKeystroke?.(); // Reset combo immediately
           if (soundEffects) playErrorSound();
           setShake(true);
           setTimeout(() => setShake(false), 300);

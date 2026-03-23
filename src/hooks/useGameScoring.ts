@@ -55,14 +55,14 @@ export function useGameScoring({ onPowerUpCollected }: UseGameScoringProps = {})
         setCurrentStreak(newStreak);
         setBestStreak(prev => Math.max(prev, newStreak));
 
-        // Increase combo multiplier (perfect words only - no mistakes ever made, even if fixed)
+        // Combo multiplier increases only on perfect words (no mistakes at all, even if fixed)
+        // Note: combo is already reset to 1 on any incorrect keystroke via resetCombo()
         if (!hadAnyMistakes) {
           const newCombo = comboMultiplier + 1;
           setComboMultiplier(newCombo);
           setMaxComboReached(prev => Math.max(prev, newCombo));
-        } else {
-          setComboMultiplier(1);
         }
+        // If hadAnyMistakes, combo stays at 1 (was already reset on the incorrect keystroke)
 
         // Award streak bonus at milestones
         const bonus = calculateStreakBonus(newStreak);
@@ -91,7 +91,7 @@ export function useGameScoring({ onPowerUpCollected }: UseGameScoringProps = {})
       } else {
         // Word has mistakes
         setCurrentStreak(0);
-        setComboMultiplier(1); // Reset combo on mistakes
+        // Combo is already 1 from resetCombo() calls during typing
         // Lose 1 point per mistake
         setGameScore(prev => Math.max(0, prev - mistakeCount));
       }

@@ -235,6 +235,10 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         monsterChase.startCountdown();
       }
     },
+    onIncorrectKeystroke: () => {
+      // Reset combo immediately on any incorrect keystroke
+      scoring.resetCombo();
+    },
     onWordComplete: (event: WordCompletionEvent) => {
       // Update scoring
       scoring.addWordScore(
@@ -781,8 +785,14 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
       {showStats && (
         <StatsView
           stats={detailedStats}
+          wordsTyped={typingInput.stats.wordsTyped}
+          totalWords={words.length}
+          accuracy={
+            typingInput.stats.totalKeystrokes > 0
+              ? (typingInput.stats.correctKeystrokes / typingInput.stats.totalKeystrokes) * 100
+              : 0
+          }
           onClose={() => setShowStats(false)}
-          currentText={title}
         />
       )}
 
