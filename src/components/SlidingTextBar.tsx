@@ -75,6 +75,10 @@ export default function SlidingTextBar({
       }
     });
 
+    console.log('SlidingTextBar: powerUpPlacements size:', powerUpPlacements.size);
+    console.log('SlidingTextBar: powerUpPositions size:', powerUpPos.size);
+    console.log('SlidingTextBar: First 5 powerup positions:', Array.from(powerUpPos.entries()).slice(0, 5));
+
     return { fullTextStream: stream, powerUpPositions: powerUpPos };
   }, [words, powerUpPlacements]);
 
