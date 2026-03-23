@@ -139,7 +139,7 @@ export default function ArcadeNameEntry({
               onChange={handleChange}
               onKeyDown={handleKeyDown}
               maxLength={5}
-              placeholder="_ _ _ _ _"
+              placeholder="·  ·  ·  ·  ·"
               className="w-full px-6 py-4 text-5xl font-bold text-center bg-white rounded border-2 transition-all focus:outline-none uppercase"
               style={{
                 fontFamily: '"Courier New", "Courier Prime", monospace',
