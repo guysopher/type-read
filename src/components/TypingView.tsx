@@ -2360,7 +2360,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         }[powerUpNotification.type];
 
         return (
-          <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 animate-[slideDown_0.3s_ease-out]">
+          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 animate-[slideUp_0.3s_ease-out]">
             <div className={`bg-gradient-to-r ${powerUpInfo.color} text-white px-8 py-5 rounded-xl shadow-2xl flex items-center gap-5 min-w-[400px]`}>
               <div className="text-5xl animate-bounce">{powerUpInfo.icon}</div>
               <div className="flex-1">
@@ -2413,6 +2413,16 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           0% {
             opacity: 0;
             transform: translate(-50%, -20px);
+          }
+          100% {
+            opacity: 1;
+            transform: translate(-50%, 0);
+          }
+        }
+        @keyframes slideUp {
+          0% {
+            opacity: 0;
+            transform: translate(-50%, 20px);
           }
           100% {
             opacity: 1;
