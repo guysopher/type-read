@@ -122,6 +122,7 @@ export function useGameScoring({ onPowerUpCollected }: UseGameScoringProps = {})
 
   /**
    * Initialize power-up placements for the text
+   * Spreads powerups evenly throughout the text
    */
   const initializePowerUps = useCallback((totalWords: number) => {
     const placements = new Map<number, 'freezeMonster' | 'shield' | 'slowMo'>();
@@ -132,15 +133,21 @@ export function useGameScoring({ onPowerUpCollected }: UseGameScoringProps = {})
     ];
     const numPowerUps = Math.floor(Math.random() * 5) + 8; // 8-12 power-ups
 
+    // Calculate even spacing between power-ups
+    const minIndex = 5; // Start after first few words
+    const maxIndex = totalWords - 1;
+    const availableRange = maxIndex - minIndex;
+    const spacing = Math.floor(availableRange / numPowerUps);
+
     for (let i = 0; i < numPowerUps; i++) {
-      // Place power-ups throughout the entire text
-      const minIndex = 5; // Start after first few words
-      const maxIndex = totalWords - 1;
-      let wordIndex = Math.floor(Math.random() * (maxIndex - minIndex + 1)) + minIndex;
+      // Place power-ups evenly with some randomness
+      const basePosition = minIndex + (i * spacing);
+      const randomOffset = Math.floor(Math.random() * Math.max(1, spacing / 2)) - Math.floor(spacing / 4);
+      let wordIndex = Math.max(minIndex, Math.min(maxIndex, basePosition + randomOffset));
 
       // Ensure we don't place multiple power-ups on the same word
-      while (placements.has(wordIndex)) {
-        wordIndex = Math.floor(Math.random() * (maxIndex - minIndex + 1)) + minIndex;
+      while (placements.has(wordIndex) && wordIndex < maxIndex) {
+        wordIndex++;
       }
 
       // Randomly select a power-up type
