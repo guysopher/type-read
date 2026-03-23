@@ -1955,61 +1955,10 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           {/* Spacer for symmetry on desktop */}
           <div className="hidden lg:block w-64 flex-shrink-0" />
 
-          {/* Beeper-style current line display */}
-          {!isComplete && (
-            <div className="fixed top-20 left-1/2 -translate-x-1/2 z-30 w-[90%] max-w-3xl">
-              <div className="bg-[#2a4a2a] border-4 border-[var(--ink-black)] pixel-corners shadow-retro-xl p-3">
-                {/* Beeper screen header */}
-                <div className="text-[#7fbf7f] text-xs font-mono mb-2 flex justify-between items-center opacity-80">
-                  <span>● TYPING</span>
-                  <span>WORD {currentWordIndex + 1}/{words.length}</span>
-                </div>
-                {/* Current line with context */}
-                <div className="bg-[#0d1f0d] border-2 border-[#3a5a3a] p-4 pixel-corners font-mono text-base sm:text-xl min-h-[70px] flex items-center">
-                  <div className="text-center w-full leading-relaxed tracking-wide" dir={isRTL ? "rtl" : "ltr"}>
-                    {/* Show 2 words before */}
-                    {words.slice(Math.max(0, currentWordIndex - 2), currentWordIndex).map((w, i) => (
-                      <span key={`before-${i}`} className="text-[#4a6a4a] mx-1 opacity-60">{w}</span>
-                    ))}
-                    {/* Current word with character-by-character display */}
-                    <span className="text-[#9fff9f] font-bold mx-2 px-2 py-1 bg-[#1a3a1a] border-2 border-[#7fbf7f] inline-block pixel-corners">
-                      {words[currentWordIndex].split('').map((char, charIndex) => {
-                        const inputChar = currentInput[charIndex];
-                        if (inputChar === undefined) {
-                          return <span key={charIndex} className="opacity-40">{char}</span>;
-                        }
-                        const isCorrect = inputChar.toLowerCase() === char.toLowerCase();
-                        return (
-                          <span key={charIndex} className={isCorrect ? "text-[#9fff9f]" : "text-[#ff6b6b]"}>
-                            {inputChar}
-                          </span>
-                        );
-                      })}
-                      {currentInput.length > words[currentWordIndex].length && (
-                        <span className="text-[#ff6b6b]">
-                          {currentInput.slice(words[currentWordIndex].length)}
-                        </span>
-                      )}
-                      {currentInput.length === 0 && <span className="opacity-0">_</span>}
-                    </span>
-                    {/* Show 2 words after */}
-                    {words.slice(currentWordIndex + 1, currentWordIndex + 3).map((w, i) => (
-                      <span key={`after-${i}`} className="text-[#4a6a4a] mx-1 opacity-60">{w}</span>
-                    ))}
-                  </div>
-                </div>
-                {/* Blinking cursor indicator */}
-                <div className="text-[#7fbf7f] text-xs font-mono mt-2 text-right opacity-60 animate-pulse">
-                  ▊ READY
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Main text content */}
           <div
             ref={textContainerRef}
-            className="typing-area flex-1 overflow-y-auto leading-relaxed text-base sm:text-lg py-2 sm:py-8 px-3 sm:px-6 mt-32"
+            className="typing-area flex-1 overflow-y-auto leading-relaxed text-base sm:text-lg py-2 sm:py-8 px-3 sm:px-6"
             dir={isRTL ? "rtl" : "ltr"}
           >
           <div className="max-w-2xl mx-auto py-[10vh] sm:py-[30vh]">
@@ -2041,8 +1990,8 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                   className += "text-[var(--foreground)]";
                 }
               } else if (index === currentWordIndex) {
-                // Current word - highlighted in main text (but beeper screen is primary)
-                className += "px-1 rounded bg-[var(--ink-blue)]/10 border-b-2 border-[var(--ink-blue)]";
+                // Current word - highlighted with box
+                className += "px-3 py-2 bg-white border-3 border-[var(--ink-black)] pixel-corners shadow-retro";
                 wordContent = (
                   <>
                     {word.split('').map((char, charIndex) => {
