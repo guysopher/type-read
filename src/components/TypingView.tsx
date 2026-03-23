@@ -340,8 +340,32 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   const nextCharToType = getNextCharToType();
   const fingerHint = getFingerHint(nextCharToType);
 
-  // Build the full text stream for the sliding view
-  const fullTextStream = useMemo(() => words.join(" "), [words]);
+  // Build the full text stream for the sliding view with powerup icons embedded
+  const fullTextStream = useMemo(() => {
+    const POWER_UP_ICONS = {
+      freezeMonster: '❄️',
+      shield: '🛡️',
+      slowMo: '⏱️',
+    };
+
+    let stream = '';
+    words.forEach((word, idx) => {
+      if (idx > 0) {
+        stream += ' ';
+      }
+
+      // Check if word has a power-up - prepend icon to word
+      const powerUpType = powerUpPlacements.get(idx);
+      if (powerUpType) {
+        const icon = POWER_UP_ICONS[powerUpType];
+        stream += icon + ' ' + word;
+      } else {
+        stream += word;
+      }
+    });
+
+    return stream;
+  }, [words, powerUpPlacements]);
 
   // Calculate the absolute character position in the full text
   const absolutePosition = useMemo(() => {
