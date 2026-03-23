@@ -74,6 +74,41 @@ export default function LeaderboardView({ onClose, gameOverStats }: LeaderboardV
     }
   }, [activeTab]);
 
+  // Auto-submit score if user is NOT in top 10
+  useEffect(() => {
+    if (gameOverStats && !hasSubmittedScore) {
+      const topScores = getTopScores(10);
+      let rank = topScores.findIndex(e => gameOverStats.score > e.score);
+      if (rank === -1) {
+        rank = topScores.length < 10 ? topScores.length : 10;
+      }
+
+      // If not in top 10, auto-submit with existing player name (or "Anonymous")
+      if (rank >= 10) {
+        const existingName = getPlayerName() || 'Anonymous';
+        const entry: LeaderboardEntry = {
+          id: `${Date.now()}-${Math.random()}`,
+          playerName: existingName,
+          score: gameOverStats.score,
+          wpm: gameOverStats.wpm,
+          peakWpm: gameOverStats.peakWpm,
+          accuracy: gameOverStats.accuracy,
+          streak: gameOverStats.streak,
+          wordsTyped: gameOverStats.wordsTyped,
+          duration: gameOverStats.duration,
+          survived: gameOverStats.survived,
+          date: Date.now(),
+          textTitle: gameOverStats.textTitle,
+          language: gameOverStats.language,
+        };
+
+        addLeaderboardEntry(entry);
+        submitToGlobalLeaderboard(entry);
+        setHasSubmittedScore(true);
+      }
+    }
+  }, [gameOverStats, hasSubmittedScore]);
+
   const handleSaveName = () => {
     if (playerName.trim()) {
       savePlayerName(playerName.trim());
@@ -353,6 +388,68 @@ export default function LeaderboardView({ onClose, gameOverStats }: LeaderboardV
               {entriesToDisplay.map((entry, index) => {
                 // Handle new score entry
                 if (entry === 'NEW_SCORE' && gameOverStats) {
+                  // Check if user is in top 10 or not
+                  const isTop10 = userRank !== null && userRank < 10;
+
+                  if (!isTop10) {
+                    // User is NOT in top 10 - just show score without name input
+                    return (
+                      <div
+                        key="new-score"
+                        className="flex items-center gap-3 p-4 rounded border transition-all"
+                        style={{
+                          backgroundColor: colors.accent,
+                          borderColor: colors.accent,
+                          boxShadow: '0 4px 12px rgba(74, 144, 226, 0.3)'
+                        }}
+                      >
+                        <div
+                          className="text-sm font-bold w-8 text-center flex-shrink-0 margin-text"
+                          style={{ color: '#fff' }}
+                        >
+                          {index + 1}.
+                        </div>
+
+                        <div className="flex-1">
+                          <div className="font-bold text-lg mb-1" style={{ color: '#fff' }}>
+                            YOUR SCORE
+                          </div>
+                          <div className="text-sm" style={{ color: '#fff', opacity: 0.9 }}>
+                            Position #{index + 1} • Not in Top 10
+                          </div>
+                        </div>
+
+                        <div className="flex gap-4">
+                          <div className="text-right">
+                            <div className="text-xs" style={{ color: '#fff', opacity: 0.8 }}>Score</div>
+                            <div className="font-bold text-lg" style={{ color: '#fff' }}>
+                              {gameOverStats.score.toLocaleString()}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-xs" style={{ color: '#fff', opacity: 0.8 }}>WPM</div>
+                            <div className="font-bold" style={{ color: '#fff' }}>
+                              {Math.round(gameOverStats.wpm)}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-xs" style={{ color: '#fff', opacity: 0.8 }}>Streak</div>
+                            <div className="font-bold" style={{ color: '#fff' }}>
+                              {gameOverStats.streak} 🔥
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-xs" style={{ color: '#fff', opacity: 0.8 }}>Accuracy</div>
+                            <div className="font-bold" style={{ color: '#fff' }}>
+                              {Math.round(gameOverStats.accuracy)}%
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // User IS in top 10 - show name input
                   return (
                     <div
                       key="new-score"
