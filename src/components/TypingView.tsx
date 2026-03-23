@@ -834,7 +834,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         // Silently fail if global submission doesn't work
       });
     }
-  }, [isGameOver, isComplete]);
+  }, [isGameOver, isComplete, stats, gameScore, bestStreak, detailedStats, calculateWPM, getActiveTime, title, isRTL]);
 
   // Load selected monster skin
   useEffect(() => {
@@ -888,7 +888,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         setLevelUpToShow(progress.level);
       }
     }
-  }, [isGameOver, isComplete]);
+  }, [isGameOver, isComplete, stats, detailedStats, calculateWPM, getActiveTime, bestStreak, gameScore, maxComboReached]);
 
   // Scroll current word to center
   useEffect(() => {
@@ -1421,7 +1421,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
               className="text-2xl sm:text-4xl tracking-wide whitespace-pre"
               style={{ fontFamily: 'var(--font-cousine), var(--font-geist-mono), monospace' }}
             >
-              {visibleText.split("").map((char: string, i: number) => {
+              {Array.from(visibleText).map((char: string, i: number) => {
                 // Account for leading padding when calculating global position
                 const globalPos = startPos + i - leadingPadding;
                 const isPadding = i < leadingPadding || i >= visibleText.length - trailingPadding;
