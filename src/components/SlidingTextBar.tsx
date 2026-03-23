@@ -60,19 +60,19 @@ export default function SlidingTextBar({
     const powerUpPos = new Map<number, { type: 'freezeMonster' | 'shield' | 'slowMo'; wordIndex: number }>();
 
     words.forEach((word, idx) => {
-      stream += word;
-
-      // Check if CURRENT word has a power-up (show icon after current word)
+      // Check if CURRENT word has a power-up (show icon BEFORE current word)
       const currentWordPowerUp = powerUpPlacements.get(idx);
-      if (currentWordPowerUp && idx < words.length - 1) {
+      if (currentWordPowerUp && idx > 0) {
         stream += ' '; // Space before power-up
         const powerUpPosition = stream.length;
         stream += '•'; // Placeholder for power-up (single char for positioning)
         powerUpPos.set(powerUpPosition, { type: currentWordPowerUp, wordIndex: idx });
         stream += ' '; // Space after power-up
-      } else if (idx < words.length - 1) {
+      } else if (idx > 0) {
         stream += ' '; // Normal space between words
       }
+
+      stream += word;
     });
 
     console.log('SlidingTextBar: powerUpPlacements size:', powerUpPlacements.size);
