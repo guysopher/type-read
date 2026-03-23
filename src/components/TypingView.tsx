@@ -1708,30 +1708,30 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
               {/* Stats button */}
               <button
                 onClick={() => setShowStats(true)}
-                className="px-2 py-1 text-xs rounded bg-[var(--foreground)]/10 text-[var(--muted)] hover:bg-[var(--foreground)]/20 transition-all"
+                className="text-sm rounded text-[var(--pencil)] hover:text-[var(--ink)] transition-all"
                 title="View statistics"
               >
-                📊
+                Stats
               </button>
               {/* Save button */}
               <button
                 onClick={handleSave}
-                className="px-2 py-1 text-xs rounded bg-[var(--foreground)]/10 text-[var(--muted)] hover:bg-[var(--foreground)]/20 transition-all"
+                className="text-sm rounded text-[var(--pencil)] hover:text-[var(--ink)] transition-all"
               >
-                {showSaved ? <span className="text-[var(--success)]">✓</span> : "💾"}
+                {showSaved ? <span className="text-[var(--success)]">✓</span> : "Save"}
               </button>
               {/* Settings button */}
               <div className="relative">
                 <button
                   onClick={() => setShowSettings(!showSettings)}
-                  className={`px-2 py-1 text-xs rounded transition-all ${
+                  className={`text-sm rounded transition-all ${
                     showSettings
                       ? "bg-[var(--foreground)] text-[var(--background)]"
-                      : "bg-[var(--foreground)]/10 text-[var(--muted)] hover:bg-[var(--foreground)]/20"
+                      : "text-[var(--pencil)] hover:text-[var(--ink)]"
                   }`}
                   title="Settings"
                 >
-                  ⚙️
+                  Settings
                 </button>
                 {/* Settings dropdown */}
                 {showSettings && (
