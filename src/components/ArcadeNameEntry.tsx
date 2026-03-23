@@ -125,30 +125,65 @@ export default function ArcadeNameEntry({
         </div>
 
         {/* Name Input */}
-        <div className="mb-8">
-          <input
-            ref={inputRef}
-            type="text"
-            value={name}
-            onChange={handleChange}
-            onKeyDown={handleKeyDown}
-            maxLength={5}
-            placeholder="_____"
-            className="w-full max-w-md px-6 py-4 text-5xl font-bold text-center bg-white rounded border-2 transition-all focus:outline-none uppercase tracking-widest"
-            style={{
-              fontFamily: '"Courier New", "Courier Prime", monospace',
-              color: colors.ink,
-              borderColor: name.length > 0 ? colors.accent : colors.pencilLight,
-              letterSpacing: '0.3em',
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)'
-            }}
-          />
+        <div className="mb-8 flex justify-center">
+          <div className="relative w-full max-w-md">
+            <input
+              ref={inputRef}
+              type="text"
+              value={name}
+              onChange={handleChange}
+              onKeyDown={handleKeyDown}
+              maxLength={5}
+              placeholder="_ _ _ _ _"
+              className="w-full px-6 py-4 text-5xl font-bold text-center bg-white rounded border-2 transition-all focus:outline-none uppercase"
+              style={{
+                fontFamily: '"Courier New", "Courier Prime", monospace',
+                color: colors.ink,
+                borderColor: name.length > 0 ? colors.accent : colors.pencilLight,
+                letterSpacing: '0.5em',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
+                minHeight: '80px'
+              }}
+            />
+          </div>
         </div>
 
         {/* Instructions */}
-        <div className="text-sm space-y-1" style={{ color: colors.pencil }}>
+        <div className="text-sm space-y-1 mb-6" style={{ color: colors.pencil }}>
           <p>Enter your name</p>
           <p className="text-xs opacity-60">Press Enter to save · Press Esc to skip</p>
+        </div>
+
+        {/* Buttons */}
+        <div className="flex gap-4 justify-center">
+          <button
+            onClick={handleSubmit}
+            disabled={name.length === 0}
+            className={`px-8 py-3 text-lg font-medium rounded-lg border-2 transition-all ${
+              name.length === 0
+                ? 'opacity-40 cursor-not-allowed'
+                : 'hover:scale-105 active:scale-95'
+            }`}
+            style={{
+              backgroundColor: name.length > 0 ? colors.accent : colors.paper,
+              borderColor: colors.accent,
+              color: name.length > 0 ? '#000' : colors.pencil,
+              boxShadow: name.length > 0 ? '0 2px 8px rgba(0, 0, 0, 0.1)' : 'none'
+            }}
+          >
+            Submit
+          </button>
+          <button
+            onClick={onSkip}
+            className="px-8 py-3 text-lg font-medium rounded-lg border-2 transition-all hover:scale-105 active:scale-95"
+            style={{
+              backgroundColor: colors.paper,
+              borderColor: colors.pencilLight,
+              color: colors.pencil,
+            }}
+          >
+            Skip
+          </button>
         </div>
       </div>
     </div>
