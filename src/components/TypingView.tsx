@@ -1324,6 +1324,11 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
             }
           }
 
+          // Reset combo immediately on incorrect keystroke
+          if (!isCorrect) {
+            setComboMultiplier(1);
+          }
+
           // Start monster countdown on first correct keystroke
           if (isCorrect && monsterMode && monsterCountdown === null && !monsterStarted) {
             startMonsterCountdown();
