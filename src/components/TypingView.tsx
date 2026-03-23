@@ -378,11 +378,10 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     return wordStart + currentInput.length;
   }, [currentWordIndex, currentInput.length, wordStartPositions]);
 
-  // Calculate monster's "one word behind" position using word positions
+  // Monster starts one character behind the cursor (on the space before current word)
   const oneWordBehindPosition = useMemo(() => {
-    const prevWordIndex = Math.max(0, currentWordIndex - 1);
-    return wordStartPositions.get(prevWordIndex) || 0;
-  }, [currentWordIndex, wordStartPositions]);
+    return Math.max(0, absolutePosition - 1);
+  }, [absolutePosition]);
 
   // Calculate current WPM
   const calculateWPM = useCallback(() => {
