@@ -1,77 +1,48 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { getPlayerProgress, usePowerUp, getLevelFromXP } from '@/lib/storage';
-import type { PlayerProgress } from '@/lib/gamification';
-
 interface GameHUDProps {
   onUsePowerUp?: (type: 'freezeMonster' | 'shield' | 'slowMo') => void;
   combo?: number;
-  showPowerUps?: boolean;
+  currentWPM?: number;
 }
 
-export default function GameHUD({ onUsePowerUp, combo = 1, showPowerUps = true }: GameHUDProps) {
-  const [progress, setProgress] = useState<PlayerProgress | null>(null);
-  const [xpProgress, setXpProgress] = useState({ current: 0, needed: 100, percentage: 0 });
+// WPM status levels with funny names
+const WPM_STATUS_LEVELS = [
+  { min: 0, max: 10, name: '🐌 Sleepy Snail', color: 'from-red-500 to-red-600' },
+  { min: 10, max: 20, name: '🐢 Turtle Tapper', color: 'from-red-400 to-orange-500' },
+  { min: 20, max: 30, name: '🦥 Slow Poke', color: 'from-orange-500 to-yellow-500' },
+  { min: 30, max: 40, name: '✌️ Two Fingers', color: 'from-yellow-500 to-yellow-400' },
+  { min: 40, max: 50, name: '👆 Pointer Pro', color: 'from-yellow-400 to-lime-400' },
+  { min: 50, max: 65, name: '✍️ Steady Scribe', color: 'from-lime-400 to-green-400' },
+  { min: 65, max: 80, name: '⚡ Speed Typist', color: 'from-green-400 to-green-500' },
+  { min: 80, max: 100, name: '🚀 Rocket Fingers', color: 'from-green-500 to-cyan-500' },
+  { min: 100, max: 120, name: '🔥 Blazing Keys', color: 'from-cyan-500 to-blue-500' },
+  { min: 120, max: 999, name: '👻 Typing Ghost', color: 'from-blue-500 to-purple-500' },
+];
 
-  useEffect(() => {
-    const playerProgress = getPlayerProgress();
-    setProgress(playerProgress);
+function getWPMStatus(wpm: number) {
+  return WPM_STATUS_LEVELS.find(level => wpm >= level.min && wpm < level.max) || WPM_STATUS_LEVELS[0];
+}
 
-    const { currentLevelXP, nextLevelXP } = getLevelFromXP(playerProgress.totalXP);
-    const percentage = (currentLevelXP / nextLevelXP) * 100;
-
-    setXpProgress({
-      current: Math.floor(currentLevelXP),
-      needed: nextLevelXP,
-      percentage: Math.min(100, percentage)
-    });
-  }, []);
-
-  // Refresh when storage changes
-  useEffect(() => {
-    const handleStorageChange = () => {
-      const playerProgress = getPlayerProgress();
-      setProgress(playerProgress);
-
-      const { currentLevelXP, nextLevelXP } = getLevelFromXP(playerProgress.totalXP);
-      const percentage = (currentLevelXP / nextLevelXP) * 100;
-
-      setXpProgress({
-        current: Math.floor(currentLevelXP),
-        needed: nextLevelXP,
-        percentage: Math.min(100, percentage)
-      });
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
-
-  const handleUsePowerUp = (type: 'freezeMonster' | 'shield' | 'slowMo') => {
-    if (usePowerUp(type)) {
-      onUsePowerUp?.(type);
-      // Refresh display
-      setProgress(getPlayerProgress());
-    }
-  };
-
-  if (!progress) return null;
+export default function GameHUD({ onUsePowerUp, combo = 1, currentWPM = 0 }: GameHUDProps) {
+  const wpmStatus = getWPMStatus(currentWPM);
+  const maxWPM = 120; // Max for the progress bar
+  const wpmPercentage = Math.min(100, (currentWPM / maxWPM) * 100);
 
   return (
     <div className="fixed top-4 left-4 z-40 space-y-2">
-      {/* XP Bar */}
-      <div className="bg-white border-2 border-black p-2 pixel-corners shadow-retro min-w-[200px]">
+      {/* WPM Status Bar */}
+      <div className="bg-white border-2 border-black p-2 pixel-corners shadow-retro min-w-[220px]">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-xs font-bold pixel-text">LVL {progress.level}</span>
+          <span className="text-xs font-bold pixel-text">{wpmStatus.name}</span>
           <span className="text-xs text-gray-600">
-            {xpProgress.current}/{xpProgress.needed} XP
+            {currentWPM} WPM
           </span>
         </div>
         <div className="h-3 bg-gray-200 border-2 border-gray-400 pixel-corners overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-yellow-400 to-yellow-500 transition-all duration-500"
-            style={{ width: `${xpProgress.percentage}%` }}
+            className={`h-full bg-gradient-to-r ${wpmStatus.color} transition-all duration-500`}
+            style={{ width: `${wpmPercentage}%` }}
           />
         </div>
       </div>
@@ -91,58 +62,7 @@ export default function GameHUD({ onUsePowerUp, combo = 1, showPowerUps = true }
         </div>
       )}
 
-      {/* Power-Ups */}
-      {showPowerUps && (
-        <div className="bg-white border-2 border-black p-2 pixel-corners shadow-retro space-y-1">
-          <div className="text-xs font-bold mb-1 pixel-text">POWER-UPS</div>
-
-          {/* Freeze Monster */}
-          <button
-            onClick={() => handleUsePowerUp('freezeMonster')}
-            disabled={progress.powerUps.freezeMonster === 0}
-            className={`w-full flex items-center gap-2 p-1 text-xs border-2 pixel-corners transition-colors ${
-              progress.powerUps.freezeMonster > 0
-                ? 'bg-blue-100 border-blue-500 hover:bg-blue-200 cursor-pointer'
-                : 'bg-gray-100 border-gray-300 opacity-50 cursor-not-allowed'
-            }`}
-            title="Freeze monster for 10 seconds"
-          >
-            <span className="text-base">❄️</span>
-            <span className="flex-1 text-left">Freeze</span>
-            <span className="font-bold">{progress.powerUps.freezeMonster}</span>
-          </button>
-
-          {/* Shield */}
-          <button
-            onClick={() => handleUsePowerUp('shield')}
-            disabled={progress.powerUps.shield === 0}
-            className={`w-full flex items-center gap-2 p-1 text-xs border-2 pixel-corners transition-colors ${
-              progress.powerUps.shield > 0
-                ? 'bg-green-100 border-green-500 hover:bg-green-200 cursor-pointer'
-                : 'bg-gray-100 border-gray-300 opacity-50 cursor-not-allowed'
-            }`}
-            title="Survive one monster catch"
-          >
-            <span className="text-base">🛡️</span>
-            <span className="flex-1 text-left">Shield</span>
-            <span className="font-bold">{progress.powerUps.shield}</span>
-          </button>
-
-          {/* Slow-Mo (if available) */}
-          {progress.powerUps.slowMo > 0 && (
-            <button
-              onClick={() => handleUsePowerUp('slowMo')}
-              disabled={progress.powerUps.slowMo === 0}
-              className="w-full flex items-center gap-2 p-1 text-xs border-2 pixel-corners bg-purple-100 border-purple-500 hover:bg-purple-200 cursor-pointer"
-              title="Slow down monster temporarily"
-            >
-              <span className="text-base">⏱️</span>
-              <span className="flex-1 text-left">Slow-Mo</span>
-              <span className="font-bold">{progress.powerUps.slowMo}</span>
-            </button>
-          )}
-        </div>
-      )}
+      {/* Power-ups are now floating collectibles above words - no inventory needed */}
 
       <style jsx>{`
         @keyframes pulse-subtle {
