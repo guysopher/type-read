@@ -12,11 +12,12 @@ import {
   getPersonalBests,
   getDailyStreak,
   getPlayerName,
-  setPlayerName,
+  setPlayerName as savePlayerName,
   type LeaderboardEntry,
   type DailyStreak,
 } from '@/lib/storage';
-import { fetchGlobalLeaderboard, submitToGlobalLeaderboard } from '@/lib/api';
+import { fetchGlobalLeaderboard } from '@/lib/api';
+import { colors } from '@/styles/designTokens';
 
 type LeaderboardTab = 'daily' | 'weekly' | 'alltime' | 'personal' | 'global';
 type MetricType = 'score' | 'wpm' | 'streak' | 'accuracy';
@@ -35,7 +36,6 @@ export default function LeaderboardView({ onClose }: { onClose: () => void }) {
     setDailyStreak(getDailyStreak());
   }, []);
 
-  // Fetch global leaderboard when global tab is selected
   useEffect(() => {
     if (activeTab === 'global') {
       setLoadingGlobal(true);
@@ -50,7 +50,7 @@ export default function LeaderboardView({ onClose }: { onClose: () => void }) {
 
   const handleSaveName = () => {
     if (playerName.trim()) {
-      setPlayerName(playerName.trim());
+      savePlayerName(playerName.trim());
       setIsEditingName(false);
     }
   };
@@ -65,7 +65,6 @@ export default function LeaderboardView({ onClose }: { onClose: () => void }) {
         .sort((a, b) => b.date - a.date);
     }
 
-    // All-time by metric
     if (metric === 'score') return getTopScores(50);
     if (metric === 'wpm') return getTopWPM(50);
     if (metric === 'streak') return getTopStreaks(50);
@@ -87,36 +86,22 @@ export default function LeaderboardView({ onClose }: { onClose: () => void }) {
     return date.toLocaleDateString();
   };
 
-  const formatTime = (ms: number) => {
-    const seconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${minutes}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const getMedalEmoji = (rank: number) => {
-    if (rank === 1) return '🥇';
-    if (rank === 2) return '🥈';
-    if (rank === 3) return '🥉';
-    return `${rank}.`;
-  };
-
-  const getMetricValue = (entry: LeaderboardEntry) => {
-    if (metric === 'score') return entry.score.toLocaleString();
-    if (metric === 'wpm') return `${Math.round(entry.wpm)} WPM`;
-    if (metric === 'streak') return `${entry.streak} 🔥`;
-    if (metric === 'accuracy') return `${entry.accuracy.toFixed(1)}%`;
-    return '';
-  };
-
   return (
-    <div className="fixed inset-0 bg-[var(--notebook-bg)]/95 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white border-4 border-[var(--ink-black)] pixel-corners shadow-retro-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+    <div
+      className="fixed inset-0 flex items-center justify-center z-50 p-4"
+      style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+    >
+      <div
+        className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+        style={{ boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)' }}
+      >
         {/* Header */}
-        <div className="p-6 border-b-3 border-[var(--notebook-line)]">
+        <div className="p-6 border-b" style={{ borderColor: colors.pencilLight, opacity: 0.3 }}>
           <div className="flex justify-between items-start mb-4">
             <div>
-              <h2 className="text-2xl font-bold mb-1 text-[var(--ink-black)] pixel-text">🏆 Leaderboard</h2>
+              <h2 className="text-2xl font-bold mb-2 heading-text" style={{ color: colors.ink }}>
+                Leaderboard
+              </h2>
               {isEditingName ? (
                 <div className="flex gap-2 items-center">
                   <input
@@ -124,21 +109,20 @@ export default function LeaderboardView({ onClose }: { onClose: () => void }) {
                     value={playerName}
                     onChange={(e) => setPlayerNameState(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSaveName()}
-                    className="px-2 py-1 border-2 border-[var(--ink-black)] pixel-corners text-sm"
+                    className="px-2 py-1 border rounded text-sm"
+                    style={{ borderColor: colors.pencilLight }}
                     placeholder="Enter your name"
                     autoFocus
                   />
-                  <button
-                    onClick={handleSaveName}
-                    className="px-2 py-1 bg-[var(--ink-blue)] text-white pixel-corners text-xs border-2 border-[var(--ink-black)] hover:opacity-90"
-                  >
+                  <button onClick={handleSaveName} className="ink-button px-3 py-1 text-xs">
                     Save
                   </button>
                 </div>
               ) : (
                 <button
                   onClick={() => setIsEditingName(true)}
-                  className="text-sm text-[var(--pencil-gray)] hover:text-[var(--ink-black)] transition-colors"
+                  className="text-sm transition-colors"
+                  style={{ color: colors.pencil }}
                 >
                   Player: {playerName} ✏️
                 </button>
@@ -146,7 +130,8 @@ export default function LeaderboardView({ onClose }: { onClose: () => void }) {
             </div>
             <button
               onClick={onClose}
-              className="text-2xl text-[var(--pencil-gray)] hover:text-[var(--ink-black)] transition-colors"
+              className="text-2xl transition-colors"
+              style={{ color: colors.pencil }}
             >
               ×
             </button>
@@ -154,18 +139,26 @@ export default function LeaderboardView({ onClose }: { onClose: () => void }) {
 
           {/* Daily Streak Banner */}
           {dailyStreak && dailyStreak.currentStreak > 0 && (
-            <div className="bg-[var(--ink-red)]/10 border-3 border-[var(--ink-red)] pixel-corners p-3 mb-4">
+            <div
+              className="border rounded p-3 mb-4"
+              style={{
+                backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                borderColor: colors.error
+              }}
+            >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <span className="text-3xl">🔥</span>
+                  <span className="text-2xl">🔥</span>
                   <div>
-                    <div className="font-bold text-lg text-[var(--ink-black)]">{dailyStreak.currentStreak} Day Streak!</div>
-                    <div className="text-xs text-[var(--pencil-gray)]">
+                    <div className="font-bold" style={{ color: colors.ink }}>
+                      {dailyStreak.currentStreak} Day Streak!
+                    </div>
+                    <div className="text-xs" style={{ color: colors.pencil }}>
                       Longest: {dailyStreak.longestStreak} days
                     </div>
                   </div>
                 </div>
-                <div className="text-right text-xs text-[var(--pencil-gray)]">
+                <div className="text-right text-xs" style={{ color: colors.pencil }}>
                   Keep playing daily to maintain your streak!
                 </div>
               </div>
@@ -173,43 +166,51 @@ export default function LeaderboardView({ onClose }: { onClose: () => void }) {
           )}
 
           {/* Tabs */}
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap mb-3">
             {(['daily', 'weekly', 'alltime', 'global', 'personal'] as LeaderboardTab[]).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2 pixel-corners border-2 transition-colors ${
-                  activeTab === tab
-                    ? 'bg-[var(--ink-blue)] text-white border-[var(--ink-black)]'
-                    : 'bg-white border-[var(--pencil-gray)] hover:border-[var(--ink-black)]'
-                }`}
+                className="px-4 py-2 rounded text-sm transition-all relative"
+                style={{
+                  backgroundColor: activeTab === tab ? colors.accent : 'transparent',
+                  color: activeTab === tab ? '#fff' : colors.ink,
+                  border: `1px solid ${activeTab === tab ? colors.accent : colors.pencilLight}`
+                }}
               >
-                {tab === 'daily' && '📅 Today'}
-                {tab === 'weekly' && '📊 This Week'}
-                {tab === 'alltime' && '⭐ All Time'}
-                {tab === 'global' && '🌍 Global'}
-                {tab === 'personal' && '👤 My Games'}
+                {tab === 'daily' && 'Today'}
+                {tab === 'weekly' && 'This Week'}
+                {tab === 'alltime' && 'All Time'}
+                {tab === 'global' && 'Global'}
+                {tab === 'personal' && 'My Games'}
+                {activeTab === tab && (
+                  <div
+                    className="absolute bottom-0 left-0 right-0 h-0.5"
+                    style={{ backgroundColor: '#fff' }}
+                  />
+                )}
               </button>
             ))}
           </div>
 
-          {/* Metric Selector (for all-time) */}
+          {/* Metric Selector */}
           {activeTab === 'alltime' && (
-            <div className="flex gap-2 mt-3 flex-wrap">
+            <div className="flex gap-2 flex-wrap text-xs">
               {(['score', 'wpm', 'streak', 'accuracy'] as MetricType[]).map((m) => (
                 <button
                   key={m}
                   onClick={() => setMetric(m)}
-                  className={`px-3 py-1 pixel-corners border-2 text-sm transition-colors ${
-                    metric === m
-                      ? 'bg-[var(--ink-blue)] text-white border-[var(--ink-black)]'
-                      : 'bg-white border-[var(--pencil-gray)] hover:border-[var(--ink-black)]'
-                  }`}
+                  className="px-3 py-1 rounded transition-all"
+                  style={{
+                    backgroundColor: metric === m ? colors.accentFaded : 'transparent',
+                    color: metric === m ? colors.accent : colors.pencil,
+                    border: `1px solid ${metric === m ? colors.accent : 'transparent'}`
+                  }}
                 >
-                  {m === 'score' && '💯 High Scores'}
-                  {m === 'wpm' && '⚡ Fastest WPM'}
-                  {m === 'streak' && '🔥 Best Streaks'}
-                  {m === 'accuracy' && '🎯 Best Accuracy'}
+                  {m === 'score' && 'Score'}
+                  {m === 'wpm' && 'WPM'}
+                  {m === 'streak' && 'Streak'}
+                  {m === 'accuracy' && 'Accuracy'}
                 </button>
               ))}
             </div>
@@ -218,30 +219,26 @@ export default function LeaderboardView({ onClose }: { onClose: () => void }) {
           {/* Personal Bests */}
           {activeTab === 'personal' && personalBests.totalGamesPlayed > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-3">
-              <div className="bg-[var(--notebook-line)] pixel-corners border-2 border-[var(--ink-black)] p-2 text-center">
-                <div className="text-xs text-[var(--pencil-gray)]">High Score</div>
-                <div className="font-bold text-lg text-[var(--ink-black)]">{personalBests.highestScore.toLocaleString()}</div>
-              </div>
-              <div className="bg-[var(--notebook-line)] pixel-corners border-2 border-[var(--ink-black)] p-2 text-center">
-                <div className="text-xs text-[var(--pencil-gray)]">Best WPM</div>
-                <div className="font-bold text-lg text-[var(--ink-black)]">{Math.round(personalBests.bestWPM)}</div>
-              </div>
-              <div className="bg-[var(--notebook-line)] pixel-corners border-2 border-[var(--ink-black)] p-2 text-center">
-                <div className="text-xs text-[var(--pencil-gray)]">Best Streak</div>
-                <div className="font-bold text-lg text-[var(--ink-black)]">{personalBests.longestStreak} 🔥</div>
-              </div>
-              <div className="bg-[var(--notebook-line)] pixel-corners border-2 border-[var(--ink-black)] p-2 text-center">
-                <div className="text-xs text-[var(--pencil-gray)]">Best Accuracy</div>
-                <div className="font-bold text-lg text-[var(--ink-black)]">{personalBests.bestAccuracy.toFixed(1)}%</div>
-              </div>
-              <div className="bg-[var(--notebook-line)] pixel-corners border-2 border-[var(--ink-black)] p-2 text-center">
-                <div className="text-xs text-[var(--pencil-gray)]">Games Played</div>
-                <div className="font-bold text-lg text-[var(--ink-black)]">{personalBests.totalGamesPlayed}</div>
-              </div>
-              <div className="bg-[var(--notebook-line)] pixel-corners border-2 border-[var(--ink-black)] p-2 text-center">
-                <div className="text-xs text-[var(--pencil-gray)]">Total Words</div>
-                <div className="font-bold text-lg text-[var(--ink-black)]">{personalBests.totalWordsTyped.toLocaleString()}</div>
-              </div>
+              {[
+                { label: 'High Score', value: personalBests.highestScore.toLocaleString() },
+                { label: 'Best WPM', value: Math.round(personalBests.bestWPM) },
+                { label: 'Best Streak', value: `${personalBests.longestStreak} 🔥` },
+                { label: 'Best Accuracy', value: `${personalBests.bestAccuracy.toFixed(1)}%` },
+                { label: 'Games Played', value: personalBests.totalGamesPlayed },
+                { label: 'Total Words', value: personalBests.totalWordsTyped.toLocaleString() },
+              ].map((stat, i) => (
+                <div
+                  key={i}
+                  className="rounded border p-2 text-center"
+                  style={{
+                    backgroundColor: colors.paperDark,
+                    borderColor: colors.pencilLight
+                  }}
+                >
+                  <div className="text-xs" style={{ color: colors.pencil }}>{stat.label}</div>
+                  <div className="font-bold" style={{ color: colors.ink }}>{stat.value}</div>
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -249,18 +246,18 @@ export default function LeaderboardView({ onClose }: { onClose: () => void }) {
         {/* Leaderboard List */}
         <div className="flex-1 overflow-y-auto p-6">
           {loadingGlobal ? (
-            <div className="text-center py-12 text-[var(--pencil-gray)]">
-              <div className="text-4xl mb-3 animate-pulse">🌍</div>
-              <div className="text-lg mb-2">Loading global leaderboard...</div>
+            <div className="text-center py-12" style={{ color: colors.pencil }}>
+              <div className="text-4xl mb-3">🌍</div>
+              <div>Loading global leaderboard...</div>
             </div>
           ) : entries.length === 0 ? (
-            <div className="text-center py-12 text-[var(--pencil-gray)]">
+            <div className="text-center py-12" style={{ color: colors.pencil }}>
               <div className="text-4xl mb-3">🎮</div>
-              <div className="text-lg mb-2">No games yet!</div>
+              <div className="mb-2">No games yet!</div>
               <div className="text-sm">
                 {activeTab === 'global'
-                  ? 'No global scores yet. Be the first!'
-                  : 'Start playing to see your scores here.'}
+                  ? 'No global scores yet'
+                  : 'Start playing to see your scores here'}
               </div>
             </div>
           ) : (
@@ -268,57 +265,51 @@ export default function LeaderboardView({ onClose }: { onClose: () => void }) {
               {entries.map((entry, index) => (
                 <div
                   key={entry.id}
-                  className={`flex items-center gap-3 p-3 pixel-corners border-2 transition-colors ${
-                    entry.playerName === playerName
-                      ? 'bg-[var(--ink-blue)]/10 border-[var(--ink-blue)]'
-                      : 'bg-white border-[var(--pencil-gray)] hover:border-[var(--ink-black)]'
-                  }`}
+                  className="flex items-center gap-3 p-3 rounded border transition-all"
+                  style={{
+                    backgroundColor: entry.playerName === playerName ? colors.accentFaded : '#fff',
+                    borderColor: entry.playerName === playerName ? colors.accent : colors.pencilLight
+                  }}
                 >
-                  {/* Rank */}
-                  <div className="text-lg font-bold w-12 text-center flex-shrink-0">
-                    {getMedalEmoji(index + 1)}
+                  <div
+                    className="text-sm font-bold w-8 text-center flex-shrink-0 margin-text"
+                    style={{ color: colors.pencil }}
+                  >
+                    {index + 1}.
                   </div>
 
-                  {/* Main Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="font-semibold truncate text-[var(--ink-black)]">{entry.playerName}</span>
+                      <span className="font-semibold truncate" style={{ color: colors.ink }}>
+                        {entry.playerName}
+                      </span>
                       {entry.survived && <span className="text-xs">✅</span>}
                       {entry.language === 'he' && <span className="text-xs">🇮🇱</span>}
                     </div>
-                    <div className="text-xs text-[var(--pencil-gray)] truncate">
-                      {entry.textTitle} • {formatDate(entry.date)}
+                    <div className="text-xs truncate" style={{ color: colors.pencil }}>
+                      {entry.textTitle} · {formatDate(entry.date)}
                     </div>
                   </div>
 
-                  {/* Stats */}
-                  <div className="flex gap-4 text-sm flex-shrink-0">
-                    {activeTab === 'personal' || activeTab === 'daily' || activeTab === 'weekly' ? (
-                      <>
-                        <div className="text-center">
-                          <div className="text-xs text-[var(--pencil-gray)]">Score</div>
-                          <div className="font-bold text-[var(--ink-black)]">{entry.score.toLocaleString()}</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-xs text-[var(--pencil-gray)]">WPM</div>
-                          <div className="font-bold text-[var(--ink-black)]">{Math.round(entry.wpm)}</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-xs text-[var(--pencil-gray)]">Streak</div>
-                          <div className="font-bold text-[var(--ink-black)]">{entry.streak} 🔥</div>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="text-center min-w-[100px]">
-                        <div className="text-xs text-[var(--pencil-gray)]">
-                          {metric === 'score' && 'Score'}
-                          {metric === 'wpm' && 'Speed'}
-                          {metric === 'streak' && 'Streak'}
-                          {metric === 'accuracy' && 'Accuracy'}
-                        </div>
-                        <div className="font-bold text-lg text-[var(--ink-black)]">{getMetricValue(entry)}</div>
+                  <div className="flex gap-4 text-sm flex-shrink-0 margin-text">
+                    <div className="text-right">
+                      <div className="text-xs" style={{ color: colors.pencil }}>Score</div>
+                      <div className="font-bold" style={{ color: colors.ink }}>
+                        {entry.score.toLocaleString()}
                       </div>
-                    )}
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs" style={{ color: colors.pencil }}>WPM</div>
+                      <div className="font-bold" style={{ color: colors.ink }}>
+                        {Math.round(entry.wpm)}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs" style={{ color: colors.pencil }}>Streak</div>
+                      <div className="font-bold" style={{ color: colors.ink }}>
+                        {entry.streak} 🔥
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -327,7 +318,10 @@ export default function LeaderboardView({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t-3 border-[var(--notebook-line)] text-center text-xs text-[var(--pencil-gray)]">
+        <div
+          className="p-4 border-t text-center text-xs"
+          style={{ borderColor: colors.pencilLight, color: colors.pencil, opacity: 0.6 }}
+        >
           {entries.length > 0 && `Showing ${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}`}
         </div>
       </div>

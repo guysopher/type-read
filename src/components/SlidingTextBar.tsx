@@ -22,16 +22,9 @@ interface SlidingTextBarProps {
   powerUpPlacements?: Map<number, 'freezeMonster' | 'shield' | 'slowMo'>;
 }
 
-// Power-up icon mapping
-const POWER_UP_ICONS = {
-  freezeMonster: '❄️',
-  shield: '🛡️',
-  slowMo: '⏱️',
-};
-
 /**
  * Sliding text display with centered cursor, monster chase, and visual feedback
- * Power-up icons appear between words in the typing row
+ * Clean text display - power-ups shown in margin, not inline
  */
 export default function SlidingTextBar({
   words,
@@ -53,38 +46,10 @@ export default function SlidingTextBar({
   const slidingBarRef = useRef<HTMLDivElement>(null);
   const [slidingBarWidth, setSlidingBarWidth] = useState(0);
 
-  // Build text stream with power-up icons embedded in the word text
-  // Use useMemo to recalculate when powerUpPlacements changes
+  // Build clean text stream (no embedded power-up icons)
   const fullTextStream = useMemo(() => {
-    let stream = '';
-    let iconsAdded = 0;
-
-    console.log('[SlidingTextBar] Building text stream...');
-    console.log('[SlidingTextBar] powerUpPlacements size:', powerUpPlacements.size);
-    console.log('[SlidingTextBar] powerUpPlacements entries:', Array.from(powerUpPlacements.entries()));
-
-    words.forEach((word, idx) => {
-      if (idx > 0) {
-        stream += ' ';
-      }
-
-      // Check if CURRENT word has a power-up - prepend icon to word
-      const powerUpType = powerUpPlacements.get(idx);
-      if (powerUpType) {
-        const icon = POWER_UP_ICONS[powerUpType];
-        console.log(`[SlidingTextBar] Adding icon ${icon} before word "${word}" at index ${idx}`);
-        stream += icon + ' ' + word;
-        iconsAdded++;
-      } else {
-        stream += word;
-      }
-    });
-
-    console.log('[SlidingTextBar] Total icons added:', iconsAdded);
-    console.log('[SlidingTextBar] First 100 chars of stream:', stream.substring(0, 100));
-
-    return stream;
-  }, [words, powerUpPlacements]);
+    return words.join(' ');
+  }, [words]);
 
   // Measure sliding bar width for responsive character count
   useEffect(() => {
@@ -159,8 +124,8 @@ export default function SlidingTextBar({
 
         <div className="flex justify-center items-center">
           <div
-            className="text-2xl sm:text-4xl tracking-wide whitespace-pre"
-            style={{ fontFamily: 'var(--font-cousine), var(--font-geist-mono), monospace' }}
+            className="reading-text text-2xl sm:text-4xl tracking-wide whitespace-pre"
+            style={{ fontFamily: 'Georgia, "Crimson Text", serif' }}
           >
             {visibleText.split('').map((char: string, i: number) => {
               const globalPos = startPos + i - leadingPadding;
@@ -260,25 +225,6 @@ export default function SlidingTextBar({
           </div>
         </div>
 
-        {/* Gradient fades */}
-        {startPos > 0 && (
-          <div
-            className="absolute inset-y-0 w-8 sm:w-16 from-[var(--background)] to-transparent pointer-events-none"
-            style={{
-              [isRTL ? 'right' : 'left']: 0,
-              background: `linear-gradient(to ${isRTL ? 'left' : 'right'}, var(--background), transparent)`,
-            }}
-          />
-        )}
-        {endPos < fullTextStream.length && (
-          <div
-            className="absolute inset-y-0 w-8 sm:w-16 from-[var(--background)] to-transparent pointer-events-none"
-            style={{
-              [isRTL ? 'left' : 'right']: 0,
-              background: `linear-gradient(to ${isRTL ? 'right' : 'left'}, var(--background), transparent)`,
-            }}
-          />
-        )}
       </div>
     </div>
   );

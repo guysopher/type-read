@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react";
 import TypingView from "@/components/TypingView";
+import PaperBackground from "@/components/PaperBackground";
 import { SavedText, getSavedTexts, deleteText } from "@/lib/storage";
 import { ENGLISH_STORIES, HEBREW_STORIES, Story } from "@/lib/stories";
+import { colors } from "@/styles/designTokens";
 
 const TUTORIAL_TEXT = `Welcome to TypeRead, the app that transforms reading into an active adventure. Instead of passively scrolling through articles, you will type every single word, engaging both your mind and your fingers in a dance of comprehension and muscle memory.
 
@@ -145,178 +147,190 @@ export default function Home() {
   const stories = storyLanguage === 'en' ? ENGLISH_STORIES : HEBREW_STORIES;
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8 relative overflow-hidden bg-gradient-to-b from-[var(--background)] via-[var(--background)] to-purple-950/20">
-      {/* CRT scanline overlay */}
-      <div
-        className="fixed inset-0 pointer-events-none z-50 opacity-[0.04]"
-        style={{
-          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.4) 2px, rgba(0,0,0,0.4) 4px)',
-        }}
-      />
+    <PaperBackground>
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8">
+        <div className="w-full max-w-xl">
+          {/* Header */}
+          <header className="text-center mb-12">
+            <div className="flex items-center justify-center gap-3 mb-3">
+              <span className="text-4xl">👾</span>
+              <h1
+                className="text-4xl font-bold heading-text"
+                style={{ color: colors.ink }}
+              >
+                TypeRead
+              </h1>
+            </div>
+            <p className="text-sm" style={{ color: colors.pencil }}>
+              Read by typing · Escape the monster
+            </p>
+          </header>
 
-      {/* Subtle vignette effect */}
-      <div
-        className="fixed inset-0 pointer-events-none z-40"
-        style={{
-          background: 'radial-gradient(ellipse at center, transparent 0%, transparent 60%, rgba(0,0,0,0.3) 100%)',
-        }}
-      />
-
-      <div className="w-full max-w-xl relative z-10">
-        {/* Header */}
-        <header className="text-center mb-8 sm:mb-12">
-          <div className="flex items-center justify-center gap-4 mb-4">
-            <span
-              className="text-5xl"
+          {/* Continue Button */}
+          {lastPlayed && (
+            <button
+              onClick={() => handleResume(lastPlayed)}
+              className="w-full mb-6 p-4 bg-white rounded-lg text-left transition-all group"
               style={{
-                animation: 'float 2s ease-in-out infinite',
-                display: 'inline-block',
-                filter: 'drop-shadow(0 0 12px rgba(168, 85, 247, 0.7)) drop-shadow(0 0 24px rgba(168, 85, 247, 0.4))',
+                border: `2px solid ${colors.accent}`,
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)'
               }}
             >
-              👾
-            </span>
-            <h1
-              className="text-3xl sm:text-4xl font-bold"
-              style={{
-                fontFamily: 'var(--font-press-start), system-ui, monospace',
-                fontSize: 'clamp(1.25rem, 5vw, 1.75rem)',
-                textShadow: '2px 2px 0 rgba(0, 0, 0, 0.3)',
-                letterSpacing: '0.1em',
-              }}
-            >
-              TypeRead
-            </h1>
-          </div>
-          <p className="text-sm sm:text-base font-mono tracking-widest uppercase text-[var(--muted)]">
-            ▸ Read by typing ▸ Escape the monster ▸
-          </p>
-        </header>
-
-        {/* Continue Button - if there's a saved game */}
-        {lastPlayed && (
-          <button
-            onClick={() => handleResume(lastPlayed)}
-            className="w-full mb-6 p-4 text-white group relative overflow-hidden"
-            style={{
-              background: 'linear-gradient(180deg, #7c3aed 0%, #5b21b6 100%)',
-              boxShadow: '0 0 30px rgba(168, 85, 247, 0.5), inset 0 2px 0 rgba(255,255,255,0.2), inset 0 -2px 0 rgba(0,0,0,0.3)',
-              border: '3px solid #a855f7',
-              imageRendering: 'pixelated',
-            }}
-          >
-            {/* Pixel corner decorations */}
-            <div className="absolute top-0 left-0 w-2 h-2 bg-purple-300" />
-            <div className="absolute top-0 right-0 w-2 h-2 bg-purple-300" />
-            <div className="absolute bottom-0 left-0 w-2 h-2 bg-purple-900" />
-            <div className="absolute bottom-0 right-0 w-2 h-2 bg-purple-900" />
-
-            <div className="flex items-center justify-between relative z-10">
-              <div className="flex items-center gap-3">
-                <span
-                  className="text-2xl"
-                  style={{
-                    filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.8))',
-                    animation: 'blink 1s step-end infinite',
-                  }}
-                >
-                  ▶
-                </span>
-                <div className="text-left">
-                  <div className="text-xs opacity-80 font-mono uppercase tracking-widest" style={{ fontFamily: 'var(--font-press-start)', fontSize: '8px' }}>Continue</div>
-                  <div className="font-medium truncate max-w-[180px] sm:max-w-[280px]">
-                    {lastPlayed.title || "Untitled"}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">▶</span>
+                  <div>
+                    <div className="text-xs uppercase tracking-wide" style={{ color: colors.pencil }}>
+                      Continue
+                    </div>
+                    <div className="font-medium" style={{ color: colors.ink }}>
+                      {lastPlayed.title || "Untitled"}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xl font-bold" style={{ color: colors.accent }}>
+                    {formatProgress(lastPlayed)}%
+                  </div>
+                  <div className="text-xs" style={{ color: colors.pencil }}>
+                    {formatTime(lastPlayed.progress.totalTime)}
                   </div>
                 </div>
               </div>
-              <div className="text-right font-mono">
-                <div className="text-xl font-bold" style={{ textShadow: '2px 2px 0 rgba(0,0,0,0.3)' }}>{formatProgress(lastPlayed)}%</div>
-                <div className="text-xs opacity-70">{formatTime(lastPlayed.progress.totalTime)}</div>
+              <div
+                className="h-2 rounded-full mt-3 overflow-hidden"
+                style={{ backgroundColor: colors.paperDark }}
+              >
+                <div
+                  className="h-full transition-all"
+                  style={{
+                    width: `${formatProgress(lastPlayed)}%`,
+                    backgroundColor: colors.accent
+                  }}
+                />
+              </div>
+            </button>
+          )}
+
+          {/* Horizontal rule */}
+          <div className="my-8 h-px" style={{ backgroundColor: colors.pencilLight, opacity: 0.3 }} />
+
+          {/* Navigation Links */}
+          <nav className="space-y-3 mb-8">
+            <button
+              onClick={() => setShowStories(true)}
+              className="w-full text-left py-3 px-4 rounded transition-all underline-drawn"
+              style={{ color: colors.ink }}
+            >
+              Stories
+            </button>
+            <button
+              onClick={() => setShowAddText(true)}
+              className="w-full text-left py-3 px-4 rounded transition-all underline-drawn"
+              style={{ color: colors.ink }}
+            >
+              Your Texts
+            </button>
+            <button
+              onClick={handleStartTutorial}
+              className="w-full text-left py-3 px-4 rounded transition-all underline-drawn"
+              style={{ color: colors.ink }}
+            >
+              Tutorial
+            </button>
+            <button
+              onClick={handleStartHebrewTutorial}
+              className="w-full text-left py-3 px-4 rounded transition-all underline-drawn"
+              style={{ color: colors.ink }}
+            >
+              מדריך עברית
+            </button>
+          </nav>
+
+          {/* Saved Texts Preview */}
+          {savedTexts.length > 0 && (
+            <div className="mt-6">
+              <h2 className="text-xs uppercase tracking-wide mb-3" style={{ color: colors.pencil }}>
+                Recent Texts
+              </h2>
+              <div className="space-y-2">
+                {savedTexts.slice(lastPlayed ? 1 : 0, lastPlayed ? 4 : 3).map((saved) => (
+                  <button
+                    key={saved.id}
+                    onClick={() => handleResume(saved)}
+                    className="w-full text-left p-3 rounded border transition-all group flex items-center justify-between"
+                    style={{
+                      borderColor: colors.pencilLight,
+                      borderWidth: '1px'
+                    }}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium truncate text-sm" style={{ color: colors.ink }}>
+                        {saved.title || "Untitled"}
+                      </div>
+                      <div className="text-xs" style={{ color: colors.pencil }}>
+                        {formatProgress(saved)}% · {formatTime(saved.progress.totalTime)}
+                      </div>
+                    </div>
+                    <button
+                      onClick={(e) => handleDelete(saved.id, e)}
+                      className="p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      style={{ color: colors.error }}
+                    >
+                      ✕
+                    </button>
+                  </button>
+                ))}
               </div>
             </div>
-          </button>
-        )}
-
-        {/* Quick Actions */}
-        <div className="flex gap-3 mb-6">
-          <button
-            onClick={() => setShowStories(true)}
-            className="flex-1 py-3 px-4 text-sm font-mono uppercase tracking-wider transition-all hover:scale-105"
-            style={{
-              background: 'linear-gradient(180deg, rgba(168,85,247,0.2) 0%, rgba(168,85,247,0.1) 100%)',
-              border: '2px solid rgba(168,85,247,0.4)',
-              boxShadow: '0 0 15px rgba(168,85,247,0.2), inset 0 1px 0 rgba(255,255,255,0.1)',
-              textShadow: '0 0 10px rgba(168,85,247,0.5)',
-            }}
-          >
-            📚 Stories
-          </button>
-          <button
-            onClick={handleStartTutorial}
-            className="flex-1 py-3 px-4 text-sm font-mono uppercase tracking-wider transition-all hover:scale-105"
-            style={{
-              background: 'linear-gradient(180deg, rgba(168,85,247,0.2) 0%, rgba(168,85,247,0.1) 100%)',
-              border: '2px solid rgba(168,85,247,0.4)',
-              boxShadow: '0 0 15px rgba(168,85,247,0.2), inset 0 1px 0 rgba(255,255,255,0.1)',
-              textShadow: '0 0 10px rgba(168,85,247,0.5)',
-            }}
-          >
-            🎮 Tutorial
-          </button>
-          <button
-            onClick={handleStartHebrewTutorial}
-            className="py-3 px-4 text-sm font-mono transition-all hover:scale-105"
-            title="Hebrew Tutorial"
-            style={{
-              background: 'linear-gradient(180deg, rgba(168,85,247,0.2) 0%, rgba(168,85,247,0.1) 100%)',
-              border: '2px solid rgba(168,85,247,0.4)',
-              boxShadow: '0 0 15px rgba(168,85,247,0.2), inset 0 1px 0 rgba(255,255,255,0.1)',
-            }}
-          >
-            🇮🇱
-          </button>
+          )}
         </div>
 
         {/* Stories Modal */}
         {showStories && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
             <div
-              className="w-full max-w-lg bg-[var(--background)] rounded-lg shadow-2xl border-2 border-purple-500/30 overflow-hidden"
-              style={{ boxShadow: '0 0 40px rgba(168, 85, 247, 0.15)' }}
+              className="w-full max-w-lg bg-white rounded-lg overflow-hidden"
+              style={{ boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)' }}
             >
-              <div className="flex items-center justify-between p-4 border-b-2 border-purple-500/20 bg-purple-500/5">
-                <h2 className="text-lg font-semibold font-mono flex items-center gap-2">
-                  <span>📚</span> Choose a Story
+              <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: colors.pencilLight, opacity: 0.3 }}>
+                <h2 className="text-lg font-medium heading-text" style={{ color: colors.ink }}>
+                  Stories
                 </h2>
                 <button
                   onClick={() => setShowStories(false)}
-                  className="p-1 hover:bg-purple-500/20 rounded-lg transition-colors text-purple-400"
+                  className="p-1 rounded transition-colors"
+                  style={{ color: colors.pencil }}
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  ✕
                 </button>
               </div>
 
               {/* Language Toggle */}
-              <div className="flex gap-2 p-4 border-b-2 border-purple-500/10">
+              <div className="flex gap-2 p-4 border-b" style={{ borderColor: colors.pencilLight, opacity: 0.2 }}>
                 <button
                   onClick={() => setStoryLanguage('en')}
-                  className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium font-mono transition-all border-2 ${
-                    storyLanguage === 'en'
-                      ? 'bg-purple-500 text-white border-purple-400'
-                      : 'border-[var(--foreground)]/10 hover:border-purple-400/50'
+                  className={`flex-1 py-2 px-4 rounded text-sm transition-all ${
+                    storyLanguage === 'en' ? 'font-bold' : ''
                   }`}
+                  style={{
+                    backgroundColor: storyLanguage === 'en' ? colors.accent : 'transparent',
+                    color: storyLanguage === 'en' ? '#fff' : colors.ink,
+                    border: `1px solid ${storyLanguage === 'en' ? colors.accent : colors.pencilLight}`
+                  }}
                 >
                   English
                 </button>
                 <button
                   onClick={() => setStoryLanguage('he')}
-                  className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium font-mono transition-all border-2 ${
-                    storyLanguage === 'he'
-                      ? 'bg-purple-500 text-white border-purple-400'
-                      : 'border-[var(--foreground)]/10 hover:border-purple-400/50'
+                  className={`flex-1 py-2 px-4 rounded text-sm transition-all ${
+                    storyLanguage === 'he' ? 'font-bold' : ''
                   }`}
+                  style={{
+                    backgroundColor: storyLanguage === 'he' ? colors.accent : 'transparent',
+                    color: storyLanguage === 'he' ? '#fff' : colors.ink,
+                    border: `1px solid ${storyLanguage === 'he' ? colors.accent : colors.pencilLight}`
+                  }}
                 >
                   עברית
                 </button>
@@ -328,11 +342,22 @@ export default function Home() {
                   <button
                     key={story.id}
                     onClick={() => handleStartStory(story)}
-                    className="w-full text-left p-3 rounded-lg hover:bg-purple-500/10 transition-colors border-l-2 border-transparent hover:border-purple-400"
+                    className="w-full text-left p-3 rounded transition-colors"
                     dir={story.language === 'he' ? 'rtl' : 'ltr'}
+                    style={{
+                      borderLeft: `2px solid transparent`
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = colors.accentFaded;
+                      e.currentTarget.style.borderLeftColor = colors.accent;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.borderLeftColor = 'transparent';
+                    }}
                   >
-                    <div className="font-medium">{story.title}</div>
-                    <div className="text-sm text-[var(--muted)] font-mono">{story.author}</div>
+                    <div className="font-medium" style={{ color: colors.ink }}>{story.title}</div>
+                    <div className="text-sm" style={{ color: colors.pencil }}>{story.author}</div>
                   </button>
                 ))}
               </div>
@@ -340,24 +365,23 @@ export default function Home() {
           </div>
         )}
 
-        {/* Add New Text Modal */}
+        {/* Add Text Modal */}
         {showAddText && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
             <div
-              className="w-full max-w-lg bg-[var(--background)] rounded-lg shadow-2xl border-2 border-purple-500/30 overflow-hidden"
-              style={{ boxShadow: '0 0 40px rgba(168, 85, 247, 0.15)' }}
+              className="w-full max-w-lg bg-white rounded-lg overflow-hidden"
+              style={{ boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)' }}
             >
-              <div className="flex items-center justify-between p-4 border-b-2 border-purple-500/20 bg-purple-500/5">
-                <h2 className="text-lg font-semibold font-mono flex items-center gap-2">
-                  <span>✏️</span> Add New Text
+              <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: colors.pencilLight, opacity: 0.3 }}>
+                <h2 className="text-lg font-medium heading-text" style={{ color: colors.ink }}>
+                  Add New Text
                 </h2>
                 <button
                   onClick={() => setShowAddText(false)}
-                  className="p-1 hover:bg-purple-500/20 rounded-lg transition-colors text-purple-400"
+                  className="p-1 rounded transition-colors"
+                  style={{ color: colors.pencil }}
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  ✕
                 </button>
               </div>
 
@@ -367,7 +391,11 @@ export default function Home() {
                   value={customTitle}
                   onChange={(e) => setCustomTitle(e.target.value)}
                   placeholder="Title (optional)"
-                  className="w-full px-4 py-2 text-sm border-2 border-purple-500/20 rounded-lg bg-transparent focus:border-purple-500/50 transition-colors"
+                  className="w-full px-4 py-2 text-sm border rounded transition-colors"
+                  style={{
+                    borderColor: colors.pencilLight,
+                    color: colors.ink
+                  }}
                   autoFocus
                 />
                 <textarea
@@ -375,124 +403,29 @@ export default function Home() {
                   onChange={(e) => setInputValue(e.target.value)}
                   placeholder="Paste your text here..."
                   rows={6}
-                  className="w-full px-4 py-3 text-base border-2 border-purple-500/20 rounded-lg bg-transparent focus:border-purple-500/50 transition-colors resize-none"
+                  className="w-full px-4 py-3 text-base border rounded resize-none transition-colors"
+                  style={{
+                    borderColor: colors.pencilLight,
+                    color: colors.ink
+                  }}
                 />
 
                 {error && (
-                  <p className="text-[var(--error)] text-sm text-center">{error}</p>
+                  <p className="text-sm text-center" style={{ color: colors.error }}>{error}</p>
                 )}
 
                 <button
                   type="submit"
                   disabled={!inputValue.trim()}
-                  className="w-full py-3 text-base font-mono uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-[1.02]"
-                  style={{
-                    background: 'linear-gradient(180deg, #a855f7 0%, #7c3aed 100%)',
-                    border: '3px solid #c084fc',
-                    boxShadow: '0 0 30px rgba(168, 85, 247, 0.4), inset 0 2px 0 rgba(255,255,255,0.2), inset 0 -2px 0 rgba(0,0,0,0.3)',
-                    color: '#fff',
-                    textShadow: '2px 2px 0 rgba(0,0,0,0.3)',
-                  }}
+                  className="ink-button w-full"
                 >
-                  ▶ Start Typing
+                  Start Typing
                 </button>
               </form>
             </div>
           </div>
         )}
-
-        {/* Your Texts Section */}
-        <div className="mt-6">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-medium text-[var(--muted)]">
-              Your Texts
-            </h2>
-            <button
-              onClick={() => setShowAddText(true)}
-              className="flex items-center gap-1 px-3 py-1.5 text-xs font-mono uppercase tracking-wider bg-purple-500/10 border border-purple-500/30 rounded-lg hover:bg-purple-500/20 transition-colors text-purple-400"
-            >
-              <span>+</span> Add New
-            </button>
-          </div>
-          <div className="space-y-2">
-            {savedTexts.length === 0 ? (
-              <p className="text-sm text-[var(--muted)] text-center py-4">
-                No saved texts yet. Try a story or add your own!
-              </p>
-            ) : (
-              savedTexts.slice(lastPlayed ? 1 : 0, lastPlayed ? 5 : 4).map((saved) => (
-                <button
-                  key={saved.id}
-                  onClick={() => handleResume(saved)}
-                  className="w-full text-left p-3 border border-[var(--foreground)]/10 rounded-lg hover:border-purple-500/30 transition-colors group"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium truncate text-sm">{saved.title || "Untitled"}</div>
-                      <div className="text-xs text-[var(--muted)]">
-                        {formatProgress(saved)}% · {formatTime(saved.progress.totalTime)}
-                      </div>
-                    </div>
-                    <button
-                      onClick={(e) => handleDelete(saved.id, e)}
-                      className="p-1 text-[var(--muted)] hover:text-[var(--error)] opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                </button>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <footer className="mt-12 text-center font-mono">
-          <p
-            className="text-xs uppercase tracking-widest mb-2"
-            style={{
-              color: '#a855f7',
-              textShadow: '0 0 10px rgba(168, 85, 247, 0.5)',
-            }}
-          >
-            ━━━ Insert Text to Begin ━━━
-          </p>
-          <p
-            className="text-xs text-purple-300/50"
-            style={{ animation: 'flicker 4s linear infinite' }}
-          >
-            👾 The monster is always watching... 👾
-          </p>
-          <p className="mt-4 text-[10px] text-[var(--muted)]/30 tracking-widest">
-            © 2024 TYPEREAD ARCADE
-          </p>
-        </footer>
       </div>
-
-      <style jsx>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0) rotate(-5deg); }
-          50% { transform: translateY(-8px) rotate(5deg); }
-        }
-        @keyframes blink {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.3; }
-        }
-        @keyframes flicker {
-          0%, 100% { opacity: 0.5; }
-          92% { opacity: 0.5; }
-          93% { opacity: 0.2; }
-          94% { opacity: 0.5; }
-          96% { opacity: 0.3; }
-          97% { opacity: 0.5; }
-        }
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.7; }
-        }
-      `}</style>
-    </div>
+    </PaperBackground>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { colors } from '@/styles/designTokens';
 
 interface ArcadeNameEntryProps {
   score: number;
@@ -21,7 +22,7 @@ export default function ArcadeNameEntry({
   onSubmit,
   onSkip,
 }: ArcadeNameEntryProps) {
-  const [name, setName] = useState(''); // 5-letter name
+  const [name, setName] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Auto-focus on mount
@@ -46,40 +47,80 @@ export default function ArcadeNameEntry({
     if (e.key === 'Enter') {
       e.preventDefault();
       handleSubmit();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      onSkip();
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--notebook-bg)]/95 backdrop-blur-sm">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center paper-texture"
+      style={{ backgroundColor: colors.paper }}
+    >
       <div className="text-center p-8 max-w-2xl">
         {/* Title */}
-        <div className="mb-8">
-          <h1 className="text-5xl font-bold text-[var(--ink-blue)] mb-2 pixel-text animate-pulse">
-            🏆 NEW HIGH SCORE! 🏆
+        <div className="mb-12">
+          <h1
+            className="text-5xl font-bold mb-4 heading-text"
+            style={{ color: colors.ink }}
+          >
+            New High Score
           </h1>
-          <p className="text-xl text-[var(--ink-black)]">Enter your name</p>
         </div>
 
         {/* Score Display */}
-        <div className="bg-white border-4 border-[var(--ink-black)] p-6 mb-8 pixel-corners shadow-retro-xl">
-          <div className="text-6xl font-bold text-[var(--ink-blue)] mb-4">{score.toLocaleString()}</div>
-          <div className="grid grid-cols-4 gap-4 text-sm">
+        <div
+          className="bg-white rounded-lg p-8 mb-8"
+          style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)' }}
+        >
+          <div
+            className="text-7xl font-bold mb-6"
+            style={{
+              fontFamily: '"Courier New", "Courier Prime", monospace',
+              color: colors.ink
+            }}
+          >
+            {score.toLocaleString()}
+          </div>
+
+          <div
+            className="h-px mb-6 mx-auto"
+            style={{
+              width: '200px',
+              backgroundColor: colors.pencilLight,
+              opacity: 0.4
+            }}
+          />
+
+          <div className="flex justify-center gap-8 text-sm">
             <div>
-              <div className="text-2xl font-bold text-[var(--ink-black)]">{wordsTyped}</div>
-              <div className="text-[var(--pencil-gray)]">Words</div>
+              <div className="text-xl font-bold" style={{ color: colors.ink }}>
+                {wordsTyped}
+              </div>
+              <div style={{ color: colors.pencil }}>words</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-[var(--ink-black)]">{wpm}</div>
-              <div className="text-[var(--pencil-gray)]">WPM</div>
+              <div className="text-xl font-bold" style={{ color: colors.ink }}>
+                {wpm}
+              </div>
+              <div style={{ color: colors.pencil }}>wpm</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-[var(--ink-black)]">{accuracy}%</div>
-              <div className="text-[var(--pencil-gray)]">Accuracy</div>
+              <div className="text-xl font-bold" style={{ color: colors.ink }}>
+                {accuracy}%
+              </div>
+              <div style={{ color: colors.pencil }}>accuracy</div>
             </div>
-            <div>
-              <div className="text-2xl font-bold text-[var(--ink-red)]">🔥 {streak}</div>
-              <div className="text-[var(--pencil-gray)]">Streak</div>
-            </div>
+            {streak > 0 && (
+              <div>
+                <div className="text-xl font-bold flex items-center justify-center gap-1">
+                  <span style={{ color: colors.success }}>{streak}</span>
+                  <span className="text-base">🔥</span>
+                </div>
+                <div style={{ color: colors.pencil }}>streak</div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -92,70 +133,24 @@ export default function ArcadeNameEntry({
             onChange={handleChange}
             onKeyDown={handleKeyDown}
             maxLength={5}
-            placeholder="ENTER NAME"
-            className="w-full max-w-md px-6 py-6 text-6xl font-bold text-center bg-white border-4 border-[var(--ink-blue)] text-[var(--ink-blue)] pixel-corners shadow-retro-xl focus:outline-none focus:border-[var(--ink-black)] transition-all placeholder-[var(--ink-blue)]/30 uppercase tracking-widest"
-            style={{ letterSpacing: '0.3em' }}
+            placeholder="_____"
+            className="w-full max-w-md px-6 py-4 text-5xl font-bold text-center bg-white rounded border-2 transition-all focus:outline-none uppercase tracking-widest"
+            style={{
+              fontFamily: '"Courier New", "Courier Prime", monospace',
+              color: colors.ink,
+              borderColor: name.length > 0 ? colors.accent : colors.pencilLight,
+              letterSpacing: '0.3em',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)'
+            }}
           />
-          <p className="text-sm text-[var(--pencil-gray)] mt-3">{5 - name.length} characters remaining</p>
         </div>
 
         {/* Instructions */}
-        <div className="text-sm text-[var(--pencil-gray)] mb-6">
-          <p>Type your name (up to 5 letters)</p>
-          <p className="mt-1">Press Enter to submit</p>
-        </div>
-
-        {/* Submit Button */}
-        <div className="flex gap-4 justify-center">
-          <button
-            onClick={handleSubmit}
-            disabled={name.length === 0}
-            className={`ink-button px-12 py-4 text-xl pixel-corners shadow-retro-lg ${
-              name.length === 0 ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
-          >
-            SUBMIT
-          </button>
-          <button
-            onClick={onSkip}
-            className="px-8 py-4 text-xl border-2 border-[var(--ink-black)] text-[var(--ink-black)] hover:bg-[var(--ink-black)] hover:text-white transition-colors pixel-corners shadow-retro-lg"
-          >
-            SKIP
-          </button>
+        <div className="text-sm space-y-1" style={{ color: colors.pencil }}>
+          <p>Enter your name</p>
+          <p className="text-xs opacity-60">Press Enter to save · Press Esc to skip</p>
         </div>
       </div>
-
-      <style jsx>{`
-        .pixel-corners {
-          clip-path: polygon(
-            6px 0, calc(100% - 6px) 0,
-            100% 6px, 100% calc(100% - 6px),
-            calc(100% - 6px) 100%, 6px 100%,
-            0 calc(100% - 6px), 0 6px
-          );
-        }
-
-        .pixel-text {
-          text-shadow: 3px 3px 0px rgba(0, 0, 0, 0.3);
-        }
-
-        .shadow-retro-lg {
-          box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.3);
-        }
-
-        .shadow-retro-xl {
-          box-shadow: 12px 12px 0px rgba(0, 0, 0, 0.3);
-        }
-
-        @keyframes pulse {
-          0%, 100% {
-            opacity: 1;
-          }
-          50% {
-            opacity: 0.8;
-          }
-        }
-      `}</style>
     </div>
   );
 }

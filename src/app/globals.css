@@ -1,27 +1,31 @@
 @import "tailwindcss";
 
 /* ============================================================================
-   8-BIT NOTEBOOK THEME - Color Palette
+   PAPER NOTEBOOK THEME - Clean Design
    ============================================================================ */
 :root {
-  /* Notebook Paper */
-  --notebook-bg: #FFF8E7;        /* Cream paper background */
-  --notebook-line: #E8DCC8;      /* Ruled lines */
-  --notebook-margin: #FFE4B5;    /* Margin line */
+  /* Paper & Ink */
+  --paper: #F5F1E8;              /* Cream paper background */
+  --paper-dark: #E8E4D8;         /* Slightly darker paper */
+  --ink: #1a1a1a;                /* Black ink for text */
+  --pencil: #666666;             /* Gray pencil for secondary text */
+  --pencil-light: #999999;       /* Light gray for subtle elements */
 
-  /* Ink Colors */
-  --ink-black: #1a1a1a;          /* Black ink for text */
-  --ink-blue: #2563eb;           /* Blue ink for accents */
-  --ink-red: #dc2626;            /* Red ink for errors */
-  --pencil-gray: #6b7280;        /* Gray pencil for hints */
+  /* Accent Colors */
+  --accent: #4A90E2;             /* Notebook blue */
+  --error: #E74C3C;              /* Red pen */
+  --success: #2ECC71;            /* Green highlighter */
+  --monster: #9B59B6;            /* Purple crayon */
+
+  /* Transparency */
+  --ink-faded: rgba(26, 26, 26, 0.4);
+  --ink-very-faded: rgba(26, 26, 26, 0.2);
+  --accent-faded: rgba(74, 144, 226, 0.2);
 
   /* Legacy mappings for compatibility */
-  --background: var(--notebook-bg);
-  --foreground: var(--ink-black);
-  --accent: var(--ink-blue);
-  --muted: var(--pencil-gray);
-  --success: var(--ink-blue);
-  --error: var(--ink-red);
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --muted: var(--pencil);
 }
 
 @theme inline {
@@ -32,28 +36,10 @@
 }
 
 body {
-  background: var(--notebook-bg);
-  color: var(--ink-black);
+  background: var(--paper);
+  color: var(--ink);
   font-family: var(--font-sans), system-ui, sans-serif;
-
-  /* Subtle paper texture - just grain, no lines */
-  background-image:
-    /* Noise texture for paper grain */
-    repeating-linear-gradient(
-      45deg,
-      transparent 0,
-      transparent 2px,
-      rgba(0, 0, 0, 0.01) 2px,
-      rgba(0, 0, 0, 0.01) 4px
-    ),
-    repeating-linear-gradient(
-      -45deg,
-      transparent 0,
-      transparent 2px,
-      rgba(0, 0, 0, 0.01) 2px,
-      rgba(0, 0, 0, 0.01) 4px
-    );
-  background-attachment: fixed;
+  line-height: 1.6;
 }
 
 /* Prevent text selection during typing */
@@ -87,11 +73,17 @@ input:focus, textarea:focus {
   outline: none;
 }
 
-/* Notebook paper card */
+/* Paper card - lifted paper effect */
 .card {
   background: #ffffff;
-  border: 3px solid var(--ink-black);
-  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--ink-faded);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 250ms ease;
+}
+
+.card:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
 }
 
 /* ============================================================================
@@ -109,17 +101,17 @@ input:focus, textarea:focus {
   text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.1);
 }
 
-/* Retro box shadows - notebook style */
-.shadow-retro {
-  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.15);
+/* Paper shadows - lifted paper effect */
+.shadow-paper {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-.shadow-retro-lg {
-  box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.2);
+.shadow-paper-lg {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
 }
 
-.shadow-retro-xl {
-  box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.25);
+.shadow-paper-xl {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
 }
 
 /* Pixel-perfect corners (8-bit style) */
@@ -141,20 +133,23 @@ input:focus, textarea:focus {
   );
 }
 
-/* Retro button styles */
-.btn-retro {
-  border: 2px solid currentColor;
-  transition: all 0.1s ease;
+/* Clean button styles */
+.btn-paper {
+  border: 1px solid var(--ink-faded);
+  border-radius: 4px;
+  transition: all 150ms ease;
+  background: #ffffff;
 }
 
-.btn-retro:hover {
-  transform: translate(-2px, -2px);
-  box-shadow: 4px 4px 0px currentColor;
+.btn-paper:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+  border-color: var(--accent);
 }
 
-.btn-retro:active {
-  transform: translate(0, 0);
-  box-shadow: 2px 2px 0px currentColor;
+.btn-paper:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 /* Pixel borders */
@@ -198,37 +193,43 @@ input:focus, textarea:focus {
 /* Standard notebook card/modal */
 .notebook-card {
   background: #ffffff;
-  border: 3px solid var(--ink-black);
-  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--ink-faded);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 250ms ease;
 }
 
 .notebook-card:hover {
-  box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
 }
 
-/* Ink button style */
+/* Clean button style */
 .ink-button {
-  background: var(--ink-blue);
+  background: var(--accent);
   color: #ffffff;
-  border: 3px solid var(--ink-black);
+  border: none;
+  border-radius: 4px;
   font-weight: 600;
-  transition: all 0.1s ease;
+  padding: 10px 20px;
+  transition: all 150ms ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .ink-button:hover {
-  transform: translate(-2px, -2px);
-  box-shadow: 4px 4px 0px var(--ink-black);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .ink-button:active {
-  transform: translate(0, 0);
-  box-shadow: 2px 2px 0px var(--ink-black);
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .ink-button:disabled {
-  background: var(--pencil-gray);
+  background: var(--pencil);
   opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
 }
 
 /* Retro animations */
@@ -306,6 +307,94 @@ textarea {
   top: 0;
   bottom: 0;
   width: 2px;
-  background: var(--notebook-margin);
+  background: var(--pencil-light);
+  opacity: 0.3;
+}
+
+/* ============================================================================
+   CLEAN PAPER DESIGN UTILITIES
+   ============================================================================ */
+
+/* Text styles */
+.text-ink {
+  color: var(--ink);
+}
+
+.text-pencil {
+  color: var(--pencil);
+}
+
+.text-faded {
+  color: var(--ink-faded);
+}
+
+/* Reading text */
+.reading-text {
+  font-family: Georgia, "Crimson Text", serif;
+  line-height: 1.8;
+  color: var(--ink);
+}
+
+/* Heading text */
+.heading-text {
+  font-family: "Courier New", "Courier Prime", monospace;
+  color: var(--ink);
+}
+
+/* Margin stats text */
+.margin-text {
+  font-family: var(--font-cousine), monospace;
+  font-size: 14px;
+  color: var(--pencil);
+  line-height: 1.5;
+}
+
+/* Hand-drawn underline effect */
+.underline-drawn {
+  position: relative;
+  text-decoration: none;
+}
+
+.underline-drawn::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  width: 100%;
+  height: 2px;
+  background: currentColor;
   opacity: 0.6;
+}
+
+/* Simple fade transition */
+.fade-in {
+  animation: fadeIn 250ms ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Subtle pulse for active elements */
+.pulse-subtle {
+  animation: pulseSubtle 2s ease-in-out infinite;
+}
+
+@keyframes pulseSubtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* Paper texture overlay */
+.paper-texture {
+  position: relative;
+}
+
+.paper-texture::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"><filter id="n"><feTurbulence baseFrequency="0.9" numOctaves="4"/><feColorMatrix values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0"/></filter><rect width="100%" height="100%" filter="url(%23n)" opacity="0.03"/></svg>');
+  pointer-events: none;
 }
