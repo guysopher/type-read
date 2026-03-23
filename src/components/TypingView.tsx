@@ -57,14 +57,14 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   useEffect(() => {
     if (words.length === 0) return;
 
-    // Place 3-5 random power-ups throughout the text
+    // Place 8-12 random power-ups throughout the text
     const placements = new Map<number, 'freezeMonster' | 'shield' | 'slowMo'>();
     const powerUpTypes: ('freezeMonster' | 'shield' | 'slowMo')[] = ['freezeMonster', 'shield', 'slowMo'];
-    const numPowerUps = Math.floor(Math.random() * 3) + 3; // 3-5 power-ups
+    const numPowerUps = Math.floor(Math.random() * 5) + 8; // 8-12 power-ups
 
     for (let i = 0; i < numPowerUps; i++) {
-      // Place power-ups throughout the text (starting from 10% in)
-      const minIndex = Math.floor(words.length * 0.1);
+      // Place power-ups throughout the entire text
+      const minIndex = 5; // Start after first few words
       const maxIndex = words.length - 1;
       let wordIndex = Math.floor(Math.random() * (maxIndex - minIndex + 1)) + minIndex;
 
@@ -2048,10 +2048,10 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                   {/* Add paragraph break */}
                   {isParagraphStart && <><br /><br /></>}
 
-                  {/* Floating power-up icon */}
+                  {/* Inline power-up icon before word */}
                   {powerUpIcon && index >= currentWordIndex && (
                     <span
-                      className="absolute -top-8 left-1/2 -translate-x-1/2 text-2xl pointer-events-none z-10"
+                      className="inline-block mx-1 text-2xl align-middle"
                       style={{
                         animation: 'bounce 1s ease-in-out infinite',
                         filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
