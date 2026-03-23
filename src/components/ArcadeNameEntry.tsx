@@ -54,14 +54,16 @@ export default function ArcadeNameEntry({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center"
-      style={{
-        backgroundColor: colors.paper,
-        backdropFilter: 'blur(8px)'
-      }}
-    >
-      <div className="text-center p-8 max-w-2xl">
+    <>
+      {/* Opaque backdrop */}
+      <div
+        className="fixed inset-0 z-[9999]"
+        style={{ backgroundColor: colors.paper }}
+      />
+
+      {/* Content layer */}
+      <div className="fixed inset-0 z-[10000] flex items-center justify-center overflow-auto">
+        <div className="text-center p-8 max-w-2xl w-full">
         {/* Title */}
         <div className="mb-12">
           <h1
@@ -190,5 +192,6 @@ export default function ArcadeNameEntry({
         </div>
       </div>
     </div>
+    </>
   );
 }
