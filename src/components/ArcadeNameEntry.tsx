@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 interface ArcadeNameEntryProps {
   score: number;
@@ -19,63 +19,43 @@ export default function ArcadeNameEntry({
   wordsTyped,
   onSubmit,
 }: ArcadeNameEntryProps) {
-  const [name, setName] = useState(['A', 'A', 'A']); // 3-letter initials
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [name, setName] = useState(''); // 5-letter name
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+  // Auto-focus on mount
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
 
-  const handleLetterChange = (direction: 'up' | 'down') => {
-    const currentLetter = name[activeIndex];
-    const currentIndex = letters.indexOf(currentLetter);
-    const newIndex = direction === 'up'
-      ? (currentIndex + 1) % letters.length
-      : (currentIndex - 1 + letters.length) % letters.length;
-
-    const newName = [...name];
-    newName[activeIndex] = letters[newIndex];
-    setName(newName);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.toUpperCase().replace(/[^A-Z]/g, '');
+    if (value.length <= 5) {
+      setName(value);
+    }
   };
 
   const handleSubmit = () => {
-    onSubmit(name.join(''));
+    if (name.length > 0) {
+      onSubmit(name.padEnd(5, ' ').substring(0, 5));
+    }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'ArrowUp') {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
       e.preventDefault();
-      handleLetterChange('up');
-    } else if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      handleLetterChange('down');
-    } else if (e.key === 'ArrowLeft') {
-      e.preventDefault();
-      setActiveIndex(prev => Math.max(0, prev - 1));
-    } else if (e.key === 'ArrowRight') {
-      e.preventDefault();
-      setActiveIndex(prev => Math.min(2, prev + 1));
-    } else if (e.key === 'Enter') {
-      e.preventDefault();
-      if (activeIndex < 2) {
-        setActiveIndex(prev => prev + 1);
-      } else {
-        handleSubmit();
-      }
+      handleSubmit();
     }
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
-      onKeyDown={handleKeyDown}
-      tabIndex={0}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm">
       <div className="text-center p-8 max-w-2xl">
         {/* Title */}
         <div className="mb-8">
           <h1 className="text-5xl font-bold text-yellow-400 mb-2 pixel-text animate-pulse">
             🏆 NEW HIGH SCORE! 🏆
           </h1>
-          <p className="text-xl text-gray-300">Enter your initials</p>
+          <p className="text-xl text-gray-300">Enter your name</p>
         </div>
 
         {/* Score Display */}
@@ -101,65 +81,37 @@ export default function ArcadeNameEntry({
           </div>
         </div>
 
-        {/* Letter Selection */}
-        <div className="flex justify-center gap-8 mb-8">
-          {name.map((letter, index) => (
-            <div key={index} className="flex flex-col items-center gap-3">
-              {/* Up Arrow */}
-              <button
-                onClick={() => {
-                  setActiveIndex(index);
-                  handleLetterChange('up');
-                }}
-                className={`text-2xl transition-all ${
-                  activeIndex === index
-                    ? 'text-yellow-400 scale-125'
-                    : 'text-gray-600 hover:text-gray-400'
-                }`}
-              >
-                ▲
-              </button>
-
-              {/* Letter */}
-              <div
-                className={`w-20 h-24 flex items-center justify-center border-4 pixel-corners text-5xl font-bold transition-all cursor-pointer ${
-                  activeIndex === index
-                    ? 'bg-yellow-400 border-yellow-400 text-black animate-pulse scale-110'
-                    : 'bg-white/10 border-white/30 text-white hover:border-white/50'
-                }`}
-                onClick={() => setActiveIndex(index)}
-              >
-                {letter}
-              </div>
-
-              {/* Down Arrow */}
-              <button
-                onClick={() => {
-                  setActiveIndex(index);
-                  handleLetterChange('down');
-                }}
-                className={`text-2xl transition-all ${
-                  activeIndex === index
-                    ? 'text-yellow-400 scale-125'
-                    : 'text-gray-600 hover:text-gray-400'
-                }`}
-              >
-                ▼
-              </button>
-            </div>
-          ))}
+        {/* Name Input */}
+        <div className="mb-8">
+          <input
+            ref={inputRef}
+            type="text"
+            value={name}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            maxLength={5}
+            placeholder="ENTER NAME"
+            className="w-full max-w-md px-6 py-6 text-6xl font-bold text-center bg-white/10 border-4 border-yellow-400 text-yellow-400 pixel-corners shadow-retro-xl focus:outline-none focus:border-yellow-300 focus:bg-white/20 transition-all placeholder-yellow-400/30 uppercase tracking-widest"
+            style={{ letterSpacing: '0.3em' }}
+          />
+          <p className="text-sm text-gray-400 mt-3">{5 - name.length} characters remaining</p>
         </div>
 
         {/* Instructions */}
         <div className="text-sm text-gray-400 mb-6">
-          <p>Use ← → to move, ↑ ↓ to change letter, Enter to continue</p>
-          <p className="mt-1">or click the arrows and letters</p>
+          <p>Type your name (up to 5 letters)</p>
+          <p className="mt-1">Press Enter to submit</p>
         </div>
 
         {/* Submit Button */}
         <button
           onClick={handleSubmit}
-          className="px-12 py-4 bg-yellow-400 text-black font-bold text-xl pixel-corners shadow-retro-lg hover:bg-yellow-300 transition-all hover:scale-105"
+          disabled={name.length === 0}
+          className={`px-12 py-4 font-bold text-xl pixel-corners shadow-retro-lg transition-all ${
+            name.length === 0
+              ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+              : 'bg-yellow-400 text-black hover:bg-yellow-300 hover:scale-105'
+          }`}
         >
           SUBMIT
         </button>
