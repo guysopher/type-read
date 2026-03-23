@@ -62,14 +62,14 @@ export default function StatsView({
   }
 
   return (
-    <div className="fixed inset-0 bg-[var(--background)] z-50 overflow-y-auto">
+    <div className="fixed inset-0 bg-[var(--notebook-bg)] z-50 overflow-y-auto">
       <div className="max-w-4xl mx-auto px-6 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-bold">Typing Statistics</h2>
+          <h2 className="text-2xl font-bold text-[var(--ink-black)] pixel-text">Typing Statistics</h2>
           <button
             onClick={onClose}
-            className="text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
+            className="text-[var(--pencil-gray)] hover:text-[var(--ink-black)] transition-colors"
           >
             ✕ Close
           </button>
@@ -77,44 +77,44 @@ export default function StatsView({
 
         {/* Summary Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="p-4 rounded-xl bg-[var(--foreground)]/5">
-            <div className="text-3xl font-bold">{stats.averageWpm || 0}</div>
-            <div className="text-sm text-[var(--muted)]">Average WPM</div>
+          <div className="p-4 pixel-corners bg-white border-2 border-[var(--ink-black)]">
+            <div className="text-3xl font-bold text-[var(--ink-black)]">{stats.averageWpm || 0}</div>
+            <div className="text-sm text-[var(--pencil-gray)]">Average WPM</div>
           </div>
-          <div className="p-4 rounded-xl bg-[var(--foreground)]/5">
-            <div className="text-3xl font-bold">{stats.peakWpm || 0}</div>
-            <div className="text-sm text-[var(--muted)]">Peak WPM</div>
+          <div className="p-4 pixel-corners bg-white border-2 border-[var(--ink-black)]">
+            <div className="text-3xl font-bold text-[var(--ink-black)]">{stats.peakWpm || 0}</div>
+            <div className="text-sm text-[var(--pencil-gray)]">Peak WPM</div>
           </div>
-          <div className="p-4 rounded-xl bg-[var(--foreground)]/5">
-            <div className="text-3xl font-bold">{accuracy}%</div>
-            <div className="text-sm text-[var(--muted)]">Accuracy</div>
+          <div className="p-4 pixel-corners bg-white border-2 border-[var(--ink-black)]">
+            <div className="text-3xl font-bold text-[var(--ink-black)]">{accuracy}%</div>
+            <div className="text-sm text-[var(--pencil-gray)]">Accuracy</div>
           </div>
-          <div className="p-4 rounded-xl bg-[var(--foreground)]/5">
-            <div className="text-3xl font-bold">{wordsTyped}</div>
-            <div className="text-sm text-[var(--muted)]">/ {totalWords} words</div>
+          <div className="p-4 pixel-corners bg-white border-2 border-[var(--ink-black)]">
+            <div className="text-3xl font-bold text-[var(--ink-black)]">{wordsTyped}</div>
+            <div className="text-sm text-[var(--pencil-gray)]">/ {totalWords} words</div>
           </div>
         </div>
 
         {/* Time Stats */}
         <div className="grid grid-cols-3 gap-4 mb-8">
-          <div className="p-4 rounded-xl bg-[var(--foreground)]/5">
-            <div className="text-2xl font-bold">{formatTime(stats.totalActiveTime)}</div>
-            <div className="text-sm text-[var(--muted)]">Active Time</div>
+          <div className="p-4 pixel-corners bg-white border-2 border-[var(--ink-black)]">
+            <div className="text-2xl font-bold text-[var(--ink-black)]">{formatTime(stats.totalActiveTime)}</div>
+            <div className="text-sm text-[var(--pencil-gray)]">Active Time</div>
           </div>
-          <div className="p-4 rounded-xl bg-[var(--foreground)]/5">
-            <div className="text-2xl font-bold">{formatTime(stats.totalPauseTime)}</div>
-            <div className="text-sm text-[var(--muted)]">Pause Time</div>
+          <div className="p-4 pixel-corners bg-white border-2 border-[var(--ink-black)]">
+            <div className="text-2xl font-bold text-[var(--ink-black)]">{formatTime(stats.totalPauseTime)}</div>
+            <div className="text-sm text-[var(--pencil-gray)]">Pause Time</div>
           </div>
-          <div className="p-4 rounded-xl bg-[var(--foreground)]/5">
-            <div className="text-2xl font-bold">{stats.pauses.length}</div>
-            <div className="text-sm text-[var(--muted)]">Pauses</div>
+          <div className="p-4 pixel-corners bg-white border-2 border-[var(--ink-black)]">
+            <div className="text-2xl font-bold text-[var(--ink-black)]">{stats.pauses.length}</div>
+            <div className="text-sm text-[var(--pencil-gray)]">Pauses</div>
           </div>
         </div>
 
         {/* WPM Graph */}
         <div className="mb-8">
-          <h3 className="text-lg font-medium mb-4">WPM Over Time</h3>
-          <div className="p-4 rounded-xl bg-[var(--foreground)]/5 overflow-x-auto">
+          <h3 className="text-lg font-medium mb-4 text-[var(--ink-black)]">WPM Over Time</h3>
+          <div className="p-4 pixel-corners bg-white border-2 border-[var(--ink-black)] overflow-x-auto">
             {samples.length > 1 ? (
               <svg
                 width={graphWidth}
@@ -257,7 +257,7 @@ export default function StatsView({
                 </text>
               </svg>
             ) : (
-              <div className="text-center py-8 text-[var(--muted)]">
+              <div className="text-center py-8 text-[var(--pencil-gray)]">
                 Not enough data yet. Keep typing to see your WPM graph!
               </div>
             )}
@@ -267,20 +267,20 @@ export default function StatsView({
         {/* WPM by Minute */}
         {stats.wordsPerMinuteByMinute.length > 0 && (
           <div className="mb-8">
-            <h3 className="text-lg font-medium mb-4">Words Per Minute Breakdown</h3>
+            <h3 className="text-lg font-medium mb-4 text-[var(--ink-black)]">Words Per Minute Breakdown</h3>
             <div className="space-y-2">
               {stats.wordsPerMinuteByMinute.map((m) => (
                 <div key={m.minute} className="flex items-center gap-4">
-                  <span className="text-sm text-[var(--muted)] w-20">
+                  <span className="text-sm text-[var(--pencil-gray)] w-20">
                     Minute {m.minute + 1}
                   </span>
-                  <div className="flex-1 h-6 bg-[var(--foreground)]/5 rounded-full overflow-hidden">
+                  <div className="flex-1 h-6 bg-[var(--notebook-line)] border-2 border-[var(--ink-black)] pixel-corners overflow-hidden">
                     <div
-                      className="h-full bg-[var(--foreground)]/30 rounded-full"
+                      className="h-full bg-[var(--ink-blue)]"
                       style={{ width: `${Math.min(100, (m.wpm / (stats.peakWpm || 100)) * 100)}%` }}
                     />
                   </div>
-                  <span className="text-sm font-medium w-16 text-right">{m.wpm} WPM</span>
+                  <span className="text-sm font-medium w-16 text-right text-[var(--ink-black)]">{m.wpm} WPM</span>
                 </div>
               ))}
             </div>
@@ -290,17 +290,17 @@ export default function StatsView({
         {/* Pause History */}
         {stats.pauses.length > 0 && (
           <div>
-            <h3 className="text-lg font-medium mb-4">Pause History</h3>
+            <h3 className="text-lg font-medium mb-4 text-[var(--ink-black)]">Pause History</h3>
             <div className="space-y-2">
               {stats.pauses.map((pause, i) => (
                 <div
                   key={i}
-                  className="flex items-center justify-between p-3 rounded-lg bg-[var(--foreground)]/5"
+                  className="flex items-center justify-between p-3 pixel-corners bg-white border-2 border-[var(--ink-black)]"
                 >
-                  <span className="text-sm">
+                  <span className="text-sm text-[var(--ink-black)]">
                     Pause {i + 1} at {formatTime(pause.startTime)}
                   </span>
-                  <span className="text-sm text-[var(--muted)]">
+                  <span className="text-sm text-[var(--pencil-gray)]">
                     {formatTime(pause.duration)}
                   </span>
                 </div>

@@ -110,13 +110,13 @@ export default function LeaderboardView({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-[var(--background)] border border-[var(--foreground)]/20 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-[var(--notebook-bg)]/95 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white border-4 border-[var(--ink-black)] pixel-corners shadow-retro-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="p-6 border-b border-[var(--foreground)]/10">
+        <div className="p-6 border-b-3 border-[var(--notebook-line)]">
           <div className="flex justify-between items-start mb-4">
             <div>
-              <h2 className="text-2xl font-bold mb-1">🏆 Leaderboard</h2>
+              <h2 className="text-2xl font-bold mb-1 text-[var(--ink-black)] pixel-text">🏆 Leaderboard</h2>
               {isEditingName ? (
                 <div className="flex gap-2 items-center">
                   <input
@@ -124,13 +124,13 @@ export default function LeaderboardView({ onClose }: { onClose: () => void }) {
                     value={playerName}
                     onChange={(e) => setPlayerNameState(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSaveName()}
-                    className="px-2 py-1 border border-[var(--foreground)]/20 rounded text-sm"
+                    className="px-2 py-1 border-2 border-[var(--ink-black)] pixel-corners text-sm"
                     placeholder="Enter your name"
                     autoFocus
                   />
                   <button
                     onClick={handleSaveName}
-                    className="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                    className="px-2 py-1 bg-[var(--ink-blue)] text-white pixel-corners text-xs border-2 border-[var(--ink-black)] hover:opacity-90"
                   >
                     Save
                   </button>
@@ -138,7 +138,7 @@ export default function LeaderboardView({ onClose }: { onClose: () => void }) {
               ) : (
                 <button
                   onClick={() => setIsEditingName(true)}
-                  className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
+                  className="text-sm text-[var(--pencil-gray)] hover:text-[var(--ink-black)] transition-colors"
                 >
                   Player: {playerName} ✏️
                 </button>
@@ -146,7 +146,7 @@ export default function LeaderboardView({ onClose }: { onClose: () => void }) {
             </div>
             <button
               onClick={onClose}
-              className="text-2xl text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
+              className="text-2xl text-[var(--pencil-gray)] hover:text-[var(--ink-black)] transition-colors"
             >
               ×
             </button>
@@ -154,18 +154,18 @@ export default function LeaderboardView({ onClose }: { onClose: () => void }) {
 
           {/* Daily Streak Banner */}
           {dailyStreak && dailyStreak.currentStreak > 0 && (
-            <div className="bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30 rounded-lg p-3 mb-4">
+            <div className="bg-[var(--ink-red)]/10 border-3 border-[var(--ink-red)] pixel-corners p-3 mb-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <span className="text-3xl">🔥</span>
                   <div>
-                    <div className="font-bold text-lg">{dailyStreak.currentStreak} Day Streak!</div>
-                    <div className="text-xs text-[var(--muted)]">
+                    <div className="font-bold text-lg text-[var(--ink-black)]">{dailyStreak.currentStreak} Day Streak!</div>
+                    <div className="text-xs text-[var(--pencil-gray)]">
                       Longest: {dailyStreak.longestStreak} days
                     </div>
                   </div>
                 </div>
-                <div className="text-right text-xs text-[var(--muted)]">
+                <div className="text-right text-xs text-[var(--pencil-gray)]">
                   Keep playing daily to maintain your streak!
                 </div>
               </div>
@@ -178,10 +178,10 @@ export default function LeaderboardView({ onClose }: { onClose: () => void }) {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2 rounded-lg transition-colors ${
+                className={`px-4 py-2 pixel-corners border-2 transition-colors ${
                   activeTab === tab
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-[var(--foreground)]/5 hover:bg-[var(--foreground)]/10'
+                    ? 'bg-[var(--ink-blue)] text-white border-[var(--ink-black)]'
+                    : 'bg-white border-[var(--pencil-gray)] hover:border-[var(--ink-black)]'
                 }`}
               >
                 {tab === 'daily' && '📅 Today'}
@@ -200,10 +200,10 @@ export default function LeaderboardView({ onClose }: { onClose: () => void }) {
                 <button
                   key={m}
                   onClick={() => setMetric(m)}
-                  className={`px-3 py-1 rounded text-sm transition-colors ${
+                  className={`px-3 py-1 pixel-corners border-2 text-sm transition-colors ${
                     metric === m
-                      ? 'bg-green-500 text-white'
-                      : 'bg-[var(--foreground)]/5 hover:bg-[var(--foreground)]/10'
+                      ? 'bg-[var(--ink-blue)] text-white border-[var(--ink-black)]'
+                      : 'bg-white border-[var(--pencil-gray)] hover:border-[var(--ink-black)]'
                   }`}
                 >
                   {m === 'score' && '💯 High Scores'}
@@ -218,29 +218,29 @@ export default function LeaderboardView({ onClose }: { onClose: () => void }) {
           {/* Personal Bests */}
           {activeTab === 'personal' && personalBests.totalGamesPlayed > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-3">
-              <div className="bg-[var(--foreground)]/5 rounded p-2 text-center">
-                <div className="text-xs text-[var(--muted)]">High Score</div>
-                <div className="font-bold text-lg">{personalBests.highestScore.toLocaleString()}</div>
+              <div className="bg-[var(--notebook-line)] pixel-corners border-2 border-[var(--ink-black)] p-2 text-center">
+                <div className="text-xs text-[var(--pencil-gray)]">High Score</div>
+                <div className="font-bold text-lg text-[var(--ink-black)]">{personalBests.highestScore.toLocaleString()}</div>
               </div>
-              <div className="bg-[var(--foreground)]/5 rounded p-2 text-center">
-                <div className="text-xs text-[var(--muted)]">Best WPM</div>
-                <div className="font-bold text-lg">{Math.round(personalBests.bestWPM)}</div>
+              <div className="bg-[var(--notebook-line)] pixel-corners border-2 border-[var(--ink-black)] p-2 text-center">
+                <div className="text-xs text-[var(--pencil-gray)]">Best WPM</div>
+                <div className="font-bold text-lg text-[var(--ink-black)]">{Math.round(personalBests.bestWPM)}</div>
               </div>
-              <div className="bg-[var(--foreground)]/5 rounded p-2 text-center">
-                <div className="text-xs text-[var(--muted)]">Best Streak</div>
-                <div className="font-bold text-lg">{personalBests.longestStreak} 🔥</div>
+              <div className="bg-[var(--notebook-line)] pixel-corners border-2 border-[var(--ink-black)] p-2 text-center">
+                <div className="text-xs text-[var(--pencil-gray)]">Best Streak</div>
+                <div className="font-bold text-lg text-[var(--ink-black)]">{personalBests.longestStreak} 🔥</div>
               </div>
-              <div className="bg-[var(--foreground)]/5 rounded p-2 text-center">
-                <div className="text-xs text-[var(--muted)]">Best Accuracy</div>
-                <div className="font-bold text-lg">{personalBests.bestAccuracy.toFixed(1)}%</div>
+              <div className="bg-[var(--notebook-line)] pixel-corners border-2 border-[var(--ink-black)] p-2 text-center">
+                <div className="text-xs text-[var(--pencil-gray)]">Best Accuracy</div>
+                <div className="font-bold text-lg text-[var(--ink-black)]">{personalBests.bestAccuracy.toFixed(1)}%</div>
               </div>
-              <div className="bg-[var(--foreground)]/5 rounded p-2 text-center">
-                <div className="text-xs text-[var(--muted)]">Games Played</div>
-                <div className="font-bold text-lg">{personalBests.totalGamesPlayed}</div>
+              <div className="bg-[var(--notebook-line)] pixel-corners border-2 border-[var(--ink-black)] p-2 text-center">
+                <div className="text-xs text-[var(--pencil-gray)]">Games Played</div>
+                <div className="font-bold text-lg text-[var(--ink-black)]">{personalBests.totalGamesPlayed}</div>
               </div>
-              <div className="bg-[var(--foreground)]/5 rounded p-2 text-center">
-                <div className="text-xs text-[var(--muted)]">Total Words</div>
-                <div className="font-bold text-lg">{personalBests.totalWordsTyped.toLocaleString()}</div>
+              <div className="bg-[var(--notebook-line)] pixel-corners border-2 border-[var(--ink-black)] p-2 text-center">
+                <div className="text-xs text-[var(--pencil-gray)]">Total Words</div>
+                <div className="font-bold text-lg text-[var(--ink-black)]">{personalBests.totalWordsTyped.toLocaleString()}</div>
               </div>
             </div>
           )}
@@ -249,12 +249,12 @@ export default function LeaderboardView({ onClose }: { onClose: () => void }) {
         {/* Leaderboard List */}
         <div className="flex-1 overflow-y-auto p-6">
           {loadingGlobal ? (
-            <div className="text-center py-12 text-[var(--muted)]">
+            <div className="text-center py-12 text-[var(--pencil-gray)]">
               <div className="text-4xl mb-3 animate-pulse">🌍</div>
               <div className="text-lg mb-2">Loading global leaderboard...</div>
             </div>
           ) : entries.length === 0 ? (
-            <div className="text-center py-12 text-[var(--muted)]">
+            <div className="text-center py-12 text-[var(--pencil-gray)]">
               <div className="text-4xl mb-3">🎮</div>
               <div className="text-lg mb-2">No games yet!</div>
               <div className="text-sm">
@@ -268,10 +268,10 @@ export default function LeaderboardView({ onClose }: { onClose: () => void }) {
               {entries.map((entry, index) => (
                 <div
                   key={entry.id}
-                  className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
+                  className={`flex items-center gap-3 p-3 pixel-corners border-2 transition-colors ${
                     entry.playerName === playerName
-                      ? 'bg-blue-500/10 border border-blue-500/30'
-                      : 'bg-[var(--foreground)]/5 hover:bg-[var(--foreground)]/10'
+                      ? 'bg-[var(--ink-blue)]/10 border-[var(--ink-blue)]'
+                      : 'bg-white border-[var(--pencil-gray)] hover:border-[var(--ink-black)]'
                   }`}
                 >
                   {/* Rank */}
@@ -282,11 +282,11 @@ export default function LeaderboardView({ onClose }: { onClose: () => void }) {
                   {/* Main Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="font-semibold truncate">{entry.playerName}</span>
+                      <span className="font-semibold truncate text-[var(--ink-black)]">{entry.playerName}</span>
                       {entry.survived && <span className="text-xs">✅</span>}
                       {entry.language === 'he' && <span className="text-xs">🇮🇱</span>}
                     </div>
-                    <div className="text-xs text-[var(--muted)] truncate">
+                    <div className="text-xs text-[var(--pencil-gray)] truncate">
                       {entry.textTitle} • {formatDate(entry.date)}
                     </div>
                   </div>
@@ -296,27 +296,27 @@ export default function LeaderboardView({ onClose }: { onClose: () => void }) {
                     {activeTab === 'personal' || activeTab === 'daily' || activeTab === 'weekly' ? (
                       <>
                         <div className="text-center">
-                          <div className="text-xs text-[var(--muted)]">Score</div>
-                          <div className="font-bold">{entry.score.toLocaleString()}</div>
+                          <div className="text-xs text-[var(--pencil-gray)]">Score</div>
+                          <div className="font-bold text-[var(--ink-black)]">{entry.score.toLocaleString()}</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-xs text-[var(--muted)]">WPM</div>
-                          <div className="font-bold">{Math.round(entry.wpm)}</div>
+                          <div className="text-xs text-[var(--pencil-gray)]">WPM</div>
+                          <div className="font-bold text-[var(--ink-black)]">{Math.round(entry.wpm)}</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-xs text-[var(--muted)]">Streak</div>
-                          <div className="font-bold">{entry.streak} 🔥</div>
+                          <div className="text-xs text-[var(--pencil-gray)]">Streak</div>
+                          <div className="font-bold text-[var(--ink-black)]">{entry.streak} 🔥</div>
                         </div>
                       </>
                     ) : (
                       <div className="text-center min-w-[100px]">
-                        <div className="text-xs text-[var(--muted)]">
+                        <div className="text-xs text-[var(--pencil-gray)]">
                           {metric === 'score' && 'Score'}
                           {metric === 'wpm' && 'Speed'}
                           {metric === 'streak' && 'Streak'}
                           {metric === 'accuracy' && 'Accuracy'}
                         </div>
-                        <div className="font-bold text-lg">{getMetricValue(entry)}</div>
+                        <div className="font-bold text-lg text-[var(--ink-black)]">{getMetricValue(entry)}</div>
                       </div>
                     )}
                   </div>
@@ -327,7 +327,7 @@ export default function LeaderboardView({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-[var(--foreground)]/10 text-center text-xs text-[var(--muted)]">
+        <div className="p-4 border-t-3 border-[var(--notebook-line)] text-center text-xs text-[var(--pencil-gray)]">
           {entries.length > 0 && `Showing ${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}`}
         </div>
       </div>

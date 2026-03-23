@@ -1,12 +1,27 @@
 @import "tailwindcss";
 
+/* ============================================================================
+   8-BIT NOTEBOOK THEME - Color Palette
+   ============================================================================ */
 :root {
-  --background: #fafafa;
-  --foreground: #171717;
-  --accent: #000000;
-  --muted: #888888;
-  --success: #22c55e;
-  --error: #ef4444;
+  /* Notebook Paper */
+  --notebook-bg: #FFF8E7;        /* Cream paper background */
+  --notebook-line: #E8DCC8;      /* Ruled lines */
+  --notebook-margin: #FFE4B5;    /* Margin line */
+
+  /* Ink Colors */
+  --ink-black: #1a1a1a;          /* Black ink for text */
+  --ink-blue: #2563eb;           /* Blue ink for accents */
+  --ink-red: #dc2626;            /* Red ink for errors */
+  --pencil-gray: #6b7280;        /* Gray pencil for hints */
+
+  /* Legacy mappings for compatibility */
+  --background: var(--notebook-bg);
+  --foreground: var(--ink-black);
+  --accent: var(--ink-blue);
+  --muted: var(--pencil-gray);
+  --success: var(--ink-blue);
+  --error: var(--ink-red);
 }
 
 @theme inline {
@@ -16,19 +31,22 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --accent: #ffffff;
-    --muted: #666666;
-  }
-}
-
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--notebook-bg);
+  color: var(--ink-black);
   font-family: var(--font-sans), system-ui, sans-serif;
+
+  /* Ruled notebook lines */
+  background-image:
+    /* Horizontal ruled lines every 30px */
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 29px,
+      var(--notebook-line) 29px,
+      var(--notebook-line) 30px
+    );
+  background-attachment: fixed;
 }
 
 /* Prevent text selection during typing */
@@ -62,15 +80,11 @@ input:focus, textarea:focus {
   outline: none;
 }
 
-/* Subtle shadow for cards */
+/* Notebook paper card */
 .card {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-@media (prefers-color-scheme: dark) {
-  .card {
-    box-shadow: 0 1px 3px rgba(255, 255, 255, 0.03);
-  }
+  background: #ffffff;
+  border: 3px solid var(--ink-black);
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.15);
 }
 
 /* ============================================================================
@@ -88,17 +102,17 @@ input:focus, textarea:focus {
   text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.1);
 }
 
-/* Retro box shadows */
+/* Retro box shadows - notebook style */
 .shadow-retro {
-  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.1);
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.15);
 }
 
 .shadow-retro-lg {
-  box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.2);
+  box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.2);
 }
 
 .shadow-retro-xl {
-  box-shadow: 12px 12px 0px rgba(0, 0, 0, 0.25);
+  box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.25);
 }
 
 /* Pixel-perfect corners (8-bit style) */
@@ -170,36 +184,44 @@ input:focus, textarea:focus {
   pointer-events: none;
 }
 
-/* Paper texture background (clean white) */
-body {
-  background: linear-gradient(
-    180deg,
-    #ffffff 0%,
-    #fafafa 100%
-  );
-  background-attachment: fixed;
+/* ============================================================================
+   NOTEBOOK-SPECIFIC UTILITIES
+   ============================================================================ */
+
+/* Standard notebook card/modal */
+.notebook-card {
+  background: #ffffff;
+  border: 3px solid var(--ink-black);
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.15);
 }
 
-@media (prefers-color-scheme: dark) {
-  body {
-    background: linear-gradient(
-      180deg,
-      #0a0a0a 0%,
-      #000000 100%
-    );
-  }
+.notebook-card:hover {
+  box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.15);
+}
 
-  .shadow-retro {
-    box-shadow: 4px 4px 0px rgba(255, 255, 255, 0.1);
-  }
+/* Ink button style */
+.ink-button {
+  background: var(--ink-blue);
+  color: #ffffff;
+  border: 3px solid var(--ink-black);
+  font-weight: 600;
+  transition: all 0.1s ease;
+}
 
-  .shadow-retro-lg {
-    box-shadow: 8px 8px 0px rgba(255, 255, 255, 0.15);
-  }
+.ink-button:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 4px 4px 0px var(--ink-black);
+}
 
-  .shadow-retro-xl {
-    box-shadow: 12px 12px 0px rgba(255, 255, 255, 0.2);
-  }
+.ink-button:active {
+  transform: translate(0, 0);
+  box-shadow: 2px 2px 0px var(--ink-black);
+}
+
+.ink-button:disabled {
+  background: var(--pencil-gray);
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Retro animations */
@@ -265,18 +287,18 @@ textarea {
   );
 }
 
-/* Pixel-perfect grid overlay (subtle, for paper effect) */
-.paper-grid {
-  background-image:
-    linear-gradient(rgba(0, 0, 0, 0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.02) 1px, transparent 1px);
-  background-size: 20px 20px;
+/* Notebook margin line (left side, like composition notebooks) */
+.notebook-margin {
+  position: relative;
 }
 
-@media (prefers-color-scheme: dark) {
-  .paper-grid {
-    background-image:
-      linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-  }
+.notebook-margin::before {
+  content: "";
+  position: absolute;
+  left: 60px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--notebook-margin);
+  opacity: 0.6;
 }

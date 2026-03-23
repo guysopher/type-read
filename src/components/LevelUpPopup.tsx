@@ -29,16 +29,8 @@ export default function LevelUpPopup({ level, onClose }: LevelUpPopupProps) {
         }`}
       >
         <div
-          className="relative bg-gradient-to-br from-yellow-100 to-yellow-200 border-4 border-yellow-500 shadow-2xl p-8 max-w-md pixel-corners pointer-events-auto"
-          style={{
-            boxShadow: '12px 12px 0px rgba(234, 179, 8, 0.3)',
-          }}
+          className="relative bg-white border-4 border-[var(--ink-black)] shadow-retro-xl p-8 max-w-md pixel-corners pointer-events-auto"
         >
-          {/* Animated rays */}
-          <div className="absolute inset-0 overflow-hidden pixel-corners">
-            <div className="absolute inset-0 bg-gradient-conic from-yellow-400/20 via-transparent to-transparent animate-spin-slow"></div>
-          </div>
-
           {/* Content */}
           <div className="relative z-10 text-center">
             {/* Star burst */}
@@ -47,20 +39,20 @@ export default function LevelUpPopup({ level, onClose }: LevelUpPopupProps) {
             </div>
 
             {/* Level Up text */}
-            <h2 className="text-3xl font-bold mb-2 pixel-text text-yellow-900">
+            <h2 className="text-3xl font-bold mb-2 pixel-text text-[var(--ink-blue)]">
               LEVEL UP!
             </h2>
 
             {/* Level number */}
-            <div className="bg-white border-4 border-yellow-600 px-6 py-3 inline-block pixel-corners mb-3">
-              <div className="text-sm text-gray-600 mb-1">Level</div>
-              <div className="text-5xl font-bold text-yellow-600 pixel-text">
+            <div className="bg-[var(--ink-blue)]/10 border-4 border-[var(--ink-blue)] px-6 py-3 inline-block pixel-corners mb-3">
+              <div className="text-sm text-[var(--pencil-gray)] mb-1">Level</div>
+              <div className="text-5xl font-bold text-[var(--ink-blue)] pixel-text">
                 {level}
               </div>
             </div>
 
             {/* Encouragement */}
-            <p className="text-yellow-800 font-medium">
+            <p className="text-[var(--ink-black)] font-medium">
               You're getting stronger! 💪
             </p>
           </div>

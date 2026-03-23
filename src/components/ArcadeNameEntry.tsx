@@ -48,35 +48,35 @@ export default function ArcadeNameEntry({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--notebook-bg)]/95 backdrop-blur-sm">
       <div className="text-center p-8 max-w-2xl">
         {/* Title */}
         <div className="mb-8">
-          <h1 className="text-5xl font-bold text-yellow-400 mb-2 pixel-text animate-pulse">
+          <h1 className="text-5xl font-bold text-[var(--ink-blue)] mb-2 pixel-text animate-pulse">
             🏆 NEW HIGH SCORE! 🏆
           </h1>
-          <p className="text-xl text-gray-300">Enter your name</p>
+          <p className="text-xl text-[var(--ink-black)]">Enter your name</p>
         </div>
 
         {/* Score Display */}
-        <div className="bg-white/10 border-4 border-yellow-400 p-6 mb-8 pixel-corners shadow-retro-xl">
-          <div className="text-6xl font-bold text-yellow-400 mb-4">{score.toLocaleString()}</div>
+        <div className="bg-white border-4 border-[var(--ink-black)] p-6 mb-8 pixel-corners shadow-retro-xl">
+          <div className="text-6xl font-bold text-[var(--ink-blue)] mb-4">{score.toLocaleString()}</div>
           <div className="grid grid-cols-4 gap-4 text-sm">
             <div>
-              <div className="text-2xl font-bold text-white">{wordsTyped}</div>
-              <div className="text-gray-400">Words</div>
+              <div className="text-2xl font-bold text-[var(--ink-black)]">{wordsTyped}</div>
+              <div className="text-[var(--pencil-gray)]">Words</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-white">{wpm}</div>
-              <div className="text-gray-400">WPM</div>
+              <div className="text-2xl font-bold text-[var(--ink-black)]">{wpm}</div>
+              <div className="text-[var(--pencil-gray)]">WPM</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-white">{accuracy}%</div>
-              <div className="text-gray-400">Accuracy</div>
+              <div className="text-2xl font-bold text-[var(--ink-black)]">{accuracy}%</div>
+              <div className="text-[var(--pencil-gray)]">Accuracy</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-orange-400">🔥 {streak}</div>
-              <div className="text-gray-400">Streak</div>
+              <div className="text-2xl font-bold text-[var(--ink-red)]">🔥 {streak}</div>
+              <div className="text-[var(--pencil-gray)]">Streak</div>
             </div>
           </div>
         </div>
@@ -91,14 +91,14 @@ export default function ArcadeNameEntry({
             onKeyDown={handleKeyDown}
             maxLength={5}
             placeholder="ENTER NAME"
-            className="w-full max-w-md px-6 py-6 text-6xl font-bold text-center bg-white/10 border-4 border-yellow-400 text-yellow-400 pixel-corners shadow-retro-xl focus:outline-none focus:border-yellow-300 focus:bg-white/20 transition-all placeholder-yellow-400/30 uppercase tracking-widest"
+            className="w-full max-w-md px-6 py-6 text-6xl font-bold text-center bg-white border-4 border-[var(--ink-blue)] text-[var(--ink-blue)] pixel-corners shadow-retro-xl focus:outline-none focus:border-[var(--ink-black)] transition-all placeholder-[var(--ink-blue)]/30 uppercase tracking-widest"
             style={{ letterSpacing: '0.3em' }}
           />
-          <p className="text-sm text-gray-400 mt-3">{5 - name.length} characters remaining</p>
+          <p className="text-sm text-[var(--pencil-gray)] mt-3">{5 - name.length} characters remaining</p>
         </div>
 
         {/* Instructions */}
-        <div className="text-sm text-gray-400 mb-6">
+        <div className="text-sm text-[var(--pencil-gray)] mb-6">
           <p>Type your name (up to 5 letters)</p>
           <p className="mt-1">Press Enter to submit</p>
         </div>
@@ -107,10 +107,8 @@ export default function ArcadeNameEntry({
         <button
           onClick={handleSubmit}
           disabled={name.length === 0}
-          className={`px-12 py-4 font-bold text-xl pixel-corners shadow-retro-lg transition-all ${
-            name.length === 0
-              ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-              : 'bg-yellow-400 text-black hover:bg-yellow-300 hover:scale-105'
+          className={`ink-button px-12 py-4 text-xl pixel-corners shadow-retro-lg ${
+            name.length === 0 ? 'opacity-50 cursor-not-allowed' : ''
           }`}
         >
           SUBMIT

@@ -24,18 +24,12 @@ export default function AchievementPopup({ achievement, onClose }: AchievementPo
     return () => clearTimeout(timer);
   }, [onClose]);
 
-  const rarityColors = {
-    common: 'from-gray-400 to-gray-600',
-    rare: 'from-blue-400 to-blue-600',
-    epic: 'from-purple-400 to-purple-600',
-    legendary: 'from-yellow-400 to-yellow-600',
-  };
-
-  const rarityBorder = {
-    common: 'border-gray-500',
-    rare: 'border-blue-500',
-    epic: 'border-purple-500',
-    legendary: 'border-yellow-500',
+  // Simplified rarity system - using notebook ink colors
+  const rarityLabels = {
+    common: 'COMMON',
+    rare: 'RARE',
+    epic: 'EPIC',
+    legendary: 'LEGENDARY',
   };
 
   return (
@@ -46,19 +40,13 @@ export default function AchievementPopup({ achievement, onClose }: AchievementPo
         }`}
       >
         <div
-          className={`relative bg-white border-4 ${rarityBorder[achievement.rarity]} shadow-2xl p-6 max-w-sm
-            pixel-corners pointer-events-auto`}
-          style={{
-            boxShadow: '8px 8px 0px rgba(0, 0, 0, 0.1)',
-          }}
+          className="relative bg-white border-3 border-[var(--ink-black)] shadow-retro-lg p-6 max-w-sm pixel-corners pointer-events-auto"
         >
-          {/* Rarity banner */}
+          {/* Rarity banner - simplified */}
           <div
-            className={`absolute -top-3 left-1/2 transform -translate-x-1/2 px-4 py-1 bg-gradient-to-r ${
-              rarityColors[achievement.rarity]
-            } text-white text-xs font-bold uppercase tracking-wider pixel-corners`}
+            className="absolute -top-3 left-1/2 transform -translate-x-1/2 px-4 py-1 bg-[var(--ink-blue)] border-2 border-[var(--ink-black)] text-white text-xs font-bold uppercase tracking-wider pixel-corners"
           >
-            {achievement.rarity}
+            {rarityLabels[achievement.rarity]}
           </div>
 
           {/* Achievement content */}
@@ -69,19 +57,19 @@ export default function AchievementPopup({ achievement, onClose }: AchievementPo
             </div>
 
             {/* Title */}
-            <h3 className="text-xl font-bold mb-2 pixel-text">
+            <h3 className="text-xl font-bold mb-2 pixel-text text-[var(--ink-black)]">
               {achievement.name}
             </h3>
 
             {/* Description */}
-            <p className="text-sm text-gray-600 mb-3">
+            <p className="text-sm text-[var(--pencil-gray)] mb-3">
               {achievement.description}
             </p>
 
             {/* XP Reward */}
-            <div className="flex items-center justify-center gap-2 bg-yellow-100 border-2 border-yellow-400 px-3 py-1 pixel-corners">
+            <div className="flex items-center justify-center gap-2 bg-[var(--ink-blue)]/10 border-2 border-[var(--ink-blue)] px-3 py-1 pixel-corners">
               <span className="text-lg">⭐</span>
-              <span className="font-bold text-yellow-700">
+              <span className="font-bold text-[var(--ink-blue)]">
                 +{achievement.xpReward} XP
               </span>
             </div>

@@ -6,18 +6,18 @@ interface GameHUDProps {
   currentWPM?: number;
 }
 
-// WPM status levels with funny names
+// WPM status levels with funny names - using notebook ink colors
 const WPM_STATUS_LEVELS = [
-  { min: 0, max: 10, name: '🐌 Sleepy Snail', color: 'from-red-500 to-red-600' },
-  { min: 10, max: 20, name: '🐢 Turtle Tapper', color: 'from-red-400 to-orange-500' },
-  { min: 20, max: 30, name: '🦥 Slow Poke', color: 'from-orange-500 to-yellow-500' },
-  { min: 30, max: 40, name: '✌️ Two Fingers', color: 'from-yellow-500 to-yellow-400' },
-  { min: 40, max: 50, name: '👆 Pointer Pro', color: 'from-yellow-400 to-lime-400' },
-  { min: 50, max: 65, name: '✍️ Steady Scribe', color: 'from-lime-400 to-green-400' },
-  { min: 65, max: 80, name: '⚡ Speed Typist', color: 'from-green-400 to-green-500' },
-  { min: 80, max: 100, name: '🚀 Rocket Fingers', color: 'from-green-500 to-cyan-500' },
-  { min: 100, max: 120, name: '🔥 Blazing Keys', color: 'from-cyan-500 to-blue-500' },
-  { min: 120, max: 999, name: '👻 Typing Ghost', color: 'from-blue-500 to-purple-500' },
+  { min: 0, max: 10, name: '🐌 Sleepy Snail', fillPercent: 10 },
+  { min: 10, max: 20, name: '🐢 Turtle Tapper', fillPercent: 20 },
+  { min: 20, max: 30, name: '🦥 Slow Poke', fillPercent: 30 },
+  { min: 30, max: 40, name: '✌️ Two Fingers', fillPercent: 40 },
+  { min: 40, max: 50, name: '👆 Pointer Pro', fillPercent: 50 },
+  { min: 50, max: 65, name: '✍️ Steady Scribe', fillPercent: 65 },
+  { min: 65, max: 80, name: '⚡ Speed Typist', fillPercent: 80 },
+  { min: 80, max: 100, name: '🚀 Rocket Fingers', fillPercent: 90 },
+  { min: 100, max: 120, name: '🔥 Blazing Keys', fillPercent: 95 },
+  { min: 120, max: 999, name: '👻 Typing Ghost', fillPercent: 100 },
 ];
 
 function getWPMStatus(wpm: number) {
@@ -33,16 +33,16 @@ export default function GameHUD({ onUsePowerUp, combo = 1, currentWPM = 0 }: Gam
     <>
       {/* WPM Status Bar - Top Left */}
       <div className="fixed top-4 left-4 z-40">
-        <div className="bg-white border-2 border-black p-2 pixel-corners shadow-retro min-w-[220px]">
+        <div className="bg-white border-3 border-[var(--ink-black)] p-2 pixel-corners shadow-retro min-w-[220px]">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-bold pixel-text">{wpmStatus.name}</span>
-            <span className="text-xs text-gray-600">
+            <span className="text-xs font-bold pixel-text text-[var(--ink-black)]">{wpmStatus.name}</span>
+            <span className="text-xs text-[var(--pencil-gray)]">
               {currentWPM} WPM
             </span>
           </div>
-          <div className="h-3 bg-gray-200 border-2 border-gray-400 pixel-corners overflow-hidden">
+          <div className="h-3 bg-[var(--notebook-line)] border-2 border-[var(--ink-black)] pixel-corners overflow-hidden">
             <div
-              className={`h-full bg-gradient-to-r ${wpmStatus.color} transition-all duration-500`}
+              className="h-full bg-[var(--ink-blue)] transition-all duration-500"
               style={{ width: `${wpmPercentage}%` }}
             />
           </div>
@@ -52,12 +52,12 @@ export default function GameHUD({ onUsePowerUp, combo = 1, currentWPM = 0 }: Gam
       {/* Combo Multiplier - Top Right */}
       {combo > 1 && (
         <div className="fixed top-4 right-4 z-40">
-          <div className="bg-gradient-to-r from-orange-100 to-red-100 border-2 border-orange-500 p-2 pixel-corners shadow-retro animate-pulse-subtle">
+          <div className="bg-white border-3 border-[var(--ink-red)] p-2 pixel-corners shadow-retro animate-pulse-subtle">
             <div className="flex items-center gap-2">
               <span className="text-xl">💥</span>
               <div>
-                <div className="text-xs text-gray-700">Combo</div>
-                <div className="text-lg font-bold text-orange-700 pixel-text">
+                <div className="text-xs text-[var(--pencil-gray)]">Combo</div>
+                <div className="text-lg font-bold text-[var(--ink-red)] pixel-text">
                   {combo}x
                 </div>
               </div>
