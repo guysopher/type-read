@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useMemo } from 'react';
 import type { ComparisonOptions } from '@/utils/typingComparison';
 import { isCorrectChar } from '@/utils/typingComparison';
 
@@ -54,7 +54,8 @@ export default function SlidingTextBar({
   const [slidingBarWidth, setSlidingBarWidth] = useState(0);
 
   // Build text stream with power-up icons inserted between words
-  const { fullTextStream, powerUpPositions } = useRef((() => {
+  // Use useMemo to recalculate when powerUpPlacements changes
+  const { fullTextStream, powerUpPositions } = useMemo(() => {
     let stream = '';
     const powerUpPos = new Map<number, { type: 'freezeMonster' | 'shield' | 'slowMo'; wordIndex: number }>();
 
@@ -75,7 +76,7 @@ export default function SlidingTextBar({
     });
 
     return { fullTextStream: stream, powerUpPositions: powerUpPos };
-  })()).current;
+  }, [words, powerUpPlacements]);
 
   // Measure sliding bar width for responsive character count
   useEffect(() => {
