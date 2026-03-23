@@ -1331,9 +1331,10 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
             }
           }
 
-          // Reset combo immediately on incorrect keystroke
+          // Reset combo immediately on incorrect keystroke and mark word as having mistakes
           if (!isCorrect) {
             setComboMultiplier(1);
+            currentWordMistakesRef.current = true; // Mark word as having mistakes
           }
 
           // Start monster countdown on first correct keystroke
