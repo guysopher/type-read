@@ -51,40 +51,6 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     return { words: allWords, paragraphStarts: startIndices };
   }, [text]);
 
-  // Initialize power-up placements when text changes
-  useEffect(() => {
-    if (words.length === 0) return;
-
-    // Only place power-ups in monster mode
-    if (!monsterMode) {
-      setPowerUpPlacements(new Map());
-      return;
-    }
-
-    // Place 8-12 random power-ups throughout the text
-    const placements = new Map<number, 'freezeMonster' | 'shield' | 'slowMo'>();
-    const powerUpTypes: ('freezeMonster' | 'shield' | 'slowMo')[] = ['freezeMonster', 'shield', 'slowMo'];
-    const numPowerUps = Math.floor(Math.random() * 5) + 8; // 8-12 power-ups
-
-    for (let i = 0; i < numPowerUps; i++) {
-      // Place power-ups throughout the entire text
-      const minIndex = 5; // Start after first few words
-      const maxIndex = words.length - 1;
-      let wordIndex = Math.floor(Math.random() * (maxIndex - minIndex + 1)) + minIndex;
-
-      // Ensure we don't place multiple power-ups on the same word
-      while (placements.has(wordIndex)) {
-        wordIndex = Math.floor(Math.random() * (maxIndex - minIndex + 1)) + minIndex;
-      }
-
-      // Randomly select a power-up type
-      const powerUpType = powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)];
-      placements.set(wordIndex, powerUpType);
-    }
-
-    setPowerUpPlacements(placements);
-  }, [text, words, monsterMode]);
-
   const [currentWordIndex, setCurrentWordIndex] = useState(
     savedData?.progress.currentWordIndex || 0
   );
@@ -174,6 +140,40 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
 
   // Floating power-ups on specific words
   const [powerUpPlacements, setPowerUpPlacements] = useState<Map<number, 'freezeMonster' | 'shield' | 'slowMo'>>(new Map());
+
+  // Initialize power-up placements when text changes
+  useEffect(() => {
+    if (words.length === 0) return;
+
+    // Only place power-ups in monster mode
+    if (!monsterMode) {
+      setPowerUpPlacements(new Map());
+      return;
+    }
+
+    // Place 8-12 random power-ups throughout the text
+    const placements = new Map<number, 'freezeMonster' | 'shield' | 'slowMo'>();
+    const powerUpTypes: ('freezeMonster' | 'shield' | 'slowMo')[] = ['freezeMonster', 'shield', 'slowMo'];
+    const numPowerUps = Math.floor(Math.random() * 5) + 8; // 8-12 power-ups
+
+    for (let i = 0; i < numPowerUps; i++) {
+      // Place power-ups throughout the entire text
+      const minIndex = 5; // Start after first few words
+      const maxIndex = words.length - 1;
+      let wordIndex = Math.floor(Math.random() * (maxIndex - minIndex + 1)) + minIndex;
+
+      // Ensure we don't place multiple power-ups on the same word
+      while (placements.has(wordIndex)) {
+        wordIndex = Math.floor(Math.random() * (maxIndex - minIndex + 1)) + minIndex;
+      }
+
+      // Randomly select a power-up type
+      const powerUpType = powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)];
+      placements.set(wordIndex, powerUpType);
+    }
+
+    setPowerUpPlacements(placements);
+  }, [text, words, monsterMode]);
 
   const [selectedMonsterSkin, setSelectedMonsterSkin] = useState('{selectedMonsterSkin}');
 
