@@ -2037,29 +2037,21 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                 className += " bg-[var(--foreground)]/10";
               }
 
-              // Check if this word has a power-up collectible
+              // Check if this word has a power-up collectible and add highlight
               const powerUpType = powerUpPlacements.get(index);
-              const powerUpIcon = powerUpType === 'freezeMonster' ? '❄️' :
-                                  powerUpType === 'shield' ? '🛡️' :
-                                  powerUpType === 'slowMo' ? '⏱️' : null;
+              if (powerUpType && index >= currentWordIndex) {
+                const powerUpColors = {
+                  freezeMonster: 'bg-cyan-400/30 shadow-[0_0_8px_rgba(34,211,238,0.4)] px-1 rounded',
+                  shield: 'bg-yellow-400/30 shadow-[0_0_8px_rgba(250,204,21,0.4)] px-1 rounded',
+                  slowMo: 'bg-purple-400/30 shadow-[0_0_8px_rgba(192,132,252,0.4)] px-1 rounded',
+                };
+                className += ' ' + powerUpColors[powerUpType];
+              }
 
               return (
                 <span key={index} className="relative">
                   {/* Add paragraph break */}
                   {isParagraphStart && <><br /><br /></>}
-
-                  {/* Inline power-up icon before word */}
-                  {powerUpIcon && index >= currentWordIndex && (
-                    <span
-                      className="inline-block mx-1 text-2xl align-middle"
-                      style={{
-                        animation: 'bounce 1s ease-in-out infinite',
-                        filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
-                      }}
-                    >
-                      {powerUpIcon}
-                    </span>
-                  )}
 
                   <span
                     ref={index === currentWordIndex ? currentWordRef : null}
