@@ -72,3 +72,211 @@ input:focus, textarea:focus {
     box-shadow: 0 1px 3px rgba(255, 255, 255, 0.03);
   }
 }
+
+/* ============================================================================
+   RETRO 8-BIT STYLING
+   ============================================================================ */
+
+/* Pixel font utility */
+.pixel-font {
+  font-family: var(--font-press-start), monospace;
+  letter-spacing: 0.05em;
+}
+
+/* Pixel text with subtle shadow */
+.pixel-text {
+  text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.1);
+}
+
+/* Retro box shadows */
+.shadow-retro {
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.1);
+}
+
+.shadow-retro-lg {
+  box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.2);
+}
+
+.shadow-retro-xl {
+  box-shadow: 12px 12px 0px rgba(0, 0, 0, 0.25);
+}
+
+/* Pixel-perfect corners (8-bit style) */
+.pixel-corners {
+  clip-path: polygon(
+    4px 0, calc(100% - 4px) 0,
+    100% 4px, 100% calc(100% - 4px),
+    calc(100% - 4px) 100%, 4px 100%,
+    0 calc(100% - 4px), 0 4px
+  );
+}
+
+.pixel-corners-lg {
+  clip-path: polygon(
+    6px 0, calc(100% - 6px) 0,
+    100% 6px, 100% calc(100% - 6px),
+    calc(100% - 6px) 100%, 6px 100%,
+    0 calc(100% - 6px), 0 6px
+  );
+}
+
+/* Retro button styles */
+.btn-retro {
+  border: 2px solid currentColor;
+  transition: all 0.1s ease;
+}
+
+.btn-retro:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 4px 4px 0px currentColor;
+}
+
+.btn-retro:active {
+  transform: translate(0, 0);
+  box-shadow: 2px 2px 0px currentColor;
+}
+
+/* Pixel borders */
+.border-pixel {
+  border-style: solid;
+  border-image: repeating-linear-gradient(
+    90deg,
+    currentColor 0,
+    currentColor 2px,
+    transparent 2px,
+    transparent 4px
+  ) 2;
+}
+
+/* Retro scanline effect (subtle) */
+.scanlines {
+  position: relative;
+}
+
+.scanlines::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.03),
+    rgba(0, 0, 0, 0.03) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+  pointer-events: none;
+}
+
+/* Paper texture background (clean white) */
+body {
+  background: linear-gradient(
+    180deg,
+    #ffffff 0%,
+    #fafafa 100%
+  );
+  background-attachment: fixed;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background: linear-gradient(
+      180deg,
+      #0a0a0a 0%,
+      #000000 100%
+    );
+  }
+
+  .shadow-retro {
+    box-shadow: 4px 4px 0px rgba(255, 255, 255, 0.1);
+  }
+
+  .shadow-retro-lg {
+    box-shadow: 8px 8px 0px rgba(255, 255, 255, 0.15);
+  }
+
+  .shadow-retro-xl {
+    box-shadow: 12px 12px 0px rgba(255, 255, 255, 0.2);
+  }
+}
+
+/* Retro animations */
+@keyframes pixel-fade-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pixel-bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes pixel-shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px);
+  }
+  75% {
+    transform: translateX(4px);
+  }
+}
+
+.animate-pixel-fade-in {
+  animation: pixel-fade-in 0.3s ease-out;
+}
+
+.animate-pixel-bounce {
+  animation: pixel-bounce 1.5s ease-in-out infinite;
+}
+
+.animate-pixel-shake {
+  animation: pixel-shake 0.5s ease-in-out;
+}
+
+/* Clean, minimal retro input styles */
+input[type="text"],
+input[type="number"],
+textarea {
+  font-family: var(--font-cousine), monospace;
+}
+
+/* Retro progress bars */
+.progress-retro {
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.05) 0px,
+    rgba(0, 0, 0, 0.05) 2px,
+    transparent 2px,
+    transparent 4px
+  );
+}
+
+/* Pixel-perfect grid overlay (subtle, for paper effect) */
+.paper-grid {
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.02) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .paper-grid {
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  }
+}

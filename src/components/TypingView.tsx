@@ -1,9 +1,17 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { SavedText, saveText, generateId, DetailedStats, WPMSample, PauseEvent, createEmptyDetailedStats, Highlight } from "@/lib/storage";
+import { SavedText, saveText, generateId, DetailedStats, WPMSample, PauseEvent, createEmptyDetailedStats, Highlight, addLeaderboardEntry, updateDailyStreak, getPlayerName, getPlayerProgress, updateGameStats, checkAndUnlockAchievements, markAchievementSeen } from "@/lib/storage";
 import { playCorrectSound, playErrorSound, playWordCompleteSound, playPunctuationSound, playBackgroundMusic, stopBackgroundMusic, pauseBackgroundMusic, resumeBackgroundMusic, setMusicMuted } from "@/lib/sounds";
+import { submitToGlobalLeaderboard } from "@/lib/api";
+import { MONSTER_SKINS } from "@/lib/gamification";
+import type { Achievement } from "@/lib/gamification";
 import StatsView from "./StatsView";
+import LeaderboardView from "./LeaderboardView";
+import AchievementPopup from "./AchievementPopup";
+import LevelUpPopup from "./LevelUpPopup";
+import GameHUD from "./GameHUD";
+import DailyChallengesPanel from "./DailyChallengesPanel";
 
 interface TypingViewProps {
   text: string;
@@ -111,6 +119,20 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   const [isPaused, setIsPaused] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [showChallenges, setShowChallenges] = useState(false);
+
+  // Gamification
+  const [comboMultiplier, setComboMultiplier] = useState(1);
+  const [maxComboReached, setMaxComboReached] = useState(0);
+  const [achievementToShow, setAchievementToShow] = useState<Achievement | null>(null);
+  const [levelUpToShow, setLevelUpToShow] = useState<number | null>(null);
+  const [activePowerUps, setActivePowerUps] = useState<{
+    freeze: boolean;
+    shield: boolean;
+    slowMo: boolean;
+  }>({ freeze: false, shield: false, slowMo: false });
+  const [selectedMonsterSkin, setSelectedMonsterSkin] = useState('{selectedMonsterSkin}');
 
   // Chase game mode state
   const [monsterPosition, setMonsterPosition] = useState(0); // Monster waits at position 0
@@ -345,6 +367,26 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     return Math.round((stats.correctKeystrokes / stats.totalKeystrokes) * 100);
   }, [stats]);
 
+  // Power-up activation handler
+  const handlePowerUpActivation = (type: 'freezeMonster' | 'shield' | 'slowMo') => {
+    if (type === 'freezeMonster') {
+      setActivePowerUps(prev => ({ ...prev, freeze: true }));
+      // Freeze monster for 10 seconds
+      setTimeout(() => {
+        setActivePowerUps(prev => ({ ...prev, freeze: false }));
+      }, 10000);
+    } else if (type === 'shield') {
+      setActivePowerUps(prev => ({ ...prev, shield: true }));
+      // Shield lasts until used (one-time protection)
+    } else if (type === 'slowMo') {
+      setActivePowerUps(prev => ({ ...prev, slowMo: true }));
+      // Slow-mo for 15 seconds
+      setTimeout(() => {
+        setActivePowerUps(prev => ({ ...prev, slowMo: false }));
+      }, 15000);
+    }
+  };
+
   // Get elapsed time since session start (excluding pauses)
   const getActiveTime = useCallback(() => {
     if (!sessionStartRef.current) return accumulatedTime;
@@ -518,12 +560,25 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     monsterIntervalRef.current = setInterval(() => {
       setMonsterPosition((prev: number) => {
         if (prev < 0) return prev; // Not started yet
-        const newPos = prev + (monsterSpeed / 20); // 20 updates per second
+
+        // Don't move if frozen
+        if (activePowerUps.freeze) return prev;
+
+        // Apply slow-mo if active
+        const speedMultiplier = activePowerUps.slowMo ? 0.5 : 1;
+        const newPos = prev + (monsterSpeed / 20) * speedMultiplier; // 20 updates per second
 
         // Check if monster caught the player
         if (newPos >= absolutePosition) {
-          setIsGameOver(true);
-          return prev;
+          // Use shield if available
+          if (activePowerUps.shield) {
+            setActivePowerUps(p => ({ ...p, shield: false }));
+            // Push monster back
+            return prev - 50; // Move back significantly
+          } else {
+            setIsGameOver(true);
+            return prev;
+          }
         }
         return newPos;
       });
@@ -634,6 +689,102 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
 
     return () => clearInterval(sampleWPM);
   }, [isComplete, isPaused, stats.startTime, stats.wordsTyped, getActiveTime, calculateWPM]);
+
+  // Update daily streak when game starts
+  useEffect(() => {
+    if (monsterStarted && monsterMode) {
+      updateDailyStreak();
+    }
+  }, [monsterStarted, monsterMode]);
+
+  // Save to leaderboard when game ends
+  useEffect(() => {
+    if ((isGameOver || isComplete) && stats.wordsTyped > 0 && stats.startTime) {
+      const activeTime = getActiveTime();
+      const accuracy = stats.totalKeystrokes > 0
+        ? (stats.correctKeystrokes / stats.totalKeystrokes) * 100
+        : 0;
+
+      const avgWPM = detailedStats.averageWpm || calculateWPM();
+
+      const entry = {
+        playerName: getPlayerName(),
+        date: Date.now(),
+        score: gameScore,
+        wordsTyped: stats.wordsTyped,
+        wpm: avgWPM,
+        peakWpm: detailedStats.peakWpm,
+        accuracy: accuracy,
+        streak: bestStreak,
+        textTitle: title,
+        duration: activeTime,
+        survived: isComplete && !isGameOver,
+        language: (isRTL ? 'he' : 'en') as 'he' | 'en',
+      };
+
+      // Save locally
+      addLeaderboardEntry(entry);
+
+      // Submit to global leaderboard (async, don't wait)
+      submitToGlobalLeaderboard(entry).catch(() => {
+        // Silently fail if global submission doesn't work
+      });
+    }
+  }, [isGameOver, isComplete]);
+
+  // Load selected monster skin
+  useEffect(() => {
+    const progress = getPlayerProgress();
+    const skin = MONSTER_SKINS.find(s => s.id === progress.selectedSkin);
+    if (skin) {
+      setSelectedMonsterSkin(skin.emoji);
+    }
+  }, []);
+
+  // Update game stats and check achievements when game ends
+  useEffect(() => {
+    if ((isGameOver || isComplete) && stats.wordsTyped > 0 && stats.startTime) {
+      const activeTime = getActiveTime();
+      const accuracy = stats.totalKeystrokes > 0
+        ? (stats.correctKeystrokes / stats.totalKeystrokes) * 100
+        : 0;
+
+      const avgWPM = detailedStats.averageWpm || calculateWPM();
+
+      // Update game stats (this also adds XP and checks achievements)
+      updateGameStats({
+        wordsTyped: stats.wordsTyped,
+        wpm: avgWPM,
+        accuracy: accuracy,
+        streak: bestStreak,
+        duration: activeTime,
+        survived: isComplete && !isGameOver,
+        score: gameScore,
+      });
+
+      // Check for new achievements
+      const newAchievements = checkAndUnlockAchievements({
+        wpm: avgWPM,
+        accuracy: accuracy,
+        streak: bestStreak,
+        wordsTyped: stats.wordsTyped,
+        survived: isComplete && !isGameOver,
+        combo: maxComboReached,
+      });
+
+      // Show first achievement (others will be shown in sequence)
+      if (newAchievements.length > 0) {
+        setAchievementToShow(newAchievements[0]);
+      }
+
+      // Check if leveled up
+      const progress = getPlayerProgress();
+      const prevProgress = JSON.parse(localStorage.getItem('typeread_player_progress_before') || 'null');
+      if (prevProgress && progress.level > prevProgress.level) {
+        setLevelUpToShow(progress.level);
+      }
+    }
+  }, [isGameOver, isComplete]);
 
   // Scroll current word to center
   useEffect(() => {
@@ -962,6 +1113,15 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           setCurrentStreak(newStreak);
           setBestStreak((prev: number) => Math.max(prev, newStreak));
 
+          // Increase combo multiplier (perfect words only)
+          if (mistakeCount === 0) {
+            const newCombo = comboMultiplier + 1;
+            setComboMultiplier(newCombo);
+            setMaxComboReached(prev => Math.max(prev, newCombo));
+          } else {
+            setComboMultiplier(1);
+          }
+
           // Award streak bonus at milestones
           let bonus = 0;
           if (newStreak === 5) bonus = 10;
@@ -976,12 +1136,14 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
             setTimeout(() => setStreakBonus(null), 1500);
           }
 
-          // Update game score: word.length + streak multiplier + bonus
+          // Update game score: word.length * streak multiplier * combo multiplier + bonus
           const streakMultiplier = Math.min(1 + Math.floor(newStreak / 5) * 0.1, 2); // Up to 2x at 50+ streak
-          setGameScore((prev: number) => prev + Math.round(currentWord.length * streakMultiplier) + bonus);
+          const baseScore = currentWord.length * streakMultiplier * comboMultiplier;
+          setGameScore((prev: number) => prev + Math.round(baseScore) + bonus);
         } else {
           // Word has mistakes
           setCurrentStreak(0);
+          setComboMultiplier(1); // Reset combo on mistakes
           // Lose 1 point per mistake
           setGameScore((prev: number) => Math.max(0, prev - mistakeCount));
         }
@@ -1107,7 +1269,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
               isMonsterWaiting ? 'text-gray-400' : 'text-purple-500'
             } ${isRTL ? 'right-2 sm:right-4 flex-row-reverse' : 'left-2 sm:left-4'}`}>
               <div className="relative">
-                <span className={`text-lg sm:text-xl ${isMonsterWaiting ? 'opacity-50' : ''}`}>👾</span>
+                <span className={`text-lg sm:text-xl ${isMonsterWaiting ? 'opacity-50' : ''}`}>{selectedMonsterSkin}</span>
                 {/* Countdown above off-screen monster */}
                 {monsterCountdown !== null && monsterCountdown > 0 && (
                   <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-sm font-bold text-purple-500 whitespace-nowrap">
@@ -1159,7 +1321,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                       {isWaiting && monsterCountdown === null && (
                         <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-xs">💤</span>
                       )}
-                      👾
+                      {selectedMonsterSkin}
                     </span>
                   );
                 }
@@ -1465,7 +1627,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                         title="Enable the chase game with the monster"
                       >
                         <div className="flex flex-col items-start">
-                          <span className="text-sm">👾 Monster Mode</span>
+                          <span className="text-sm">{selectedMonsterSkin} Monster Mode</span>
                           <span className="text-[10px] text-[var(--muted)] opacity-0 group-hover:opacity-100 transition-opacity">Chase game with the monster</span>
                         </div>
                         <span className={`text-xs px-2 py-0.5 rounded ${monsterMode ? 'bg-green-500/20 text-green-600' : 'bg-[var(--foreground)]/10 text-[var(--muted)]'}`}>
@@ -1570,6 +1732,36 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                           {allowMistakes ? 'ON' : 'OFF'}
                         </span>
                       </button>
+                      {/* Leaderboard */}
+                      <button
+                        onClick={() => {
+                          setShowSettings(false);
+                          setShowLeaderboard(true);
+                        }}
+                        className="w-full px-3 py-2 flex items-center justify-between hover:bg-[var(--foreground)]/5 transition-colors group"
+                        title="View leaderboard and rankings"
+                      >
+                        <div className="flex flex-col items-start">
+                          <span className="text-sm">🏆 Leaderboard</span>
+                          <span className="text-[10px] text-[var(--muted)] opacity-0 group-hover:opacity-100 transition-opacity">Rankings and achievements</span>
+                        </div>
+                        <span className="text-lg">→</span>
+                      </button>
+                      {/* Daily Challenges */}
+                      <button
+                        onClick={() => {
+                          setShowSettings(false);
+                          setShowChallenges(true);
+                        }}
+                        className="w-full px-3 py-2 flex items-center justify-between hover:bg-[var(--foreground)]/5 transition-colors group"
+                        title="View and complete daily challenges"
+                      >
+                        <div className="flex flex-col items-start">
+                          <span className="text-sm">📋 Daily Challenges</span>
+                          <span className="text-[10px] text-[var(--muted)] opacity-0 group-hover:opacity-100 transition-opacity">Complete quests for rewards</span>
+                        </div>
+                        <span className="text-lg">→</span>
+                      </button>
                     </div>
                   </>
                 )}
@@ -1614,7 +1806,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                       {bonusCpm > 0 && (
                         <span className="text-[10px] text-purple-400">+{bonusCpm}</span>
                       )}
-                      <span className="text-sm">👾</span>
+                      <span className="text-sm">{selectedMonsterSkin}</span>
                       <span className="text-xs text-[var(--muted)] hidden sm:inline">c/m</span>
                     </div>
                   );
@@ -1911,7 +2103,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
       {isGameOver && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
           <div className="text-center p-8 max-w-md">
-            <div className="text-6xl mb-4 animate-bounce">👾</div>
+            <div className="text-6xl mb-4 animate-bounce">{selectedMonsterSkin}</div>
             <h2 className="text-4xl font-bold text-red-500 mb-2">GAME OVER</h2>
             <p className="text-[var(--muted)] mb-6">The monster caught you!</p>
 
@@ -1939,34 +2131,46 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
               </div>
             </div>
 
-            <div className="flex gap-4 justify-center">
+            <div className="flex flex-col gap-3 items-center">
+              <div className="flex gap-4 justify-center">
+                <button
+                  onClick={() => {
+                    // Continue from where the user got caught - reset game state but keep position
+                    setIsGameOver(false);
+                    setMonsterPosition(oneWordBehindPosition); // Start one word behind current position
+                    setMonsterSpeed(2);
+                    setMonsterStarted(false);
+                    setMonsterCountdown(null);
+                    // Reset score and streak to start fresh
+                    setGameScore(0);
+                    setCurrentStreak(0);
+                    setStreakBonus(null);
+                    // Reset keystroke tracking for new attempt
+                    recentKeystrokesRef.current = [];
+                    allKeystrokesRef.current = [];
+                    monsterStartTimeRef.current = null;
+                    // Clear current input to start fresh on current word
+                    setCurrentInput("");
+                  }}
+                  className="px-6 py-3 bg-[var(--foreground)] text-[var(--background)] rounded-xl font-medium hover:opacity-90 transition-opacity"
+                >
+                  Try Again
+                </button>
+                <button
+                  onClick={onReset}
+                  className="px-6 py-3 border border-[var(--foreground)]/20 rounded-xl font-medium hover:bg-[var(--foreground)]/5 transition-colors"
+                >
+                  New Text
+                </button>
+              </div>
               <button
                 onClick={() => {
-                  // Continue from where the user got caught - just reset monster state
                   setIsGameOver(false);
-                  setMonsterPosition(oneWordBehindPosition); // Start one word behind current position
-                  setMonsterSpeed(2);
-                  setMonsterStarted(false);
-                  setMonsterCountdown(null);
-                  // Keep the score but reset streak
-                  setCurrentStreak(0);
-                  setStreakBonus(null);
-                  // Reset keystroke tracking for new attempt
-                  recentKeystrokesRef.current = [];
-                  allKeystrokesRef.current = [];
-                  monsterStartTimeRef.current = null;
-                  // Clear current input to start fresh on current word
-                  setCurrentInput("");
+                  setShowLeaderboard(true);
                 }}
-                className="px-6 py-3 bg-[var(--foreground)] text-[var(--background)] rounded-xl font-medium hover:opacity-90 transition-opacity"
+                className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm"
               >
-                Try Again
-              </button>
-              <button
-                onClick={onReset}
-                className="px-6 py-3 border border-[var(--foreground)]/20 rounded-xl font-medium hover:bg-[var(--foreground)]/5 transition-colors"
-              >
-                New Text
+                🏆 View Leaderboard
               </button>
             </div>
           </div>
@@ -1981,6 +2185,44 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           totalWords={stats.totalWords}
           accuracy={calculateAccuracy()}
           onClose={() => setShowStats(false)}
+        />
+      )}
+
+      {/* Leaderboard modal */}
+      {showLeaderboard && (
+        <LeaderboardView onClose={() => setShowLeaderboard(false)} />
+      )}
+
+      {/* Daily Challenges modal */}
+      {showChallenges && (
+        <DailyChallengesPanel onClose={() => setShowChallenges(false)} />
+      )}
+
+      {/* Game HUD (XP bar, combo, power-ups) */}
+      {monsterMode && (
+        <GameHUD
+          onUsePowerUp={handlePowerUpActivation}
+          combo={comboMultiplier}
+          showPowerUps={monsterStarted}
+        />
+      )}
+
+      {/* Achievement unlock popup */}
+      {achievementToShow && (
+        <AchievementPopup
+          achievement={achievementToShow}
+          onClose={() => {
+            markAchievementSeen(achievementToShow.id);
+            setAchievementToShow(null);
+          }}
+        />
+      )}
+
+      {/* Level up popup */}
+      {levelUpToShow && (
+        <LevelUpPopup
+          level={levelUpToShow}
+          onClose={() => setLevelUpToShow(null)}
         />
       )}
 
