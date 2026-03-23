@@ -400,6 +400,12 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     return wordStart + currentInput.length;
   }, [currentWordIndex, currentInput.length, wordStartPositions]);
 
+  // Ref for absolutePosition to avoid recreating intervals on every keystroke
+  const absolutePositionRef = useRef(absolutePosition);
+  useEffect(() => {
+    absolutePositionRef.current = absolutePosition;
+  }, [absolutePosition]);
+
   // Monster starts one character behind the cursor (on the space before current word)
   const oneWordBehindPosition = useMemo(() => {
     return Math.max(0, absolutePosition - 1);
@@ -668,7 +674,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         const newPos = prev + (monsterSpeed / 20) * speedMultiplier; // 20 updates per second
 
         // Check if monster caught the player
-        if (newPos >= absolutePosition) {
+        if (newPos >= absolutePositionRef.current) {
           // Use shield if available
           if (activePowerUps.shield) {
             setActivePowerUps(p => ({ ...p, shield: false }));
@@ -706,7 +712,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
 
         // 3. Rubber-Banding: Adjust based on player lead/lag
         // Distance in characters between player and monster
-        const distance = absolutePosition - monsterPosition;
+        const distance = absolutePositionRef.current - monsterPosition;
         const targetDistance = lastMinuteSpeed * 10; // Target: ~10 seconds of typing ahead
 
         // Rubber-banding factor: 0.9-1.1x based on distance from target
@@ -732,7 +738,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
       }
       clearInterval(speedUpdateInterval);
     };
-  }, [monsterStarted, isComplete, isGameOver, isPaused, absolutePosition, monsterSpeed, calculateLastMinuteSpeed]);
+  }, [monsterStarted, isComplete, isGameOver, isPaused, monsterSpeed, calculateLastMinuteSpeed, activePowerUps, handleGameOver, monsterPosition]);
 
   // WPM sampling
   useEffect(() => {
