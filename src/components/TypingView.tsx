@@ -1315,7 +1315,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
 
           // Track alphanumeric characters during monster warmup
           if (isCorrect && monsterMode && !monsterStarted) {
-            const isAlphanumeric = /[a-zA-Z0-9]/.test(newChar);
+            const isAlphanumeric = /[a-zA-Z0-9א-ת]/.test(newChar);
             console.log('Checking warmup - isCorrect:', isCorrect, 'newChar:', newChar, 'isAlphanumeric:', isAlphanumeric, 'monsterCountdown:', monsterCountdown);
 
             if (isAlphanumeric) {
