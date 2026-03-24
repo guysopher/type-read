@@ -655,42 +655,48 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     // Update monster speed every second based on adaptive difficulty algorithm
     const speedUpdateInterval = setInterval(() => {
       const lastMinuteSpeed = calculateLastMinuteSpeed(); // chars/sec from last 60 seconds
+      console.log('Adaptive speed update - lastMinuteSpeed:', lastMinuteSpeed, 'current monster speed:', monsterSpeed);
 
-      if (lastMinuteSpeed > 0 && monsterStartTimeRef.current) {
+      if (monsterStartTimeRef.current) {
         const elapsedSeconds = (Date.now() - monsterStartTimeRef.current) / 1000;
 
-        // 1. Skill-Based Scaling: Determine player skill tier
-        // Fast typers (>5 c/s ≈ 60 WPM): 1.0-1.5x multiplier
-        // Medium typers (3-5 c/s ≈ 36-60 WPM): 0.8-1.0x multiplier
-        // Slow typers (<3 c/s ≈ <36 WPM): 0.6-0.8x multiplier
-        const playerCPS = lastMinuteSpeed;
-        const skillMultiplier = Math.min(Math.max(0.6 + (playerCPS / 10), 0.6), 1.5);
+        // If we have recent typing data, use adaptive algorithm
+        if (lastMinuteSpeed > 0) {
+          // 1. Skill-Based Scaling: Determine player skill tier
+          // Fast typers (>5 c/s ≈ 60 WPM): 1.0-1.5x multiplier
+          // Medium typers (3-5 c/s ≈ 36-60 WPM): 0.8-1.0x multiplier
+          // Slow typers (<3 c/s ≈ <36 WPM): 0.6-0.8x multiplier
+          const playerCPS = lastMinuteSpeed;
+          const skillMultiplier = Math.min(Math.max(0.6 + (playerCPS / 10), 0.6), 1.5);
 
-        // 2. Sigmoid Curve Progression: Smooth S-curve (starts gentle, accelerates mid-game, plateaus)
-        // Formula: bonus = maxBonus / (1 + e^(-steepness * (time - midpoint)))
-        const maxBonus = 8 * skillMultiplier; // Max bonus scaled by skill (4.8-12 c/s)
-        const midpoint = 60; // S-curve inflection point at 60 seconds
-        const steepness = 0.05 * skillMultiplier; // Curve steepness scales with skill
-        const sigmoidBonus = maxBonus / (1 + Math.exp(-steepness * (elapsedSeconds - midpoint)));
+          // 2. Sigmoid Curve Progression: Smooth S-curve (starts gentle, accelerates mid-game, plateaus)
+          // Formula: bonus = maxBonus / (1 + e^(-steepness * (time - midpoint)))
+          const maxBonus = 8 * skillMultiplier; // Max bonus scaled by skill (4.8-12 c/s)
+          const midpoint = 60; // S-curve inflection point at 60 seconds
+          const steepness = 0.05 * skillMultiplier; // Curve steepness scales with skill
+          const sigmoidBonus = maxBonus / (1 + Math.exp(-steepness * (elapsedSeconds - midpoint)));
 
-        // 3. Rubber-Banding: Adjust based on player lead/lag
-        // Distance in characters between player and monster
-        const distance = absolutePositionRef.current - monsterPosition;
-        const targetDistance = lastMinuteSpeed * 10; // Target: ~10 seconds of typing ahead
+          // 3. Rubber-Banding: Adjust based on player lead/lag
+          // Distance in characters between player and monster
+          const distance = absolutePositionRef.current - monsterPosition;
+          const targetDistance = lastMinuteSpeed * 10; // Target: ~10 seconds of typing ahead
 
-        // Rubber-banding factor: 0.9-1.1x based on distance from target
-        // Player far ahead → monster speeds up (+10%)
-        // Player close/behind → monster slows down (-10%)
-        const distanceRatio = distance / Math.max(targetDistance, 20);
-        const rubberBandFactor = Math.min(Math.max(0.9 + (1 - distanceRatio) * 0.2, 0.9), 1.1);
+          // Rubber-banding factor: 0.9-1.1x based on distance from target
+          // Player far ahead → monster speeds up (+10%)
+          // Player close/behind → monster slows down (-10%)
+          const distanceRatio = distance / Math.max(targetDistance, 20);
+          const rubberBandFactor = Math.min(Math.max(0.9 + (1 - distanceRatio) * 0.2, 0.9), 1.1);
 
-        // 4. Combine all factors: base speed * rubber-banding + sigmoid progression
-        const baseSpeed = lastMinuteSpeed * rubberBandFactor;
-        const newSpeed = baseSpeed + sigmoidBonus;
+          // 4. Combine all factors: base speed * rubber-banding + sigmoid progression
+          const baseSpeed = lastMinuteSpeed * rubberBandFactor;
+          const newSpeed = baseSpeed + sigmoidBonus;
 
-        // Clamp between minimum (0.1 c/s) and maximum (30 c/s for fast typers)
-        const maxSpeed = 20 + (10 * (skillMultiplier - 0.6)); // 20-29 c/s based on skill
-        setMonsterSpeed(Math.min(Math.max(newSpeed, 0.1), maxSpeed));
+          // Clamp between minimum (0.1 c/s) and maximum (30 c/s for fast typers)
+          const maxSpeed = 20 + (10 * (skillMultiplier - 0.6)); // 20-29 c/s based on skill
+          const finalSpeed = Math.min(Math.max(newSpeed, 0.1), maxSpeed);
+          console.log('Setting new monster speed:', finalSpeed, 'from playerCPS:', playerCPS, 'rubberBand:', rubberBandFactor, 'sigmoidBonus:', sigmoidBonus);
+          setMonsterSpeed(finalSpeed);
+        }
       }
     }, 1000);
 
