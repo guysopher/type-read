@@ -8,7 +8,6 @@ import type { Achievement } from "@/lib/gamification";
 import StatsView from "./StatsView";
 import LeaderboardView from "./LeaderboardView";
 import AchievementPopup from "./AchievementPopup";
-import LevelUpPopup from "./LevelUpPopup";
 import GameHUD from "./GameHUD";
 import DailyChallengesPanel from "./DailyChallengesPanel";
 import WPMMeter from "./WPMMeter";
@@ -126,7 +125,6 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   const [comboMultiplier, setComboMultiplier] = useState(1);
   const [maxComboReached, setMaxComboReached] = useState(0);
   const [achievementToShow, setAchievementToShow] = useState<Achievement | null>(null);
-  const [levelUpToShow, setLevelUpToShow] = useState<number | null>(null);
   const [activePowerUps, setActivePowerUps] = useState<{
     freeze: boolean;
     shield: boolean;
@@ -871,7 +869,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
 
       const avgWPM = detailedStats.averageWpm || calculateWPM();
 
-      // Update game stats (this also adds XP and checks achievements)
+      // Update game stats and check achievements
       updateGameStats({
         wordsTyped: stats.wordsTyped,
         wpm: avgWPM,
@@ -897,12 +895,6 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         setAchievementToShow(newAchievements[0]);
       }
 
-      // Check if leveled up
-      const progress = getPlayerProgress();
-      const prevProgress = JSON.parse(localStorage.getItem('typeread_player_progress_before') || 'null');
-      if (prevProgress && progress.level > prevProgress.level) {
-        setLevelUpToShow(progress.level);
-      }
     }
   }, [isGameOver, isComplete, stats, detailedStats, calculateWPM, getActiveTime, bestStreak, gameScore, maxComboReached]);
 
@@ -2360,14 +2352,6 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
             markAchievementSeen(achievementToShow.id);
             setAchievementToShow(null);
           }}
-        />
-      )}
-
-      {/* Level up popup */}
-      {levelUpToShow && (
-        <LevelUpPopup
-          level={levelUpToShow}
-          onClose={() => setLevelUpToShow(null)}
         />
       )}
 

@@ -51,7 +51,7 @@ export default function DailyChallengesPanel({ onClose }: DailyChallengesPanelPr
             </button>
           </div>
           <p className="text-xs text-white/80 mt-1">
-            Complete challenges to earn XP and power-ups!
+            Complete challenges to earn power-ups!
           </p>
         </div>
 
@@ -102,16 +102,9 @@ export default function DailyChallengesPanel({ onClose }: DailyChallengesPanelPr
               )}
 
               {/* Rewards */}
-              <div className="flex items-center gap-2 text-xs">
-                <span className="text-[var(--pencil-gray)]">Reward:</span>
-                {challenge.reward.xp && (
-                  <div className="bg-[var(--ink-blue)]/10 border-2 border-[var(--ink-blue)] px-2 py-0.5 pixel-corners">
-                    <span className="text-[var(--ink-blue)] font-bold">
-                      +{challenge.reward.xp} XP
-                    </span>
-                  </div>
-                )}
-                {challenge.reward.powerUp && (
+              {challenge.reward.powerUp && (
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="text-[var(--pencil-gray)]">Reward:</span>
                   <div className="bg-[var(--ink-blue)]/10 border-2 border-[var(--ink-blue)] px-2 py-0.5 pixel-corners">
                     <span className="text-[var(--ink-blue)] font-bold">
                       {challenge.reward.powerUp.type === 'freezeMonster' && '❄️'}
@@ -120,8 +113,8 @@ export default function DailyChallengesPanel({ onClose }: DailyChallengesPanelPr
                       {' '}+{challenge.reward.powerUp.amount}
                     </span>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           ))}
         </div>

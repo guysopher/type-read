@@ -65,14 +65,6 @@ export default function AchievementPopup({ achievement, onClose }: AchievementPo
             <p className="text-sm text-[var(--pencil-gray)] mb-3">
               {achievement.description}
             </p>
-
-            {/* XP Reward */}
-            <div className="flex items-center justify-center gap-2 bg-[var(--ink-blue)]/10 border-2 border-[var(--ink-blue)] px-3 py-1 pixel-corners">
-              <span className="text-lg">⭐</span>
-              <span className="font-bold text-[var(--ink-blue)]">
-                +{achievement.xpReward} XP
-              </span>
-            </div>
           </div>
 
           {/* Sparkle effects */}

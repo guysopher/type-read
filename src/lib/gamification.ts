@@ -9,11 +9,10 @@ export interface Achievement {
   icon: string; // emoji
   category: 'speed' | 'accuracy' | 'streak' | 'endurance' | 'mastery' | 'special';
   requirement: {
-    type: 'wpm' | 'accuracy' | 'streak' | 'words' | 'games' | 'level' | 'combo' | 'survival';
+    type: 'wpm' | 'accuracy' | 'streak' | 'words' | 'games' | 'combo' | 'survival';
     value: number;
     comparison?: 'gte' | 'lte' | 'eq';
   };
-  xpReward: number;
   rarity: 'common' | 'rare' | 'epic' | 'legendary';
 }
 
@@ -24,9 +23,6 @@ export interface UnlockedAchievement {
 }
 
 export interface PlayerProgress {
-  level: number;
-  xp: number;
-  totalXP: number;
   achievements: UnlockedAchievement[];
   powerUps: {
     freezeMonster: number;
@@ -56,7 +52,6 @@ export interface DailyChallenge {
   progress: number;
   completed: boolean;
   reward: {
-    xp?: number;
     powerUp?: { type: 'freezeMonster' | 'shield' | 'slowMo'; amount: number };
   };
 }
@@ -74,7 +69,6 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '🏃',
     category: 'speed',
     requirement: { type: 'wpm', value: 40, comparison: 'gte' },
-    xpReward: 50,
     rarity: 'common'
   },
   {
@@ -84,7 +78,6 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '⚡',
     category: 'speed',
     requirement: { type: 'wpm', value: 60, comparison: 'gte' },
-    xpReward: 100,
     rarity: 'common'
   },
   {
@@ -94,7 +87,6 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '⚡',
     category: 'speed',
     requirement: { type: 'wpm', value: 80, comparison: 'gte' },
-    xpReward: 200,
     rarity: 'rare'
   },
   {
@@ -104,7 +96,6 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '💨',
     category: 'speed',
     requirement: { type: 'wpm', value: 100, comparison: 'gte' },
-    xpReward: 500,
     rarity: 'epic'
   },
   {
@@ -114,7 +105,6 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '🌟',
     category: 'speed',
     requirement: { type: 'wpm', value: 120, comparison: 'gte' },
-    xpReward: 1000,
     rarity: 'legendary'
   },
 
@@ -126,7 +116,6 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '🎯',
     category: 'accuracy',
     requirement: { type: 'accuracy', value: 95, comparison: 'gte' },
-    xpReward: 100,
     rarity: 'common'
   },
   {
@@ -136,7 +125,6 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '🎯',
     category: 'accuracy',
     requirement: { type: 'accuracy', value: 98, comparison: 'gte' },
-    xpReward: 250,
     rarity: 'rare'
   },
   {
@@ -146,7 +134,6 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '💎',
     category: 'accuracy',
     requirement: { type: 'accuracy', value: 100, comparison: 'gte' },
-    xpReward: 500,
     rarity: 'epic'
   },
 
@@ -158,7 +145,6 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '🔥',
     category: 'streak',
     requirement: { type: 'streak', value: 10, comparison: 'gte' },
-    xpReward: 50,
     rarity: 'common'
   },
   {
@@ -168,7 +154,6 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '🔥',
     category: 'streak',
     requirement: { type: 'streak', value: 25, comparison: 'gte' },
-    xpReward: 150,
     rarity: 'common'
   },
   {
@@ -178,7 +163,6 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '🔥',
     category: 'streak',
     requirement: { type: 'streak', value: 50, comparison: 'gte' },
-    xpReward: 300,
     rarity: 'rare'
   },
   {
@@ -188,7 +172,6 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '👑',
     category: 'streak',
     requirement: { type: 'streak', value: 100, comparison: 'gte' },
-    xpReward: 1000,
     rarity: 'legendary'
   },
 
@@ -200,7 +183,6 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '📝',
     category: 'endurance',
     requirement: { type: 'words', value: 500, comparison: 'gte' },
-    xpReward: 100,
     rarity: 'common'
   },
   {
@@ -210,7 +192,6 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '📚',
     category: 'endurance',
     requirement: { type: 'words', value: 1000, comparison: 'gte' },
-    xpReward: 300,
     rarity: 'rare'
   },
   {
@@ -220,7 +201,6 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '🤖',
     category: 'endurance',
     requirement: { type: 'words', value: 2000, comparison: 'gte' },
-    xpReward: 750,
     rarity: 'epic'
   },
 
@@ -232,7 +212,6 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '✅',
     category: 'mastery',
     requirement: { type: 'survival', value: 1, comparison: 'gte' },
-    xpReward: 100,
     rarity: 'common'
   },
   {
@@ -242,7 +221,6 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '⚔️',
     category: 'mastery',
     requirement: { type: 'survival', value: 5, comparison: 'gte' },
-    xpReward: 300,
     rarity: 'rare'
   },
   {
@@ -252,7 +230,6 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '👾',
     category: 'mastery',
     requirement: { type: 'survival', value: 10, comparison: 'gte' },
-    xpReward: 750,
     rarity: 'epic'
   },
 
@@ -264,7 +241,6 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '💥',
     category: 'mastery',
     requirement: { type: 'combo', value: 10, comparison: 'gte' },
-    xpReward: 150,
     rarity: 'common'
   },
   {
@@ -274,7 +250,6 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '💥',
     category: 'mastery',
     requirement: { type: 'combo', value: 25, comparison: 'gte' },
-    xpReward: 400,
     rarity: 'rare'
   },
   {
@@ -284,7 +259,6 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '⭐',
     category: 'mastery',
     requirement: { type: 'combo', value: 50, comparison: 'gte' },
-    xpReward: 1000,
     rarity: 'legendary'
   },
 
@@ -296,7 +270,6 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '🎮',
     category: 'special',
     requirement: { type: 'games', value: 10, comparison: 'gte' },
-    xpReward: 50,
     rarity: 'common'
   },
   {
@@ -306,7 +279,6 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '🎮',
     category: 'special',
     requirement: { type: 'games', value: 50, comparison: 'gte' },
-    xpReward: 250,
     rarity: 'rare'
   },
   {
@@ -316,7 +288,6 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '🏆',
     category: 'special',
     requirement: { type: 'games', value: 100, comparison: 'gte' },
-    xpReward: 500,
     rarity: 'epic'
   },
 ];
@@ -330,72 +301,20 @@ export interface MonsterSkin {
   emoji: string;
   name: string;
   unlockRequirement: {
-    type: 'level' | 'achievement';
-    value: number | string;
+    type: 'default' | 'achievement';
+    value?: string; // achievement ID
   };
 }
 
 export const MONSTER_SKINS: MonsterSkin[] = [
-  { id: 'default', emoji: '👾', name: 'Classic Monster', unlockRequirement: { type: 'level', value: 1 } },
-  { id: 'robot', emoji: '🤖', name: 'Robot', unlockRequirement: { type: 'level', value: 3 } },
-  { id: 'alien', emoji: '👽', name: 'Alien', unlockRequirement: { type: 'level', value: 5 } },
-  { id: 'ghost', emoji: '👻', name: 'Ghost', unlockRequirement: { type: 'level', value: 7 } },
-  { id: 'dragon', emoji: '🐉', name: 'Dragon', unlockRequirement: { type: 'level', value: 10 } },
-  { id: 'demon', emoji: '😈', name: 'Demon', unlockRequirement: { type: 'level', value: 15 } },
+  { id: 'default', emoji: '👾', name: 'Classic Monster', unlockRequirement: { type: 'default' } },
+  { id: 'robot', emoji: '🤖', name: 'Robot', unlockRequirement: { type: 'default' } },
+  { id: 'alien', emoji: '👽', name: 'Alien', unlockRequirement: { type: 'default' } },
+  { id: 'ghost', emoji: '👻', name: 'Ghost', unlockRequirement: { type: 'default' } },
+  { id: 'dragon', emoji: '🐉', name: 'Dragon', unlockRequirement: { type: 'achievement', value: 'speed_expert' } },
+  { id: 'demon', emoji: '😈', name: 'Demon', unlockRequirement: { type: 'achievement', value: 'accuracy_perfect' } },
   { id: 'skull', emoji: '💀', name: 'Skull', unlockRequirement: { type: 'achievement', value: 'survival_10' } },
 ];
-
-// ============================================================================
-// XP & LEVELING
-// ============================================================================
-
-export function getXPForLevel(level: number): number {
-  // Exponential curve: level 1 = 100 XP, level 2 = 200, level 3 = 350, etc.
-  return Math.floor(100 * level * (1 + level * 0.15));
-}
-
-export function getLevelFromXP(totalXP: number): { level: number; currentLevelXP: number; nextLevelXP: number } {
-  let level = 1;
-  let accumulatedXP = 0;
-
-  while (accumulatedXP + getXPForLevel(level) <= totalXP) {
-    accumulatedXP += getXPForLevel(level);
-    level++;
-  }
-
-  const currentLevelXP = totalXP - accumulatedXP;
-  const nextLevelXP = getXPForLevel(level);
-
-  return { level, currentLevelXP, nextLevelXP };
-}
-
-export function calculateXPFromGame(stats: {
-  score: number;
-  wordsTyped: number;
-  accuracy: number;
-  streak: number;
-  survived: boolean;
-}): number {
-  let xp = 0;
-
-  // Base XP from score (1 XP per 10 score points)
-  xp += Math.floor(stats.score / 10);
-
-  // Bonus for accuracy
-  if (stats.accuracy >= 95) xp += 50;
-  if (stats.accuracy >= 98) xp += 50;
-  if (stats.accuracy === 100) xp += 100;
-
-  // Bonus for survival
-  if (stats.survived) xp += 100;
-
-  // Bonus for high streak
-  if (stats.streak >= 25) xp += 50;
-  if (stats.streak >= 50) xp += 100;
-  if (stats.streak >= 100) xp += 200;
-
-  return xp;
-}
 
 // ============================================================================
 // DAILY CHALLENGES
@@ -416,7 +335,7 @@ export function generateDailyChallenges(seed: string): DailyChallenge[] {
       target: random(300, 600, 1),
       progress: 0,
       completed: false,
-      reward: { xp: 150, powerUp: { type: 'freezeMonster', amount: 1 } }
+      reward: { powerUp: { type: 'freezeMonster', amount: 1 } }
     },
     {
       id: 'daily_wpm',
@@ -426,7 +345,7 @@ export function generateDailyChallenges(seed: string): DailyChallenge[] {
       target: random(50, 80, 2),
       progress: 0,
       completed: false,
-      reward: { xp: 200 }
+      reward: { powerUp: { type: 'shield', amount: 1 } }
     },
     {
       id: 'daily_streak',
@@ -436,7 +355,7 @@ export function generateDailyChallenges(seed: string): DailyChallenge[] {
       target: random(20, 40, 3),
       progress: 0,
       completed: false,
-      reward: { xp: 100, powerUp: { type: 'shield', amount: 1 } }
+      reward: { powerUp: { type: 'slowMo', amount: 1 } }
     }
   ];
 }

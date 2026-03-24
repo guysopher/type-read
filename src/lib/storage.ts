@@ -341,7 +341,7 @@ export function setPlayerName(name: string): void {
 // ============================================================================
 
 import type { PlayerProgress, UnlockedAchievement, DailyChallenge, Achievement } from './gamification';
-import { ACHIEVEMENTS, generateDailyChallenges, shouldResetChallenges, getLevelFromXP, calculateXPFromGame } from './gamification';
+import { ACHIEVEMENTS, MONSTER_SKINS, generateDailyChallenges, shouldResetChallenges } from './gamification';
 
 // Re-export for external use
 export { getLevelFromXP } from './gamification';
@@ -380,16 +380,13 @@ export function savePlayerProgress(progress: PlayerProgress): void {
 export function createDefaultProgress(): PlayerProgress {
   const today = new Date().toISOString().split('T')[0];
   return {
-    level: 1,
-    xp: 0,
-    totalXP: 0,
     achievements: [],
     powerUps: {
       freezeMonster: 1, // Start with 1 of each
       shield: 1,
       slowMo: 0,
     },
-    unlockedSkins: ['default'], // Start with default monster
+    unlockedSkins: ['default', 'robot', 'alien', 'ghost'], // Start with default skins unlocked
     selectedSkin: 'default',
     dailyChallenges: generateDailyChallenges(today),
     lastChallengeReset: today,
@@ -401,27 +398,6 @@ export function createDefaultProgress(): PlayerProgress {
       bestAccuracy: 0,
       totalPlayTime: 0,
     },
-  };
-}
-
-export function addXP(amount: number): { newLevel: number; leveledUp: boolean; totalXP: number } {
-  const progress = getPlayerProgress();
-  const oldLevel = progress.level;
-
-  progress.xp += amount;
-  progress.totalXP += amount;
-
-  const { level: newLevel, currentLevelXP, nextLevelXP } = getLevelFromXP(progress.totalXP);
-
-  progress.level = newLevel;
-  progress.xp = currentLevelXP;
-
-  savePlayerProgress(progress);
-
-  return {
-    newLevel,
-    leveledUp: newLevel > oldLevel,
-    totalXP: progress.totalXP,
   };
 }
 
@@ -482,8 +458,11 @@ export function checkAndUnlockAchievements(gameStats: {
       });
       newlyUnlocked.push(achievement);
 
-      // Award XP for achievement
-      addXP(achievement.xpReward);
+      // Check if this achievement unlocks a monster skin
+      const skin = MONSTER_SKINS.find(s => s.unlockRequirement.type === 'achievement' && s.unlockRequirement.value === achievement.id);
+      if (skin && !progress.unlockedSkins.includes(skin.id)) {
+        progress.unlockedSkins.push(skin.id);
+      }
     }
   }
 
@@ -523,9 +502,6 @@ export function updateDailyChallengeProgress(
       completedChallenges.push(challenge);
 
       // Award rewards
-      if (challenge.reward.xp) {
-        addXP(challenge.reward.xp);
-      }
       if (challenge.reward.powerUp) {
         usePowerUp(challenge.reward.powerUp.type, -challenge.reward.powerUp.amount); // Negative to add
       }
@@ -587,10 +563,6 @@ export function updateGameStats(stats: {
   progress.stats.fastestWPM = Math.max(progress.stats.fastestWPM, stats.wpm);
   progress.stats.bestAccuracy = Math.max(progress.stats.bestAccuracy, stats.accuracy);
   progress.stats.totalPlayTime += stats.duration;
-
-  // Calculate and add XP
-  const xpGained = calculateXPFromGame(stats);
-  const { leveledUp, newLevel } = addXP(xpGained);
 
   // Check achievements
   checkAndUnlockAchievements({
