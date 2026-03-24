@@ -11,6 +11,7 @@ import AchievementPopup from "./AchievementPopup";
 import LevelUpPopup from "./LevelUpPopup";
 import GameHUD from "./GameHUD";
 import DailyChallengesPanel from "./DailyChallengesPanel";
+import WPMMeter from "./WPMMeter";
 
 interface TypingViewProps {
   text: string;
@@ -1985,9 +1986,6 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                     </div>
                   );
                 })()}
-                  <span className="text-xs sm:text-sm font-medium text-[var(--muted)] tabular-nums">
-                    {calculateWPM()} <span className="text-xs hidden sm:inline">WPM</span>
-                  </span>
                 </div>
               )}
             </div>
@@ -2320,6 +2318,9 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
       {showChallenges && (
         <DailyChallengesPanel onClose={() => setShowChallenges(false)} />
       )}
+
+      {/* WPM Meter - always visible */}
+      <WPMMeter wpm={calculateWPM()} />
 
       {/* Game HUD (WPM status bar, combo) */}
       {monsterMode && (
