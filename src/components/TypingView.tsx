@@ -206,6 +206,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   const [monsterCountdown, setMonsterCountdown] = useState<number | null>(null);
   const monsterStartTimeRef = useRef<number | null>(null); // When monster started chasing
   const alphanumericCharsTyped = useRef(0); // Count of alphanumeric chars typed during warmup
+  const warmupStartTimeRef = useRef<number | null>(null); // When warmup started (first alphanumeric char)
 
   // Rolling speed tracking for adaptive monster
   const recentKeystrokesRef = useRef<number[]>([]); // timestamps of recent keystrokes
@@ -1327,7 +1328,8 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
               // Start countdown if not started yet
               if (monsterCountdown === null) {
                 alphanumericCharsTyped.current = 1; // Count this first character
-                console.log('Starting countdown - setting to 11');
+                warmupStartTimeRef.current = Date.now(); // Record warmup start time
+                console.log('Starting countdown - setting to 11, warmup start time:', warmupStartTimeRef.current);
                 setMonsterCountdown(11); // 11 remaining (already typed 1)
               } else if (monsterCountdown > 0) {
                 // Continue counting
@@ -1339,20 +1341,19 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                 // Check if warmup is complete (12 chars typed)
                 if (remaining <= 0) {
                   console.log('Warmup complete! Starting monster...');
-                  // Monster wakes up!
-                  const keystrokes = allKeystrokesRef.current;
+                  // Monster wakes up! Calculate speed based on warmup period only
+                  const warmupEndTime = Date.now();
+                  const warmupStartTime = warmupStartTimeRef.current || warmupEndTime;
+                  const warmupDuration = (warmupEndTime - warmupStartTime) / 1000; // seconds
+
+                  // Calculate characters per second based on 12 warmup characters
                   let playerCharsPerSec = 2; // default minimum
-
-                  if (keystrokes.length >= 2) {
-                    const firstKeystroke = keystrokes[0];
-                    const lastKeystroke = keystrokes[keystrokes.length - 1];
-                    const activeTypingTime = (lastKeystroke - firstKeystroke) / 1000;
-
-                    if (activeTypingTime > 0.5) {
-                      playerCharsPerSec = Math.max(keystrokes.length / activeTypingTime, 2);
-                    }
+                  if (warmupDuration > 0.5) {
+                    // 12 characters typed during warmup period
+                    playerCharsPerSec = Math.max(12 / warmupDuration, 2);
                   }
 
+                  console.log('Warmup speed calculation - duration:', warmupDuration, 'chars/sec:', playerCharsPerSec);
                   setMonsterSpeed(playerCharsPerSec);
                   setMonsterStarted(true);
                   setMonsterCountdown(null);
