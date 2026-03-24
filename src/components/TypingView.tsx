@@ -1322,8 +1322,10 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
               // Start countdown if not started yet
               if (monsterCountdown === null) {
                 alphanumericCharsTyped.current = 1; // Count this first character
-                console.log('Starting countdown - setting to 11');
+                console.log('Starting countdown - setting to 11, monster position to:', absolutePosition - 1);
                 setMonsterCountdown(11); // 11 remaining (already typed 1)
+                // Position monster one character behind current position
+                setMonsterPosition(Math.max(0, absolutePosition - 1));
               } else if (monsterCountdown > 0) {
                 // Continue counting
                 alphanumericCharsTyped.current += 1;
