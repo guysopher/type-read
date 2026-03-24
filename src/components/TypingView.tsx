@@ -583,7 +583,12 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   }, []);
 
   // Monster position is set once at the start and doesn't move until chase begins
-  // No need for continuous updates - let the chase logic handle movement
+  // Initialize monster position to current cursor location on mount
+  useEffect(() => {
+    if (monsterMode && !monsterStarted) {
+      setMonsterPosition(Math.max(0, absolutePosition - 1));
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle music based on game state
   useEffect(() => {
@@ -1322,10 +1327,8 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
               // Start countdown if not started yet
               if (monsterCountdown === null) {
                 alphanumericCharsTyped.current = 1; // Count this first character
-                console.log('Starting countdown - setting to 11, monster position to:', absolutePosition - 1);
+                console.log('Starting countdown - setting to 11');
                 setMonsterCountdown(11); // 11 remaining (already typed 1)
-                // Position monster one character behind current position
-                setMonsterPosition(Math.max(0, absolutePosition - 1));
               } else if (monsterCountdown > 0) {
                 // Continue counting
                 alphanumericCharsTyped.current += 1;
