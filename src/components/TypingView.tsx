@@ -426,11 +426,10 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   // Calculate typing speed (chars/sec) from correctly typed chars over last 60 seconds
   const calculateLastMinuteSpeed = useCallback(() => {
     const now = Date.now();
-    const windowMs = 60000; // 60 second window (1 minute)
+    const windowMs = 10000; // 10 second window for responsive tracking
 
-    // Filter to correct keystrokes in the last minute
+    // Filter to correct keystrokes in the last 10 seconds
     const recentCorrect = correctKeystrokesRef.current.filter(ts => now - ts < windowMs);
-    correctKeystrokesRef.current = recentCorrect; // Clean up old ones
 
     if (recentCorrect.length < 2) return 0;
 
