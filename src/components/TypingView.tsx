@@ -597,15 +597,6 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     }
   }, [monsterMode, monsterStarted, hasCountdown, oneWordBehindPosition]);
 
-  // Monster waits for 12 alphanumeric characters to be typed before starting
-  // Start the character countdown when first char is typed
-  const startMonsterCountdown = useCallback(() => {
-    if (!monsterMode || monsterCountdown !== null || monsterStarted) return;
-    // Start the 12-character grace period countdown (position is already set)
-    setMonsterCountdown(12);
-    alphanumericCharsTyped.current = 0;
-  }, [monsterMode, monsterCountdown, monsterStarted]);
-
   // Handle music based on game state
   useEffect(() => {
     if (isGameOver || isComplete) {
@@ -1334,40 +1325,43 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
             currentWordMistakesRef.current = true; // Mark word as having mistakes
           }
 
-          // Start monster countdown on first correct keystroke
-          if (isCorrect && monsterMode && monsterCountdown === null && !monsterStarted) {
-            startMonsterCountdown();
-          }
-
           // Track alphanumeric characters during monster warmup
-          if (isCorrect && monsterMode && monsterCountdown !== null && monsterCountdown > 0 && !monsterStarted) {
+          if (isCorrect && monsterMode && !monsterStarted) {
             const isAlphanumeric = /[a-zA-Z0-9]/.test(newChar);
+
             if (isAlphanumeric) {
-              alphanumericCharsTyped.current += 1;
-              const remaining = 12 - alphanumericCharsTyped.current;
-              setMonsterCountdown(remaining);
+              // Start countdown if not started yet
+              if (monsterCountdown === null) {
+                alphanumericCharsTyped.current = 1; // Count this first character
+                setMonsterCountdown(11); // 11 remaining (already typed 1)
+              } else if (monsterCountdown > 0) {
+                // Continue counting
+                alphanumericCharsTyped.current += 1;
+                const remaining = 12 - alphanumericCharsTyped.current;
+                setMonsterCountdown(remaining);
 
-              // Check if warmup is complete (12 chars typed)
-              if (remaining <= 0) {
-                // Monster wakes up!
-                const keystrokes = allKeystrokesRef.current;
-                let playerCharsPerSec = 2; // default minimum
+                // Check if warmup is complete (12 chars typed)
+                if (remaining <= 0) {
+                  // Monster wakes up!
+                  const keystrokes = allKeystrokesRef.current;
+                  let playerCharsPerSec = 2; // default minimum
 
-                if (keystrokes.length >= 2) {
-                  const firstKeystroke = keystrokes[0];
-                  const lastKeystroke = keystrokes[keystrokes.length - 1];
-                  const activeTypingTime = (lastKeystroke - firstKeystroke) / 1000;
+                  if (keystrokes.length >= 2) {
+                    const firstKeystroke = keystrokes[0];
+                    const lastKeystroke = keystrokes[keystrokes.length - 1];
+                    const activeTypingTime = (lastKeystroke - firstKeystroke) / 1000;
 
-                  if (activeTypingTime > 0.5) {
-                    playerCharsPerSec = Math.max(keystrokes.length / activeTypingTime, 2);
+                    if (activeTypingTime > 0.5) {
+                      playerCharsPerSec = Math.max(keystrokes.length / activeTypingTime, 2);
+                    }
                   }
-                }
 
-                setMonsterSpeed(playerCharsPerSec);
-                setMonsterStarted(true);
-                setMonsterCountdown(null);
-                monsterStartTimeRef.current = Date.now();
-                if (musicEnabled) playBackgroundMusic();
+                  setMonsterSpeed(playerCharsPerSec);
+                  setMonsterStarted(true);
+                  setMonsterCountdown(null);
+                  monsterStartTimeRef.current = Date.now();
+                  if (musicEnabled) playBackgroundMusic();
+                }
               }
             }
           }
@@ -1380,7 +1374,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         setCurrentInput(value);
       }
     },
-    [currentWord, currentWordIndex, words.length, stats.startTime, compareStrings, forgiveCapitals, forgiveNonAlpha, soundEffects, getActiveTime, isPaused, resumeFromPause, currentStreak, monsterMode, monsterCountdown, monsterStarted, startMonsterCountdown, musicEnabled]
+    [currentWord, currentWordIndex, words.length, stats.startTime, compareStrings, forgiveCapitals, forgiveNonAlpha, soundEffects, getActiveTime, isPaused, resumeFromPause, currentStreak, monsterMode, monsterCountdown, monsterStarted, musicEnabled]
   );
 
   // Sliding text bar renderer
