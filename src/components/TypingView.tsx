@@ -688,9 +688,9 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         const baseSpeed = lastMinuteSpeed * rubberBandFactor;
         const newSpeed = baseSpeed + sigmoidBonus;
 
-        // Clamp between minimum (2 c/s) and maximum (30 c/s for fast typers)
+        // Clamp between minimum (0.1 c/s) and maximum (30 c/s for fast typers)
         const maxSpeed = 20 + (10 * (skillMultiplier - 0.6)); // 20-29 c/s based on skill
-        setMonsterSpeed(Math.min(Math.max(newSpeed, 2), maxSpeed));
+        setMonsterSpeed(Math.min(Math.max(newSpeed, 0.1), maxSpeed));
       }
     }, 1000);
 
