@@ -343,9 +343,6 @@ export function setPlayerName(name: string): void {
 import type { PlayerProgress, UnlockedAchievement, DailyChallenge, Achievement } from './gamification';
 import { ACHIEVEMENTS, MONSTER_SKINS, generateDailyChallenges, shouldResetChallenges } from './gamification';
 
-// Re-export for external use
-export { getLevelFromXP } from './gamification';
-
 const PLAYER_PROGRESS_KEY = "typeread_player_progress";
 
 export function getPlayerProgress(): PlayerProgress {

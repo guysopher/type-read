@@ -2,9 +2,6 @@ import { describe, it, expect } from 'vitest';
 import {
   ACHIEVEMENTS,
   MONSTER_SKINS,
-  getXPForLevel,
-  getLevelFromXP,
-  calculateXPFromGame,
   generateDailyChallenges,
   shouldResetChallenges,
 } from './gamification';
@@ -23,7 +20,6 @@ describe('gamification', () => {
         expect(achievement.icon).toBeDefined();
         expect(achievement.category).toBeDefined();
         expect(achievement.requirement).toBeDefined();
-        expect(achievement.xpReward).toBeGreaterThan(0);
         expect(achievement.rarity).toBeDefined();
       });
     });
@@ -69,17 +65,6 @@ describe('gamification', () => {
         expect(speedAchievements[4].requirement.value).toBe(120);
       });
 
-      it('should have increasing XP rewards', () => {
-        const speedAchievements = ACHIEVEMENTS
-          .filter(a => a.category === 'speed')
-          .sort((a, b) => a.requirement.value - b.requirement.value);
-
-        for (let i = 1; i < speedAchievements.length; i++) {
-          expect(speedAchievements[i].xpReward).toBeGreaterThan(
-            speedAchievements[i - 1].xpReward
-          );
-        }
-      });
     });
 
     describe('accuracy achievements', () => {
@@ -163,7 +148,6 @@ describe('gamification', () => {
         expect(skin.name).toBeDefined();
         expect(skin.unlockRequirement).toBeDefined();
         expect(skin.unlockRequirement.type).toBeDefined();
-        expect(skin.unlockRequirement.value).toBeDefined();
       });
     });
 
@@ -173,259 +157,29 @@ describe('gamification', () => {
       expect(uniqueIds.size).toBe(ids.length);
     });
 
-    it('should have default skin at level 1', () => {
+    it('should have default skin', () => {
       const defaultSkin = MONSTER_SKINS.find(s => s.id === 'default');
       expect(defaultSkin).toBeDefined();
-      expect(defaultSkin?.unlockRequirement.type).toBe('level');
-      expect(defaultSkin?.unlockRequirement.value).toBe(1);
+      expect(defaultSkin?.unlockRequirement.type).toBe('default');
     });
 
-    it('should have progressive level requirements', () => {
-      const levelSkins = MONSTER_SKINS
-        .filter(s => s.unlockRequirement.type === 'level')
-        .sort((a, b) => {
-          const aVal = a.unlockRequirement.value as number;
-          const bVal = b.unlockRequirement.value as number;
-          return aVal - bVal;
-        });
-
-      for (let i = 1; i < levelSkins.length; i++) {
-        expect(levelSkins[i].unlockRequirement.value).toBeGreaterThan(
-          levelSkins[i - 1].unlockRequirement.value
-        );
-      }
+    it('should have default unlocked skins', () => {
+      const defaultSkins = MONSTER_SKINS.filter(
+        s => s.unlockRequirement.type === 'default'
+      );
+      expect(defaultSkins.length).toBeGreaterThan(0);
     });
 
-    it('should have at least one achievement-based unlock', () => {
+    it('should have achievement-based unlock skins', () => {
       const achievementSkins = MONSTER_SKINS.filter(
         s => s.unlockRequirement.type === 'achievement'
       );
       expect(achievementSkins.length).toBeGreaterThan(0);
-    });
-  });
 
-  describe('XP & Leveling', () => {
-    describe('getXPForLevel', () => {
-      it('should return 100 XP for level 1', () => {
-        expect(getXPForLevel(1)).toBe(115);
-      });
-
-      it('should return increasing XP for higher levels', () => {
-        const level1XP = getXPForLevel(1);
-        const level2XP = getXPForLevel(2);
-        const level3XP = getXPForLevel(3);
-
-        expect(level2XP).toBeGreaterThan(level1XP);
-        expect(level3XP).toBeGreaterThan(level2XP);
-      });
-
-      it('should use exponential curve', () => {
-        const xp1 = getXPForLevel(1);
-        const xp5 = getXPForLevel(5);
-        const xp10 = getXPForLevel(10);
-
-        // Each level should require significantly more XP
-        expect(xp5 / xp1).toBeGreaterThan(2);
-        expect(xp10 / xp5).toBeGreaterThan(1.5);
-      });
-
-      it('should handle high levels', () => {
-        const xp50 = getXPForLevel(50);
-        const xp100 = getXPForLevel(100);
-
-        expect(xp50).toBeGreaterThan(0);
-        expect(xp100).toBeGreaterThan(xp50);
-      });
-    });
-
-    describe('getLevelFromXP', () => {
-      it('should return level 1 for 0 XP', () => {
-        const result = getLevelFromXP(0);
-        expect(result.level).toBe(1);
-        expect(result.currentLevelXP).toBe(0);
-      });
-
-      it('should return level 1 for low XP', () => {
-        const result = getLevelFromXP(50);
-        expect(result.level).toBe(1);
-        expect(result.currentLevelXP).toBe(50);
-      });
-
-      it('should calculate correct level from XP', () => {
-        const level2XP = getXPForLevel(1);
-        const result = getLevelFromXP(level2XP + 10);
-        expect(result.level).toBe(2);
-        expect(result.currentLevelXP).toBe(10);
-      });
-
-      it('should return correct next level XP', () => {
-        const result = getLevelFromXP(200);
-        expect(result.nextLevelXP).toBe(getXPForLevel(result.level));
-      });
-
-      it('should handle large XP values', () => {
-        const result = getLevelFromXP(10000);
-        expect(result.level).toBeGreaterThan(5);
-        expect(result.currentLevelXP).toBeGreaterThanOrEqual(0);
-        expect(result.currentLevelXP).toBeLessThan(result.nextLevelXP);
-      });
-
-      it('should maintain consistency', () => {
-        // If you have X total XP, currentLevelXP + accumulated should equal X
-        const totalXP = 1000;
-        const result = getLevelFromXP(totalXP);
-
-        let accumulated = 0;
-        for (let i = 1; i < result.level; i++) {
-          accumulated += getXPForLevel(i);
-        }
-
-        expect(accumulated + result.currentLevelXP).toBe(totalXP);
-      });
-    });
-
-    describe('calculateXPFromGame', () => {
-      it('should award base XP from score', () => {
-        const xp = calculateXPFromGame({
-          score: 1000,
-          wordsTyped: 100,
-          accuracy: 80,
-          streak: 5,
-          survived: false,
-        });
-
-        expect(xp).toBeGreaterThanOrEqual(100); // At least 100 XP from 1000 score
-      });
-
-      it('should award bonus for 95% accuracy', () => {
-        const lowAccuracyXP = calculateXPFromGame({
-          score: 1000,
-          wordsTyped: 100,
-          accuracy: 90,
-          streak: 5,
-          survived: false,
-        });
-
-        const highAccuracyXP = calculateXPFromGame({
-          score: 1000,
-          wordsTyped: 100,
-          accuracy: 95,
-          streak: 5,
-          survived: false,
-        });
-
-        expect(highAccuracyXP).toBe(lowAccuracyXP + 50);
-      });
-
-      it('should award bonus for 98% accuracy', () => {
-        const xp95 = calculateXPFromGame({
-          score: 1000,
-          wordsTyped: 100,
-          accuracy: 95,
-          streak: 5,
-          survived: false,
-        });
-
-        const xp98 = calculateXPFromGame({
-          score: 1000,
-          wordsTyped: 100,
-          accuracy: 98,
-          streak: 5,
-          survived: false,
-        });
-
-        expect(xp98).toBe(xp95 + 50);
-      });
-
-      it('should award bonus for 100% accuracy', () => {
-        const xp98 = calculateXPFromGame({
-          score: 1000,
-          wordsTyped: 100,
-          accuracy: 98,
-          streak: 5,
-          survived: false,
-        });
-
-        const xp100 = calculateXPFromGame({
-          score: 1000,
-          wordsTyped: 100,
-          accuracy: 100,
-          streak: 5,
-          survived: false,
-        });
-
-        expect(xp100).toBe(xp98 + 100);
-      });
-
-      it('should award bonus for survival', () => {
-        const noSurvivalXP = calculateXPFromGame({
-          score: 1000,
-          wordsTyped: 100,
-          accuracy: 80,
-          streak: 5,
-          survived: false,
-        });
-
-        const survivalXP = calculateXPFromGame({
-          score: 1000,
-          wordsTyped: 100,
-          accuracy: 80,
-          streak: 5,
-          survived: true,
-        });
-
-        expect(survivalXP).toBe(noSurvivalXP + 100);
-      });
-
-      it('should award bonus for high streaks', () => {
-        const lowStreakXP = calculateXPFromGame({
-          score: 1000,
-          wordsTyped: 100,
-          accuracy: 80,
-          streak: 10,
-          survived: false,
-        });
-
-        const streak25XP = calculateXPFromGame({
-          score: 1000,
-          wordsTyped: 100,
-          accuracy: 80,
-          streak: 25,
-          survived: false,
-        });
-
-        const streak50XP = calculateXPFromGame({
-          score: 1000,
-          wordsTyped: 100,
-          accuracy: 80,
-          streak: 50,
-          survived: false,
-        });
-
-        const streak100XP = calculateXPFromGame({
-          score: 1000,
-          wordsTyped: 100,
-          accuracy: 80,
-          streak: 100,
-          survived: false,
-        });
-
-        expect(streak25XP).toBeGreaterThan(lowStreakXP);
-        expect(streak50XP).toBeGreaterThan(streak25XP);
-        expect(streak100XP).toBeGreaterThan(streak50XP);
-      });
-
-      it('should combine all bonuses', () => {
-        const xp = calculateXPFromGame({
-          score: 5000,
-          wordsTyped: 500,
-          accuracy: 100,
-          streak: 100,
-          survived: true,
-        });
-
-        // Should have: base (500) + accuracy (50+50+100) + survival (100) + streak (50+100+200) = 1150
-        expect(xp).toBeGreaterThanOrEqual(1150);
+      // Verify achievement skins have valid achievement IDs
+      achievementSkins.forEach(skin => {
+        expect(skin.unlockRequirement.value).toBeDefined();
+        expect(typeof skin.unlockRequirement.value).toBe('string');
       });
     });
   });
@@ -498,15 +252,7 @@ describe('gamification', () => {
         expect(streakChallenge?.target).toBeLessThanOrEqual(40);
       });
 
-      it('should have XP rewards', () => {
-        const challenges = generateDailyChallenges('2024-01-01');
-
-        challenges.forEach(challenge => {
-          expect(challenge.reward.xp).toBeGreaterThan(0);
-        });
-      });
-
-      it('should have power-up rewards on some challenges', () => {
+      it('should have power-up rewards on all challenges', () => {
         const challenges = generateDailyChallenges('2024-01-01');
 
         const challengesWithPowerUps = challenges.filter(c => c.reward.powerUp);

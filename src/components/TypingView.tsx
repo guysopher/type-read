@@ -572,24 +572,10 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     localStorage.setItem('typeread_allow_mistakes', String(allowMistakes));
   }, [allowMistakes]);
 
-  // Initialize sessionStartRef and monster when loading from saved data
+  // Initialize sessionStartRef when loading from saved data (for WPM tracking)
   useEffect(() => {
     if (savedData?.progress.wordsTyped && !sessionStartRef.current) {
       sessionStartRef.current = Date.now();
-
-      // If they've already typed words, skip the monster warmup and start it immediately
-      if (monsterMode && savedData.progress.totalKeystrokes >= 12) {
-        // Calculate initial speed based on their typing so far
-        const keystrokes = savedData.progress.totalKeystrokes;
-        const totalTime = savedData.progress.totalTime || 1000; // fallback
-        const playerCharsPerSec = Math.max(keystrokes / (totalTime / 1000), 2);
-
-        setMonsterSpeed(playerCharsPerSec);
-        setMonsterStarted(true);
-        setMonsterCountdown(null);
-        monsterStartTimeRef.current = Date.now();
-        if (musicEnabled) playBackgroundMusic();
-      }
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

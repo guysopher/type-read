@@ -24,7 +24,6 @@ import {
   getPlayerProgress,
   savePlayerProgress,
   createDefaultProgress,
-  addXP,
   checkAndUnlockAchievements,
   markAchievementSeen,
   updateDailyChallengeProgress,
@@ -656,16 +655,13 @@ describe('storage', () => {
     describe('createDefaultProgress', () => {
       it('should create progress with expected structure', () => {
         const progress = createDefaultProgress();
-        expect(progress.level).toBe(1);
-        expect(progress.xp).toBe(0);
-        expect(progress.totalXP).toBe(0);
         expect(progress.achievements).toEqual([]);
         expect(progress.powerUps).toEqual({
           freezeMonster: 1,
           shield: 1,
           slowMo: 0,
         });
-        expect(progress.unlockedSkins).toEqual(['default']);
+        expect(progress.unlockedSkins).toEqual(['default', 'robot', 'alien', 'ghost']);
         expect(progress.selectedSkin).toBe('default');
         expect(progress.dailyChallenges).toHaveLength(3);
       });
@@ -674,34 +670,23 @@ describe('storage', () => {
     describe('getPlayerProgress and savePlayerProgress', () => {
       it('should return default progress when none exists', () => {
         const progress = getPlayerProgress();
-        expect(progress.level).toBe(1);
+        expect(progress.achievements).toEqual([]);
+        expect(progress.powerUps).toBeDefined();
       });
 
       it('should save and retrieve progress', () => {
         const progress = createDefaultProgress();
-        progress.level = 5;
-        progress.xp = 500;
+        progress.powerUps.freezeMonster = 5;
+        progress.achievements.push({
+          achievementId: 'test_achievement',
+          unlockedAt: Date.now(),
+          seen: false,
+        });
         savePlayerProgress(progress);
 
         const retrieved = getPlayerProgress();
-        expect(retrieved.level).toBe(5);
-        expect(retrieved.xp).toBe(500);
-      });
-    });
-
-    describe('addXP', () => {
-      it('should add XP to player progress', () => {
-        const result = addXP(100);
-        expect(result.totalXP).toBe(100);
-        expect(result.newLevel).toBe(1);
-        expect(result.leveledUp).toBe(false);
-      });
-
-      it('should level up when XP threshold is reached', () => {
-        addXP(500);
-        const result = addXP(500);
-        expect(result.leveledUp).toBe(true);
-        expect(result.newLevel).toBeGreaterThan(1);
+        expect(retrieved.powerUps.freezeMonster).toBe(5);
+        expect(retrieved.achievements).toHaveLength(1);
       });
     });
 
