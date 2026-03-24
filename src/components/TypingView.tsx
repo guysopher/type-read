@@ -1347,11 +1347,11 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                   const warmupDuration = (warmupEndTime - warmupStartTime) / 1000; // seconds
 
                   // Calculate characters per second based on 12 warmup characters
-                  let playerCharsPerSec = 0.5; // default minimum (30 CPM)
+                  let playerCharsPerSec = 0.1; // default minimum (6 CPM)
                   if (warmupDuration > 0.5) {
                     // 12 characters typed during warmup period
                     // Use actual speed with very low floor to prevent stationary monster
-                    playerCharsPerSec = Math.max(12 / warmupDuration, 0.3);
+                    playerCharsPerSec = Math.max(12 / warmupDuration, 0.1);
                   }
 
                   console.log('Warmup speed calculation - duration:', warmupDuration, 'chars/sec:', playerCharsPerSec);
