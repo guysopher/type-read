@@ -606,34 +606,6 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     alphanumericCharsTyped.current = 0;
   }, [monsterMode, monsterCountdown, monsterStarted]);
 
-  // Handle monster warmup completion (character-based, triggered by typing)
-  const checkMonsterWarmup = useCallback(() => {
-    if (monsterCountdown === null || monsterCountdown > 0) return;
-
-    // 12 alphanumeric chars typed - monster wakes up!
-    // Calculate initial speed from keystrokes during the grace period
-    const keystrokes = allKeystrokesRef.current;
-    let playerCharsPerSec = 2; // default minimum
-
-    if (keystrokes.length >= 2) {
-      const firstKeystroke = keystrokes[0];
-      const lastKeystroke = keystrokes[keystrokes.length - 1];
-      const activeTypingTime = (lastKeystroke - firstKeystroke) / 1000;
-
-      if (activeTypingTime > 0.5) {
-        playerCharsPerSec = Math.max(keystrokes.length / activeTypingTime, 2);
-      }
-    }
-
-    // Monster position is already at "one word behind" from the useEffect
-    setMonsterSpeed(playerCharsPerSec);
-    setMonsterStarted(true);
-    setMonsterCountdown(null);
-    monsterStartTimeRef.current = Date.now();
-    // Start the chase music!
-    if (musicEnabled) playBackgroundMusic();
-  }, [monsterCountdown, musicEnabled]);
-
   // Handle music based on game state
   useEffect(() => {
     if (isGameOver || isComplete) {
@@ -1375,9 +1347,27 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
               const remaining = 12 - alphanumericCharsTyped.current;
               setMonsterCountdown(remaining);
 
-              // Check if warmup is complete
+              // Check if warmup is complete (12 chars typed)
               if (remaining <= 0) {
-                checkMonsterWarmup();
+                // Monster wakes up!
+                const keystrokes = allKeystrokesRef.current;
+                let playerCharsPerSec = 2; // default minimum
+
+                if (keystrokes.length >= 2) {
+                  const firstKeystroke = keystrokes[0];
+                  const lastKeystroke = keystrokes[keystrokes.length - 1];
+                  const activeTypingTime = (lastKeystroke - firstKeystroke) / 1000;
+
+                  if (activeTypingTime > 0.5) {
+                    playerCharsPerSec = Math.max(keystrokes.length / activeTypingTime, 2);
+                  }
+                }
+
+                setMonsterSpeed(playerCharsPerSec);
+                setMonsterStarted(true);
+                setMonsterCountdown(null);
+                monsterStartTimeRef.current = Date.now();
+                if (musicEnabled) playBackgroundMusic();
               }
             }
           }
@@ -1390,7 +1380,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         setCurrentInput(value);
       }
     },
-    [currentWord, currentWordIndex, words.length, stats.startTime, compareStrings, forgiveCapitals, forgiveNonAlpha, soundEffects, getActiveTime, isPaused, resumeFromPause, currentStreak, monsterMode, monsterCountdown, monsterStarted, startMonsterCountdown, checkMonsterWarmup]
+    [currentWord, currentWordIndex, words.length, stats.startTime, compareStrings, forgiveCapitals, forgiveNonAlpha, soundEffects, getActiveTime, isPaused, resumeFromPause, currentStreak, monsterMode, monsterCountdown, monsterStarted, startMonsterCountdown, musicEnabled]
   );
 
   // Sliding text bar renderer
@@ -1960,13 +1950,26 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                       <span className="text-sm font-bold text-orange-500 tabular-nums">{currentStreak}</span>
                     </div>
                   )}
-                {/* Speed comparison display */}
-                {monsterStarted && (() => {
+                {/* Speed comparison display - show during warmup and after */}
+                {monsterCountdown !== null && (() => {
                   const lastMinuteSpeed = calculateLastMinuteSpeed();
                   const playerCpm = lastMinuteSpeed > 0 ? Math.round(lastMinuteSpeed * 60) : calculateWPM() * 5;
+
+                  if (!monsterStarted) {
+                    // During warmup - show only player CPM
+                    return (
+                      <div className="flex items-center gap-1 px-2 py-1 bg-[var(--foreground)]/5 rounded-lg">
+                        <span className="text-xs sm:text-sm font-bold tabular-nums text-blue-500">
+                          {playerCpm}
+                        </span>
+                        <span className="text-xs text-[var(--muted)] hidden sm:inline">c/m</span>
+                      </div>
+                    );
+                  }
+
+                  // After warmup - show player vs monster
                   const monsterCpm = Math.round(monsterSpeed * 60);
                   const isAhead = playerCpm > monsterCpm;
-                  // Calculate the bonus cpm the monster has
                   const bonusCpm = monsterStartTimeRef.current
                     ? Math.floor((Date.now() - monsterStartTimeRef.current) / 10000)
                     : 0;
