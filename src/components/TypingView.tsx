@@ -1950,13 +1950,13 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                       <span className="text-sm font-bold text-orange-500 tabular-nums">{currentStreak}</span>
                     </div>
                   )}
-                {/* Speed comparison display - show during warmup and after */}
-                {monsterCountdown !== null && (() => {
+                {/* Speed comparison display - always show in monster mode */}
+                {monsterMode && (() => {
                   const lastMinuteSpeed = calculateLastMinuteSpeed();
                   const playerCpm = lastMinuteSpeed > 0 ? Math.round(lastMinuteSpeed * 60) : calculateWPM() * 5;
 
                   if (!monsterStarted) {
-                    // During warmup - show only player CPM
+                    // Before monster starts - show only player CPM
                     return (
                       <div className="flex items-center gap-1 px-2 py-1 bg-[var(--foreground)]/5 rounded-lg">
                         <span className="text-xs sm:text-sm font-bold tabular-nums text-blue-500">
@@ -1967,7 +1967,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                     );
                   }
 
-                  // After warmup - show player vs monster
+                  // After monster starts - show player vs monster
                   const monsterCpm = Math.round(monsterSpeed * 60);
                   const isAhead = playerCpm > monsterCpm;
                   const bonusCpm = monsterStartTimeRef.current
