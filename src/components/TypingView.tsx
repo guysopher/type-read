@@ -405,11 +405,6 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     absolutePositionRef.current = absolutePosition;
   }, [absolutePosition]);
 
-  // Monster starts one character behind the cursor (on the space before current word)
-  const oneWordBehindPosition = useMemo(() => {
-    return Math.max(0, absolutePosition - 1);
-  }, [absolutePosition]);
-
   // Calculate current WPM using standard formula: (characters / 5) / minutes
   const calculateWPM = useCallback(() => {
     if (!stats.startTime) return 0;
@@ -587,15 +582,8 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     return;
   }, []);
 
-  // Keep monster at "one word behind" position until countdown starts
-  // This ensures the monster is visible from the start and tracks player position
-  const hasCountdown = monsterCountdown !== null;
-  useEffect(() => {
-    // Only update position if monster mode is on, not started, and no countdown
-    if (monsterMode && !monsterStarted && !hasCountdown) {
-      setMonsterPosition(oneWordBehindPosition);
-    }
-  }, [monsterMode, monsterStarted, hasCountdown, oneWordBehindPosition]);
+  // Monster position is set once at the start and doesn't move until chase begins
+  // No need for continuous updates - let the chase logic handle movement
 
   // Handle music based on game state
   useEffect(() => {
@@ -1328,20 +1316,24 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           // Track alphanumeric characters during monster warmup
           if (isCorrect && monsterMode && !monsterStarted) {
             const isAlphanumeric = /[a-zA-Z0-9]/.test(newChar);
+            console.log('Checking warmup - isCorrect:', isCorrect, 'newChar:', newChar, 'isAlphanumeric:', isAlphanumeric, 'monsterCountdown:', monsterCountdown);
 
             if (isAlphanumeric) {
               // Start countdown if not started yet
               if (monsterCountdown === null) {
                 alphanumericCharsTyped.current = 1; // Count this first character
+                console.log('Starting countdown - setting to 11');
                 setMonsterCountdown(11); // 11 remaining (already typed 1)
               } else if (monsterCountdown > 0) {
                 // Continue counting
                 alphanumericCharsTyped.current += 1;
                 const remaining = 12 - alphanumericCharsTyped.current;
+                console.log('Counting down - chars typed:', alphanumericCharsTyped.current, 'remaining:', remaining, 'current countdown:', monsterCountdown);
                 setMonsterCountdown(remaining);
 
                 // Check if warmup is complete (12 chars typed)
                 if (remaining <= 0) {
+                  console.log('Warmup complete! Starting monster...');
                   // Monster wakes up!
                   const keystrokes = allKeystrokesRef.current;
                   let playerCharsPerSec = 2; // default minimum
