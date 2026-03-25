@@ -178,6 +178,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
 
   // Chase game mode state
   const [monsterPosition, setMonsterPosition] = useState(0); // Monster waits at position 0
+  const monsterPositionRef = useRef(0); // Ref to track latest monster position without causing re-renders
   const [gameScore, setGameScore] = useState(0);
   const [isGameOver, setIsGameOver] = useState(false);
   const [showLeaderboardAfterGame, setShowLeaderboardAfterGame] = useState(false);
@@ -406,6 +407,11 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     absolutePositionRef.current = absolutePosition;
   }, [absolutePosition]);
 
+  // Sync monster position ref
+  useEffect(() => {
+    monsterPositionRef.current = monsterPosition;
+  }, [monsterPosition]);
+
   // Calculate current WPM using standard formula: (characters / 5) / minutes
   const calculateWPM = useCallback(() => {
     if (!stats.startTime) return 0;
@@ -428,19 +434,31 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     const now = Date.now();
     const windowMs = 10000; // 10 second window for responsive tracking
 
+    console.log('[SPEED CALC] Total keystrokes tracked:', correctKeystrokesRef.current.length);
+
     // Filter to correct keystrokes in the last 10 seconds
     const recentCorrect = correctKeystrokesRef.current.filter(ts => now - ts < windowMs);
+    console.log('[SPEED CALC] Recent keystrokes (last 10s):', recentCorrect.length);
 
-    if (recentCorrect.length < 2) return 0;
+    if (recentCorrect.length < 2) {
+      console.log('[SPEED CALC] Not enough recent keystrokes, returning 0');
+      return 0;
+    }
 
     // Calculate chars per second based on correct keystrokes only
     const oldest = recentCorrect[0];
     const timeSpanSec = (now - oldest) / 1000;
+    console.log('[SPEED CALC] Time span:', timeSpanSec, 'seconds');
 
-    if (timeSpanSec < 1) return 0;
+    if (timeSpanSec < 1) {
+      console.log('[SPEED CALC] Time span too short, returning 0');
+      return 0;
+    }
 
     // Return correctly typed chars per second
-    return recentCorrect.length / timeSpanSec;
+    const speed = recentCorrect.length / timeSpanSec;
+    console.log('[SPEED CALC] Calculated speed:', speed, 'chars/sec (', Math.round(speed * 60), 'CPM)');
+    return speed;
   }, []);
 
   const calculateAccuracy = useCallback(() => {
@@ -653,50 +671,72 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
 
     // Update monster speed every second based on adaptive difficulty algorithm
     const speedUpdateInterval = setInterval(() => {
-      const lastMinuteSpeed = calculateLastMinuteSpeed(); // chars/sec from last 60 seconds
-      console.log('Adaptive speed update - lastMinuteSpeed:', lastMinuteSpeed, 'current monster speed:', monsterSpeed);
+      console.log('\n========== MONSTER SPEED UPDATE ==========');
+      console.log('[UPDATE] Monster started:', monsterStarted);
+      console.log('[UPDATE] Monster start time ref:', monsterStartTimeRef.current);
+      console.log('[UPDATE] Current monster speed STATE:', monsterSpeed);
+      console.log('[UPDATE] Current monster position:', monsterPositionRef.current);
+      console.log('[UPDATE] Current player position:', absolutePositionRef.current);
 
-      if (monsterStartTimeRef.current) {
-        const elapsedSeconds = (Date.now() - monsterStartTimeRef.current) / 1000;
+      // Calculate current average typing speed
+      const currentAvgSpeed = calculateLastMinuteSpeed(); // chars/sec from last 10 seconds
 
-        // If we have recent typing data, use adaptive algorithm
-        if (lastMinuteSpeed > 0) {
-          // BASE SPEED = current average typing speed (this is the reference point)
-          const baseSpeed = lastMinuteSpeed;
-
-          // MODIFIER 1: Rubber-Banding (±adjustment based on distance)
-          // Distance in characters between player and monster
-          const distance = absolutePositionRef.current - monsterPosition;
-          const targetDistance = baseSpeed * 10; // Target: ~10 seconds of typing ahead
-
-          // Close to player: slow down by -0.5 c/s
-          // Far from player: speed up by +1.0 c/s
-          const distanceRatio = distance / Math.max(targetDistance, 20);
-          let rubberBandAdjustment = 0;
-          if (distanceRatio < 0.5) {
-            // Monster is catching up - slow down
-            rubberBandAdjustment = -0.5;
-          } else if (distanceRatio > 1.5) {
-            // Player is far ahead - speed up
-            rubberBandAdjustment = 1.0;
-          }
-
-          // MODIFIER 2: Time-based progression (gradual increase over time)
-          // Starts at 0, increases slowly over time (max +2 c/s after 120 seconds)
-          const maxTimeBonus = 2; // Max 2 chars/sec bonus
-          const timeBonus = Math.min((elapsedSeconds / 120) * maxTimeBonus, maxTimeBonus);
-
-          // FINAL SPEED = base + modifiers
-          const newSpeed = baseSpeed + rubberBandAdjustment + timeBonus;
-
-          // Clamp between minimum (0.1 c/s) and reasonable maximum (base * 3)
-          const maxSpeed = Math.max(baseSpeed * 3, 10); // At least 3x base or 10 c/s
-          const finalSpeed = Math.min(Math.max(newSpeed, 0.1), maxSpeed);
-
-          console.log('Monster speed calculation - base:', baseSpeed, 'rubberBand:', rubberBandAdjustment, 'timeBonus:', timeBonus, 'final:', finalSpeed);
-          setMonsterSpeed(finalSpeed);
-        }
+      if (!monsterStartTimeRef.current) {
+        console.log('[UPDATE] ❌ Monster not started yet, skipping speed update');
+        return;
       }
+
+      if (currentAvgSpeed <= 0) {
+        console.log('[UPDATE] ❌ No recent typing data, skipping speed update');
+        return;
+      }
+
+      console.log('[UPDATE] ✓ Monster started, proceeding with speed calculation');
+
+      const elapsedSeconds = (Date.now() - monsterStartTimeRef.current) / 1000;
+      console.log('[UPDATE] Elapsed time since monster started:', elapsedSeconds, 'seconds');
+
+      // BASE SPEED = current average typing speed (this is the reference point)
+      const baseSpeed = currentAvgSpeed;
+      console.log('[CALC] BASE SPEED:', baseSpeed, 'chars/sec (', Math.round(baseSpeed * 60), 'CPM)');
+
+      // MODIFIER 1: Rubber-Banding (±adjustment based on distance)
+      const distance = absolutePositionRef.current - monsterPositionRef.current;
+      const targetDistance = baseSpeed * 10; // Target: ~10 seconds of typing ahead
+      const distanceRatio = distance / Math.max(targetDistance, 20);
+
+      console.log('[CALC] Distance:', distance, 'chars | Target:', targetDistance, 'chars | Ratio:', distanceRatio.toFixed(2));
+
+      let rubberBandAdjustment = 0;
+      if (distanceRatio < 0.5) {
+        rubberBandAdjustment = -0.5;
+        console.log('[CALC] Rubber-band: TOO CLOSE → -0.5 c/s');
+      } else if (distanceRatio > 1.5) {
+        rubberBandAdjustment = 1.0;
+        console.log('[CALC] Rubber-band: TOO FAR → +1.0 c/s');
+      } else {
+        console.log('[CALC] Rubber-band: NORMAL DISTANCE → 0 c/s');
+      }
+
+      // MODIFIER 2: Time-based progression (gradual increase over time)
+      const maxTimeBonus = 2; // Max 2 chars/sec bonus
+      const timeBonus = Math.min((elapsedSeconds / 120) * maxTimeBonus, maxTimeBonus);
+      console.log('[CALC] Time bonus:', timeBonus.toFixed(2), 'c/s (', (timeBonus / maxTimeBonus * 100).toFixed(0), '% of max)');
+
+      // FINAL SPEED = base + modifiers
+      const rawSpeed = baseSpeed + rubberBandAdjustment + timeBonus;
+      console.log('[CALC] Raw speed (before clamping):', rawSpeed.toFixed(2), 'c/s');
+
+      // Clamp between minimum (0.1 c/s) and reasonable maximum (base * 3)
+      const maxSpeed = Math.max(baseSpeed * 3, 10);
+      const finalSpeed = Math.min(Math.max(rawSpeed, 0.1), maxSpeed);
+
+      console.log('[CALC] FINAL SPEED:', finalSpeed.toFixed(2), 'c/s (', Math.round(finalSpeed * 60), 'CPM)');
+      console.log('[CALC] Min allowed:', 0.1, '| Max allowed:', maxSpeed.toFixed(2));
+
+      console.log('[UPDATE] 🎯 Setting monster speed to:', finalSpeed);
+      setMonsterSpeed(finalSpeed);
+      console.log('========================================\n');
     }, 1000);
 
     return () => {
@@ -706,7 +746,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
       }
       clearInterval(speedUpdateInterval);
     };
-  }, [monsterStarted, isComplete, isGameOver, isPaused, monsterSpeed, calculateLastMinuteSpeed, activePowerUps, handleGameOver, monsterPosition]);
+  }, [monsterStarted, isComplete, isGameOver, isPaused, calculateLastMinuteSpeed, activePowerUps, handleGameOver]); // Removed monsterSpeed and monsterPosition from deps
 
   // WPM sampling
   useEffect(() => {
