@@ -195,6 +195,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     language: 'he' | 'en';
   } | null>(null);
   const [monsterSpeed, setMonsterSpeed] = useState(2); // characters per second (will be set based on WPM)
+  const monsterSpeedRef = useRef(2); // Ref to track latest speed without causing re-renders
   const [monsterStarted, setMonsterStarted] = useState(false);
   const monsterIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -407,10 +408,15 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     absolutePositionRef.current = absolutePosition;
   }, [absolutePosition]);
 
-  // Sync monster position ref
+  // Sync monster position and speed refs
   useEffect(() => {
     monsterPositionRef.current = monsterPosition;
   }, [monsterPosition]);
+
+  useEffect(() => {
+    monsterSpeedRef.current = monsterSpeed;
+    console.log('[SPEED REF] Monster speed ref updated to:', monsterSpeed);
+  }, [monsterSpeed]);
 
   // Calculate current WPM using standard formula: (characters / 5) / minutes
   const calculateWPM = useCallback(() => {
@@ -651,7 +657,9 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
 
         // Apply slow-mo if active
         const speedMultiplier = activePowerUps.slowMo ? 0.5 : 1;
-        const newPos = prev + (monsterSpeed / 20) * speedMultiplier; // 20 updates per second
+        // Use ref to get latest speed without closure issues
+        const currentSpeed = monsterSpeedRef.current;
+        const newPos = prev + (currentSpeed / 20) * speedMultiplier; // 20 updates per second
 
         // Check if monster caught the player
         if (newPos >= absolutePositionRef.current) {
@@ -736,6 +744,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
 
       console.log('[UPDATE] 🎯 Setting monster speed to:', finalSpeed);
       setMonsterSpeed(finalSpeed);
+      monsterSpeedRef.current = finalSpeed; // Also update ref immediately
       console.log('========================================\n');
     }, 1000);
 
@@ -1401,6 +1410,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
 
                   console.log('Warmup speed calculation - duration:', warmupDuration, 'chars/sec:', playerCharsPerSec);
                   setMonsterSpeed(playerCharsPerSec);
+                  monsterSpeedRef.current = playerCharsPerSec; // Also update ref immediately
                   setMonsterStarted(true);
                   setMonsterCountdown(null);
                   monsterStartTimeRef.current = Date.now();
