@@ -11,6 +11,7 @@ import AchievementPopup from "./AchievementPopup";
 import GameHUD from "./GameHUD";
 import DailyChallengesPanel from "./DailyChallengesPanel";
 import WPMMeter from "./WPMMeter";
+import { ToastContainer, type ToastMessage } from "./Toast";
 
 interface TypingViewProps {
   text: string;
@@ -196,6 +197,18 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   } | null>(null);
   const [monsterSpeed, setMonsterSpeed] = useState(2); // characters per second (will be set based on WPM)
   const monsterSpeedRef = useRef(2); // Ref to track latest speed without causing re-renders
+
+  // Toast notifications
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const showToast = useCallback((message: string, type: ToastMessage['type'] = 'info', duration = 3000) => {
+    const id = `${Date.now()}-${Math.random()}`;
+    setToasts(prev => [...prev, { id, message, type, duration }]);
+  }, []);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
   const [monsterStarted, setMonsterStarted] = useState(false);
   const monsterIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -666,6 +679,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           // Use shield if available
           if (activePowerUps.shield) {
             setActivePowerUps(p => ({ ...p, shield: false }));
+            showToast('🛡️ MONSTER BLOCKED!', 'success', 2000);
             // Push monster back
             return prev - 50; // Move back significantly
           } else {
@@ -1290,6 +1304,15 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           if (powerUpType) {
             // Auto-collect and activate the power-up
             handlePowerUpActivation(powerUpType);
+
+            // Show celebration toast
+            const powerUpMessages = {
+              freezeMonster: '❄️ FREEZE COLLECTED!',
+              shield: '🛡️ SHIELD COLLECTED!',
+              slowMo: '⏱️ SLOW-MO COLLECTED!'
+            };
+            showToast(powerUpMessages[powerUpType], 'success', 1500);
+
             // Remove it from placements so it's not collected again
             setPowerUpPlacements(prev => {
               const newPlacements = new Map(prev);
@@ -1506,6 +1529,10 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                 const wordStartPos = absolutePosition - cursorInWord;
                 const monsterAtThisPos = monsterMode && monsterPosition >= 0 && Math.floor(monsterPosition) === globalPos;
 
+                // Check if this character is a powerup icon
+                const isPowerUpIcon = char === '❄️' || char === '🛡️' || char === '⏱️';
+                const distanceToPowerUp = isPowerUpIcon ? globalPos - absolutePosition : Infinity;
+
                 // Monster replaces the character at its position (check BEFORE padding so monster is always visible)
                 if (monsterAtThisPos) {
                   const gap = absolutePosition - monsterPosition;
@@ -1542,6 +1569,44 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                   return (
                     <span key={`padding-${i}`} className="inline-block opacity-0">
                       {"\u00A0"}
+                    </span>
+                  );
+                }
+
+                // Special rendering for powerup icons
+                if (isPowerUpIcon) {
+                  const isVeryClose = distanceToPowerUp <= 3;
+                  const isClose = distanceToPowerUp <= 8;
+                  const isPassed = globalPos < absolutePosition;
+
+                  return (
+                    <span
+                      key={`powerup-${globalPos}`}
+                      className={`inline-block relative ${isVeryClose ? 'animate-bounce' : isClose ? 'animate-pulse' : ''}`}
+                      style={{
+                        fontSize: isPassed ? '1em' : isVeryClose ? '2.5em' : isClose ? '2em' : '1.5em',
+                        filter: isPassed
+                          ? 'grayscale(100%) opacity(0.3)'
+                          : isVeryClose
+                          ? 'drop-shadow(0 0 12px gold) drop-shadow(0 0 24px orange)'
+                          : isClose
+                          ? 'drop-shadow(0 0 8px gold)'
+                          : 'drop-shadow(0 0 4px rgba(255, 215, 0, 0.5))',
+                        transform: isPassed ? 'scale(0.5)' : 'scale(1)',
+                        opacity: isPassed ? 0.2 : 1,
+                        transition: 'all 0.3s ease',
+                        marginLeft: isVeryClose ? '0.2em' : isClose ? '0.1em' : '0',
+                        marginRight: isVeryClose ? '0.2em' : isClose ? '0.1em' : '0',
+                      }}
+                    >
+                      {char}
+                      {/* Sparkles when very close */}
+                      {isVeryClose && !isPassed && (
+                        <>
+                          <span className="absolute -top-1 -left-1 text-yellow-300 animate-ping" style={{ fontSize: '0.5em' }}>✨</span>
+                          <span className="absolute -bottom-1 -right-1 text-yellow-300 animate-ping" style={{ fontSize: '0.5em', animationDelay: '0.5s' }}>✨</span>
+                        </>
+                      )}
                     </span>
                   );
                 }
@@ -2510,6 +2575,9 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
           }
         }
       `}</style>
+
+      {/* Toast notifications */}
+      <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>
   );
 }

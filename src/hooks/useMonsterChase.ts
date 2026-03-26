@@ -21,6 +21,7 @@ export interface UseMonsterChaseProps {
   musicEnabled: boolean;
   onGameOver: () => void;
   onMonsterStart?: (timestamp: number) => void;
+  onShieldBlock?: () => void;
 }
 
 export function useMonsterChase({
@@ -32,6 +33,7 @@ export function useMonsterChase({
   musicEnabled,
   onGameOver,
   onMonsterStart,
+  onShieldBlock,
 }: UseMonsterChaseProps) {
   const [monsterPosition, setMonsterPosition] = useState(0);
   const [monsterSpeed, setMonsterSpeed] = useState(2); // characters per second
@@ -218,6 +220,7 @@ export function useMonsterChase({
           // Use shield if available
           if (activePowerUps.shield) {
             setActivePowerUps(p => ({ ...p, shield: false }));
+            onShieldBlock?.(); // Notify that shield blocked the monster
             // Push monster back
             return prev - 50; // Move back significantly
           } else {
@@ -290,6 +293,7 @@ export function useMonsterChase({
     activePowerUps,
     calculateLastMinuteSpeed,
     onGameOver,
+    onShieldBlock,
   ]);
 
   return {

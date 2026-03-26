@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Clear Leaderboard</title>
+</head>
+<body>
+  <h1>Clear Leaderboard</h1>
+  <p>Click the button below to clear all leaderboard data:</p>
+  <button onclick="clearData()" style="padding: 10px 20px; font-size: 16px; cursor: pointer;">
+    Clear Leaderboard
+  </button>
+  <div id="status"></div>
+
+  <script>
+    function clearData() {
+      try {
+        localStorage.removeItem('typeread_leaderboard');
+        document.getElementById('status').innerHTML = '<p style="color: green;">✓ Leaderboard cleared successfully!</p>';
+      } catch (error) {
+        document.getElementById('status').innerHTML = '<p style="color: red;">Error: ' + error.message + '</p>';
+      }
+    }
+  </script>
+</body>
+</html>

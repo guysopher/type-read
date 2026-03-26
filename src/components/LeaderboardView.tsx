@@ -14,6 +14,7 @@ import {
   getPlayerName,
   setPlayerName as savePlayerName,
   addLeaderboardEntry,
+  clearLeaderboard,
   type LeaderboardEntry,
   type DailyStreak,
 } from '@/lib/storage';
@@ -57,10 +58,35 @@ export default function LeaderboardView({ onClose, gameOverStats }: LeaderboardV
   const [newPlayerName, setNewPlayerName] = useState('');
   const [hasSubmittedScore, setHasSubmittedScore] = useState(false);
 
+  const handleClearLeaderboard = () => {
+    if (confirm('Are you sure you want to clear all leaderboard data? This cannot be undone!')) {
+      clearLeaderboard();
+      window.location.reload(); // Reload to refresh the data
+    }
+  };
+
   useEffect(() => {
     setPlayerNameState(getPlayerName());
     setDailyStreak(getDailyStreak());
-  }, []);
+
+    // Add keyboard shortcuts
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // ESC to close
+      if (e.key === 'Escape') {
+        onClose();
+      }
+      // L to toggle between leaderboard tabs
+      if (e.key === 'l' || e.key === 'L') {
+        const tabs: LeaderboardTab[] = ['daily', 'weekly', 'alltime', 'global', 'personal'];
+        const currentIndex = tabs.indexOf(activeTab);
+        const nextIndex = (currentIndex + 1) % tabs.length;
+        setActiveTab(tabs[nextIndex]);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose, activeTab]);
 
   useEffect(() => {
     if (activeTab === 'global') {
@@ -253,8 +279,9 @@ export default function LeaderboardView({ onClose, gameOverStats }: LeaderboardV
             </div>
             <button
               onClick={onClose}
-              className="text-2xl transition-colors"
+              className="text-4xl font-bold transition-all hover:scale-110 px-3 py-1 rounded"
               style={{ color: colors.pencil }}
+              title="Close (ESC)"
             >
               ×
             </button>
@@ -586,10 +613,26 @@ export default function LeaderboardView({ onClose, gameOverStats }: LeaderboardV
 
         {/* Footer */}
         <div
-          className="p-4 border-t text-center text-xs"
-          style={{ borderColor: colors.pencilLight, color: colors.pencil, opacity: 0.6 }}
+          className="p-4 border-t text-center text-xs flex items-center justify-between"
+          style={{ borderColor: colors.pencilLight, color: colors.pencil }}
         >
-          {entries.length > 0 && `Showing ${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}`}
+          <div className="opacity-60">
+            {entries.length > 0 && `Showing ${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}`}
+          </div>
+          <div className="flex gap-2 items-center">
+            <span className="opacity-60 text-xs">Hotkeys: ESC (close), L (switch tabs)</span>
+            <button
+              onClick={handleClearLeaderboard}
+              className="px-3 py-1 rounded text-xs transition-all hover:scale-105"
+              style={{
+                backgroundColor: colors.error,
+                color: '#fff',
+              }}
+              title="Clear all leaderboard data"
+            >
+              Clear All Data
+            </button>
+          </div>
         </div>
       </div>
     </div>
