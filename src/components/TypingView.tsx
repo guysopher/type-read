@@ -1574,7 +1574,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                       key={`powerup-${globalPos}`}
                       className={`inline-block relative ${isVeryClose ? 'animate-pulse' : ''}`}
                       style={{
-                        fontSize: isPassed ? '0.95em' : isVeryClose ? '1.35em' : isClose ? '1.2em' : '1.05em',
+                        fontSize: isPassed ? '0.9em' : isVeryClose ? '1.25em' : isClose ? '1.1em' : '1em',
                         lineHeight: 1,
                         color: isPassed ? 'rgba(107, 114, 128, 0.35)' : powerUpColors[powerUpType],
                         filter: isPassed
@@ -1587,12 +1587,26 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                         transform: isPassed ? 'scale(0.85)' : 'scale(1)',
                         opacity: isPassed ? 0.35 : 1,
                         transition: 'all 0.3s ease',
-                        marginLeft: '0.02em',
-                        marginRight: '0',
-                        verticalAlign: '-0.08em',
+                        width: 0,
+                        marginLeft: '-0.18em',
+                        marginRight: '-0.02em',
+                        verticalAlign: 'baseline',
+                        overflow: 'visible',
+                        pointerEvents: 'none',
                       }}
                     >
-                      {char}
+                      <span
+                        style={{
+                          display: 'inline-block',
+                          transform: isVeryClose
+                            ? 'translate(-0.05em, -0.62em)'
+                            : isClose
+                            ? 'translate(-0.03em, -0.54em)'
+                            : 'translate(0, -0.46em)',
+                        }}
+                      >
+                        {char}
+                      </span>
                     </span>
                   );
                 }
