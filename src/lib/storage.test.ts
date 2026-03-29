@@ -65,6 +65,29 @@ describe('storage', () => {
         expect(getSavedTexts()).toEqual([text]);
       });
 
+      it('should sanitize older saved texts with illegal characters', () => {
+        const text: SavedText = {
+          id: '1',
+          title: 'Bad\uFFFC Title',
+          text: 'Hello\u200B world\uFFFC',
+          progress: {
+            currentWordIndex: 0,
+            wordsTyped: 0,
+            correctKeystrokes: 0,
+            totalKeystrokes: 0,
+            totalTime: 0,
+          },
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+
+        localStorage.setItem('typeread_saved_texts', JSON.stringify([text]));
+
+        const saved = getSavedTexts();
+        expect(saved[0].title).toBe('Bad Title');
+        expect(saved[0].text).toBe('Hello world');
+      });
+
       it('should handle corrupted localStorage data', () => {
         localStorage.setItem('typeread_saved_texts', 'invalid json');
         expect(getSavedTexts()).toEqual([]);
@@ -90,6 +113,28 @@ describe('storage', () => {
 
         saveText(text);
         expect(getSavedTexts()).toEqual([text]);
+      });
+
+      it('should sanitize text before saving', () => {
+        const text: SavedText = {
+          id: '1',
+          title: 'Title\uFFFC',
+          text: 'Hello\u200B world🙂',
+          progress: {
+            currentWordIndex: 0,
+            wordsTyped: 0,
+            correctKeystrokes: 0,
+            totalKeystrokes: 0,
+            totalTime: 0,
+          },
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+
+        saveText(text);
+        const saved = getSavedTexts();
+        expect(saved[0].title).toBe('Title');
+        expect(saved[0].text).toBe('Hello world');
       });
 
       it('should update existing text', () => {

@@ -5,6 +5,7 @@ import { SavedText, saveText, generateId, DetailedStats, WPMSample, PauseEvent, 
 import { playCorrectSound, playErrorSound, playWordCompleteSound, playPunctuationSound, playBackgroundMusic, stopBackgroundMusic, pauseBackgroundMusic, resumeBackgroundMusic, setMusicMuted } from "@/lib/sounds";
 import { MONSTER_SKINS } from "@/lib/gamification";
 import type { Achievement } from "@/lib/gamification";
+import { prepareTextForTyping, sanitizeTypingText } from "@/lib/textProcessing";
 import StatsView from "./StatsView";
 import LeaderboardView from "./LeaderboardView";
 import AchievementPopup from "./AchievementPopup";
@@ -33,9 +34,12 @@ const WPM_SAMPLE_INTERVAL = 3000; // Sample WPM every 3 seconds
 const AUTO_SAVE_INTERVAL = 5000; // Auto-save every 5 seconds
 
 export default function TypingView({ text, title, onReset, savedData }: TypingViewProps) {
+  const sanitizedText = useMemo(() => prepareTextForTyping(text), [text]);
+  const sanitizedTitle = useMemo(() => sanitizeTypingText(title).trim() || "Untitled", [title]);
+
   // Split text into words while tracking paragraph breaks
   const { words, paragraphStarts } = useMemo(() => {
-    const paragraphs = text.split(/\n\n+/);
+    const paragraphs = sanitizedText.split(/\n\n+/);
     const allWords: string[] = [];
     const startIndices = new Set<number>();
 
@@ -50,7 +54,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     });
 
     return { words: allWords, paragraphStarts: startIndices };
-  }, [text]);
+  }, [sanitizedText]);
 
   const [currentWordIndex, setCurrentWordIndex] = useState(
     savedData?.progress.currentWordIndex || 0
@@ -173,7 +177,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     }
 
     setPowerUpPlacements(placements);
-  }, [text, words, monsterMode]);
+  }, [sanitizedText, words, monsterMode]);
 
   const [selectedMonsterSkin, setSelectedMonsterSkin] = useState('{selectedMonsterSkin}');
 
@@ -255,8 +259,8 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
   // Detect RTL text (Hebrew, Arabic, etc.)
   const isRTL = useMemo(() => {
     const rtlRegex = /[\u0590-\u05FF\u0600-\u06FF\u0750-\u077F]/;
-    return rtlRegex.test(text);
-  }, [text]);
+    return rtlRegex.test(sanitizedText);
+  }, [sanitizedText]);
 
   // Finger mapping for touch typing hints
   const getFingerHint = useCallback((char: string): { finger: string; direction: string; hand: string } | null => {
@@ -523,13 +527,13 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
       wordsTyped: stats.wordsTyped,
       duration: detailedStats.totalActiveTime || 0,
       survived: false,
-      textTitle: title,
+      textTitle: sanitizedTitle,
       language: (isRTL ? 'he' : 'en') as 'he' | 'en',
     };
 
     setGameOverStats(gameStats);
     setShowLeaderboardAfterGame(true);
-  }, [gameScore, bestStreak, stats.wordsTyped, title, isRTL, detailedStats, calculateWPM, calculateAccuracy]);
+  }, [gameScore, bestStreak, stats.wordsTyped, sanitizedTitle, isRTL, detailedStats, calculateWPM, calculateAccuracy]);
 
 
   // Get elapsed time since session start (excluding pauses)
@@ -852,14 +856,14 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         wordsTyped: stats.wordsTyped,
         duration: activeTime,
         survived: true,
-        textTitle: title,
+        textTitle: sanitizedTitle,
         language: (isRTL ? 'he' : 'en') as 'he' | 'en',
       };
 
       setGameOverStats(completionStats);
       setShowLeaderboardAfterGame(true);
     }
-  }, [isComplete, gameOverStats, stats, gameScore, bestStreak, detailedStats, calculateWPM, getActiveTime, title, isRTL]);
+  }, [isComplete, gameOverStats, stats, gameScore, bestStreak, detailedStats, calculateWPM, getActiveTime, sanitizedTitle, isRTL]);
 
   // Load selected monster skin
   useEffect(() => {
@@ -926,8 +930,8 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
 
       const savedText: SavedText = {
         id: saveId,
-        title,
-        text,
+        title: sanitizedTitle,
+        text: sanitizedText,
         progress: {
           currentWordIndex,
           wordsTyped: stats.wordsTyped,
@@ -956,8 +960,8 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     stats,
     accumulatedTime,
     saveId,
-    title,
-    text,
+    sanitizedTitle,
+    sanitizedText,
     currentWordIndex,
     detailedStats,
     highlights,
@@ -974,8 +978,8 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
 
       const savedText: SavedText = {
         id: saveId,
-        title,
-        text,
+        title: sanitizedTitle,
+        text: sanitizedText,
         progress: {
           currentWordIndex,
           wordsTyped: stats.wordsTyped,
@@ -995,7 +999,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
       saveText(savedText);
       setLastSavedTime(Date.now());
     }
-  }, [isComplete, isGameOver, stats, accumulatedTime, saveId, title, text, currentWordIndex, detailedStats, highlights, getActiveTime, savedData?.createdAt, autosaveEnabled]);
+  }, [isComplete, isGameOver, stats, accumulatedTime, saveId, sanitizedTitle, sanitizedText, currentWordIndex, detailedStats, highlights, getActiveTime, savedData?.createdAt, autosaveEnabled]);
 
   const resumeFromPause = useCallback(() => {
     if (pauseStartRef.current) {
@@ -1038,8 +1042,8 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
 
     const savedText: SavedText = {
       id: saveId,
-      title,
-      text,
+      title: sanitizedTitle,
+      text: sanitizedText,
       progress: {
         currentWordIndex,
         wordsTyped: stats.wordsTyped,
@@ -1062,8 +1066,8 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
     setTimeout(() => setShowSaved(false), 2000);
   }, [
     saveId,
-    title,
-    text,
+    sanitizedTitle,
+    sanitizedText,
     currentWordIndex,
     stats,
     accumulatedTime,
@@ -1786,12 +1790,12 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
         <div className="text-center max-w-md">
           <div className="text-5xl sm:text-6xl mb-4 sm:mb-6">✓</div>
           <h2 className="text-2xl sm:text-3xl font-bold mb-2">Complete!</h2>
-          {title && (
+          {sanitizedTitle && (
             <p className="text-[var(--muted)] mb-6 sm:mb-8 text-sm sm:text-base">
-              You&apos;ve read &ldquo;{title}&rdquo;
+              You&apos;ve read &ldquo;{sanitizedTitle}&rdquo;
             </p>
           )}
-          {!title && <div className="mb-6 sm:mb-8" />}
+          {!sanitizedTitle && <div className="mb-6 sm:mb-8" />}
 
           <div className="grid grid-cols-2 gap-4 sm:gap-6 mb-8 sm:mb-10">
             <div className="text-center">
@@ -1858,7 +1862,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
             >
               {isRTL ? 'חזרה →' : '← Back'}
             </button>
-            {title && <h1 className="text-xs sm:text-sm font-medium truncate max-w-[30%] sm:max-w-[40%]">{title}</h1>}
+            {sanitizedTitle && <h1 className="text-xs sm:text-sm font-medium truncate max-w-[30%] sm:max-w-[40%]">{sanitizedTitle}</h1>}
             <div className="flex items-center gap-1 sm:gap-2">
               {/* Stats button */}
               <button

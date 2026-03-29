@@ -1,3 +1,5 @@
+import { prepareTextForTyping, sanitizeTypingText } from './textProcessing';
+
 export interface WPMSample {
   timestamp: number; // ms since start
   wpm: number;
@@ -52,7 +54,17 @@ export function getSavedTexts(): SavedText[] {
   if (typeof window === "undefined") return [];
   try {
     const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
+    if (!data) return [];
+
+    const parsed = JSON.parse(data) as SavedText[];
+    const sanitized = parsed.map(sanitizeSavedText);
+
+    // Self-heal older saves that still contain illegal characters.
+    if (JSON.stringify(parsed) !== JSON.stringify(sanitized)) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitized));
+    }
+
+    return sanitized;
   } catch {
     return [];
   }
@@ -60,20 +72,29 @@ export function getSavedTexts(): SavedText[] {
 
 export function saveText(saved: SavedText): void {
   const texts = getSavedTexts();
-  const existingIndex = texts.findIndex((t) => t.id === saved.id);
+  const sanitizedSaved = sanitizeSavedText(saved);
+  const existingIndex = texts.findIndex((t) => t.id === sanitizedSaved.id);
 
   if (existingIndex >= 0) {
     const existing = texts[existingIndex];
     // Never save older progress over newer progress
-    if (saved.progress.currentWordIndex < existing.progress.currentWordIndex) {
+    if (sanitizedSaved.progress.currentWordIndex < existing.progress.currentWordIndex) {
       return; // Don't overwrite - existing has more progress
     }
-    texts[existingIndex] = saved;
+    texts[existingIndex] = sanitizedSaved;
   } else {
-    texts.unshift(saved);
+    texts.unshift(sanitizedSaved);
   }
 
   localStorage.setItem(STORAGE_KEY, JSON.stringify(texts));
+}
+
+function sanitizeSavedText(saved: SavedText): SavedText {
+  return {
+    ...saved,
+    title: sanitizeTypingText(saved.title).trim(),
+    text: prepareTextForTyping(saved.text),
+  };
 }
 
 export function deleteText(id: string): void {
