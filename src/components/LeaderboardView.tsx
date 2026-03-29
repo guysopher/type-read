@@ -14,6 +14,7 @@ import {
   getPlayerName,
   setPlayerName as savePlayerName,
   addLeaderboardEntry,
+  updateLeaderboardEntry,
   clearLeaderboard,
   type LeaderboardEntry,
   type DailyStreak,
@@ -57,6 +58,30 @@ export default function LeaderboardView({ onClose, gameOverStats }: LeaderboardV
   // Game over state
   const [newPlayerName, setNewPlayerName] = useState('');
   const [hasSubmittedScore, setHasSubmittedScore] = useState(false);
+  const [savedEntryId, setSavedEntryId] = useState<string | null>(null);
+
+  const getRankedTopScores = (limit: number) =>
+    getTopScores(limit).filter(entry => entry.id !== savedEntryId);
+
+  const buildLeaderboardEntry = (name: string): LeaderboardEntry | null => {
+    if (!gameOverStats) return null;
+
+    return {
+      id: `${Date.now()}-${Math.random()}`,
+      playerName: name,
+      score: gameOverStats.score,
+      wpm: gameOverStats.wpm,
+      peakWpm: gameOverStats.peakWpm,
+      accuracy: gameOverStats.accuracy,
+      streak: gameOverStats.streak,
+      wordsTyped: gameOverStats.wordsTyped,
+      duration: gameOverStats.duration,
+      survived: gameOverStats.survived,
+      date: Date.now(),
+      textTitle: gameOverStats.textTitle,
+      language: gameOverStats.language,
+    };
+  };
 
   const handleClearLeaderboard = () => {
     if (confirm('Are you sure you want to clear all leaderboard data? This cannot be undone!')) {
@@ -100,10 +125,26 @@ export default function LeaderboardView({ onClose, gameOverStats }: LeaderboardV
     }
   }, [activeTab]);
 
-  // Auto-submit score if user is NOT in top 10
+  // Always save the finished run locally so the leaderboard is never empty after a game.
+  useEffect(() => {
+    if (!gameOverStats || savedEntryId) {
+      return;
+    }
+
+    const existingName = getPlayerName() || 'PLAYER';
+    const entry = buildLeaderboardEntry(existingName);
+    if (!entry) {
+      return;
+    }
+
+    const savedEntry = addLeaderboardEntry(entry);
+    setSavedEntryId(savedEntry.id);
+  }, [gameOverStats, savedEntryId]);
+
+  // Auto-submit score globally if user is NOT in top 10
   useEffect(() => {
     if (gameOverStats && !hasSubmittedScore) {
-      const topScores = getTopScores(10);
+      const topScores = getRankedTopScores(10);
       let rank = topScores.findIndex(e => gameOverStats.score > e.score);
       if (rank === -1) {
         rank = topScores.length < 10 ? topScores.length : 10;
@@ -112,28 +153,16 @@ export default function LeaderboardView({ onClose, gameOverStats }: LeaderboardV
       // If not in top 10, auto-submit with existing player name (or "Anonymous")
       if (rank >= 10) {
         const existingName = getPlayerName() || 'Anonymous';
-        const entry: LeaderboardEntry = {
-          id: `${Date.now()}-${Math.random()}`,
-          playerName: existingName,
-          score: gameOverStats.score,
-          wpm: gameOverStats.wpm,
-          peakWpm: gameOverStats.peakWpm,
-          accuracy: gameOverStats.accuracy,
-          streak: gameOverStats.streak,
-          wordsTyped: gameOverStats.wordsTyped,
-          duration: gameOverStats.duration,
-          survived: gameOverStats.survived,
-          date: Date.now(),
-          textTitle: gameOverStats.textTitle,
-          language: gameOverStats.language,
-        };
+        const entry = buildLeaderboardEntry(existingName);
+        if (!entry) {
+          return;
+        }
 
-        addLeaderboardEntry(entry);
         submitToGlobalLeaderboard(entry);
         setHasSubmittedScore(true);
       }
     }
-  }, [gameOverStats, hasSubmittedScore]);
+  }, [gameOverStats, hasSubmittedScore, savedEntryId]);
 
   const handleSaveName = () => {
     if (playerName.trim()) {
@@ -149,23 +178,13 @@ export default function LeaderboardView({ onClose, gameOverStats }: LeaderboardV
     const trimmedName = name.trim().toUpperCase();
     if (trimmedName.length === 0) return;
 
-    const entry: LeaderboardEntry = {
-      id: `${Date.now()}-${Math.random()}`,
-      playerName: trimmedName,
-      score: gameOverStats.score,
-      wpm: gameOverStats.wpm,
-      peakWpm: gameOverStats.peakWpm,
-      accuracy: gameOverStats.accuracy,
-      streak: gameOverStats.streak,
-      wordsTyped: gameOverStats.wordsTyped,
-      duration: gameOverStats.duration,
-      survived: gameOverStats.survived,
-      date: Date.now(),
-      textTitle: gameOverStats.textTitle,
-      language: gameOverStats.language,
-    };
+    const entry = buildLeaderboardEntry(trimmedName);
+    if (!entry) return;
 
-    addLeaderboardEntry(entry);
+    if (savedEntryId) {
+      updateLeaderboardEntry(savedEntryId, { playerName: trimmedName });
+    }
+
     submitToGlobalLeaderboard(entry);
 
     setHasSubmittedScore(true);
@@ -198,7 +217,7 @@ export default function LeaderboardView({ onClose, gameOverStats }: LeaderboardV
   let entriesToDisplay: (LeaderboardEntry | 'NEW_SCORE')[] = entries;
 
   if (gameOverStats && activeTab === 'alltime' && metric === 'score' && !hasSubmittedScore) {
-    const topScores = getTopScores(10);
+    const topScores = getRankedTopScores(10);
 
     // Find where the user's score ranks
     userRank = topScores.findIndex(e => gameOverStats.score > e.score);
@@ -400,7 +419,7 @@ export default function LeaderboardView({ onClose, gameOverStats }: LeaderboardV
               <div className="text-4xl mb-3">🌍</div>
               <div>Loading global leaderboard...</div>
             </div>
-          ) : entries.length === 0 ? (
+          ) : entriesToDisplay.length === 0 ? (
             <div className="text-center py-12" style={{ color: colors.pencil }}>
               <div className="text-4xl mb-3">🎮</div>
               <div className="mb-2">No games yet!</div>

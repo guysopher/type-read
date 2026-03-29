@@ -169,7 +169,7 @@ export function getLeaderboard(): LeaderboardEntry[] {
   }
 }
 
-export function addLeaderboardEntry(entry: Omit<LeaderboardEntry, 'id'>): void {
+export function addLeaderboardEntry(entry: Omit<LeaderboardEntry, 'id'>): LeaderboardEntry {
   const entries = getLeaderboard();
   const newEntry: LeaderboardEntry = {
     ...entry,
@@ -182,6 +182,27 @@ export function addLeaderboardEntry(entry: Omit<LeaderboardEntry, 'id'>): void {
   const trimmed = entries.slice(0, 1000);
 
   localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(trimmed));
+  return newEntry;
+}
+
+export function updateLeaderboardEntry(
+  id: string,
+  updates: Partial<Omit<LeaderboardEntry, 'id'>>
+): void {
+  const entries = getLeaderboard();
+  const entryIndex = entries.findIndex((entry) => entry.id === id);
+
+  if (entryIndex === -1) {
+    return;
+  }
+
+  entries[entryIndex] = {
+    ...entries[entryIndex],
+    ...updates,
+    id,
+  };
+
+  localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(entries));
 }
 
 export function getTopScores(limit: number = 10): LeaderboardEntry[] {
