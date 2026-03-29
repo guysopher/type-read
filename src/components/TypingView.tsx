@@ -5,6 +5,7 @@ import { SavedText, saveText, generateId, DetailedStats, WPMSample, PauseEvent, 
 import { playCorrectSound, playErrorSound, playWordCompleteSound, playPunctuationSound, playBackgroundMusic, stopBackgroundMusic, pauseBackgroundMusic, resumeBackgroundMusic, setMusicMuted } from "@/lib/sounds";
 import { MONSTER_SKINS } from "@/lib/gamification";
 import type { Achievement } from "@/lib/gamification";
+import { getSentencePowerUpPlacements, INLINE_POWER_UP_MARKERS, type PowerUpType } from "@/lib/powerUps";
 import { prepareTextForTyping, sanitizeTypingText } from "@/lib/textProcessing";
 import StatsView from "./StatsView";
 import LeaderboardView from "./LeaderboardView";
@@ -138,12 +139,12 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
 
   // Powerup activation notification
   const [powerUpNotification, setPowerUpNotification] = useState<{
-    type: 'freezeMonster' | 'shield' | 'slowMo';
+    type: PowerUpType;
     timestamp: number;
   } | null>(null);
 
   // Floating power-ups on specific words
-  const [powerUpPlacements, setPowerUpPlacements] = useState<Map<number, 'freezeMonster' | 'shield' | 'slowMo'>>(new Map());
+  const [powerUpPlacements, setPowerUpPlacements] = useState<Map<number, PowerUpType>>(new Map());
 
   // Initialize power-up placements when text changes
   useEffect(() => {
@@ -155,28 +156,7 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
       return;
     }
 
-    // Place 8-12 random power-ups throughout the text
-    const placements = new Map<number, 'freezeMonster' | 'shield' | 'slowMo'>();
-    const powerUpTypes: ('freezeMonster' | 'shield' | 'slowMo')[] = ['freezeMonster', 'shield', 'slowMo'];
-    const numPowerUps = Math.floor(Math.random() * 5) + 8; // 8-12 power-ups
-
-    for (let i = 0; i < numPowerUps; i++) {
-      // Place power-ups throughout the entire text
-      const minIndex = 5; // Start after first few words
-      const maxIndex = words.length - 1;
-      let wordIndex = Math.floor(Math.random() * (maxIndex - minIndex + 1)) + minIndex;
-
-      // Ensure we don't place multiple power-ups on the same word
-      while (placements.has(wordIndex)) {
-        wordIndex = Math.floor(Math.random() * (maxIndex - minIndex + 1)) + minIndex;
-      }
-
-      // Randomly select a power-up type
-      const powerUpType = powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)];
-      placements.set(wordIndex, powerUpType);
-    }
-
-    setPowerUpPlacements(placements);
+    setPowerUpPlacements(getSentencePowerUpPlacements(words, 5));
   }, [sanitizedText, words, monsterMode]);
 
   const [selectedMonsterSkin, setSelectedMonsterSkin] = useState('{selectedMonsterSkin}');
@@ -380,16 +360,17 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
 
   const nextCharToType = getNextCharToType();
   const fingerHint = getFingerHint(nextCharToType);
+  const inlinePowerUpTypes = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(INLINE_POWER_UP_MARKERS).map(([type, marker]) => [marker, type as PowerUpType])
+      ) as Record<string, PowerUpType>,
+    []
+  );
 
   // Build the full text stream for the sliding view with powerup icons embedded
   // Also track word start positions for accurate cursor positioning
   const { fullTextStream, wordStartPositions } = useMemo(() => {
-    const POWER_UP_ICONS = {
-      freezeMonster: '❄️',
-      shield: '🛡️',
-      slowMo: '⏱️',
-    };
-
     let stream = '';
     const positions = new Map<number, number>();
 
@@ -402,11 +383,10 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
       positions.set(idx, stream.length);
       stream += word;
 
-      // Check if word has a power-up - append icon after word
+      // Attach a tiny collectible marker directly after sentence-ending words.
       const powerUpType = powerUpPlacements.get(idx);
       if (powerUpType) {
-        const icon = POWER_UP_ICONS[powerUpType];
-        stream += ' ' + icon;
+        stream += INLINE_POWER_UP_MARKERS[powerUpType];
       }
     });
 
@@ -1534,7 +1514,8 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                 const monsterAtThisPos = monsterMode && monsterPosition >= 0 && Math.floor(monsterPosition) === globalPos;
 
                 // Check if this character is a powerup icon
-                const isPowerUpIcon = char === '❄️' || char === '🛡️' || char === '⏱️';
+                const powerUpType = inlinePowerUpTypes[char];
+                const isPowerUpIcon = Boolean(powerUpType);
                 const distanceToPowerUp = isPowerUpIcon ? globalPos - absolutePosition : Infinity;
 
                 // Monster replaces the character at its position (check BEFORE padding so monster is always visible)
@@ -1582,35 +1563,36 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
                   const isVeryClose = distanceToPowerUp <= 3;
                   const isClose = distanceToPowerUp <= 8;
                   const isPassed = globalPos < absolutePosition;
+                  const powerUpColors: Record<PowerUpType, string> = {
+                    freezeMonster: '#67e8f9',
+                    shield: '#facc15',
+                    slowMo: '#c084fc',
+                  };
 
                   return (
                     <span
                       key={`powerup-${globalPos}`}
-                      className={`inline-block relative ${isVeryClose ? 'animate-bounce' : isClose ? 'animate-pulse' : ''}`}
+                      className={`inline-block relative ${isVeryClose ? 'animate-pulse' : ''}`}
                       style={{
-                        fontSize: isPassed ? '1em' : isVeryClose ? '2.5em' : isClose ? '2em' : '1.5em',
+                        fontSize: isPassed ? '0.7em' : isVeryClose ? '1em' : isClose ? '0.9em' : '0.8em',
+                        lineHeight: 1,
+                        color: isPassed ? 'rgba(107, 114, 128, 0.35)' : powerUpColors[powerUpType],
                         filter: isPassed
-                          ? 'grayscale(100%) opacity(0.3)'
+                          ? 'none'
                           : isVeryClose
-                          ? 'drop-shadow(0 0 12px gold) drop-shadow(0 0 24px orange)'
+                          ? `drop-shadow(0 0 6px ${powerUpColors[powerUpType]})`
                           : isClose
-                          ? 'drop-shadow(0 0 8px gold)'
-                          : 'drop-shadow(0 0 4px rgba(255, 215, 0, 0.5))',
-                        transform: isPassed ? 'scale(0.5)' : 'scale(1)',
-                        opacity: isPassed ? 0.2 : 1,
+                          ? `drop-shadow(0 0 4px ${powerUpColors[powerUpType]})`
+                          : 'none',
+                        transform: isPassed ? 'scale(0.9)' : 'scale(1)',
+                        opacity: isPassed ? 0.35 : 1,
                         transition: 'all 0.3s ease',
-                        marginLeft: isVeryClose ? '0.2em' : isClose ? '0.1em' : '0',
-                        marginRight: isVeryClose ? '0.2em' : isClose ? '0.1em' : '0',
+                        marginLeft: '-0.05em',
+                        marginRight: '0',
+                        verticalAlign: 'baseline',
                       }}
                     >
                       {char}
-                      {/* Sparkles when very close */}
-                      {isVeryClose && !isPassed && (
-                        <>
-                          <span className="absolute -top-1 -left-1 text-yellow-300 animate-ping" style={{ fontSize: '0.5em' }}>✨</span>
-                          <span className="absolute -bottom-1 -right-1 text-yellow-300 animate-ping" style={{ fontSize: '0.5em', animationDelay: '0.5s' }}>✨</span>
-                        </>
-                      )}
                     </span>
                   );
                 }
@@ -2234,10 +2216,10 @@ export default function TypingView({ text, title, onReset, savedData }: TypingVi
               if (monsterMode) {
                 const powerUpType = powerUpPlacements.get(index);
                 if (powerUpType && index >= currentWordIndex) {
-                  const powerUpHighlights = {
-                    freezeMonster: 'bg-cyan-400/40 px-1 rounded shadow-sm',
-                    shield: 'bg-yellow-400/40 px-1 rounded shadow-sm',
-                    slowMo: 'bg-purple-400/40 px-1 rounded shadow-sm',
+                  const powerUpHighlights: Record<PowerUpType, string> = {
+                    freezeMonster: 'underline decoration-cyan-400/70 underline-offset-2',
+                    shield: 'underline decoration-yellow-400/70 underline-offset-2',
+                    slowMo: 'underline decoration-purple-400/70 underline-offset-2',
                   };
                   className += ' ' + powerUpHighlights[powerUpType];
                 }
