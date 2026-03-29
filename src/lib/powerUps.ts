@@ -3,9 +3,9 @@ export type PowerUpType = 'freezeMonster' | 'shield' | 'slowMo';
 export const POWER_UP_TYPES: PowerUpType[] = ['freezeMonster', 'shield', 'slowMo'];
 
 export const INLINE_POWER_UP_MARKERS: Record<PowerUpType, string> = {
-  freezeMonster: '•',
-  shield: '∙',
-  slowMo: '·',
+  freezeMonster: '❄️',
+  shield: '🛡️',
+  slowMo: '⏱️',
 };
 
 export function isSentenceEndingWord(word: string): boolean {

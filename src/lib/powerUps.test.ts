@@ -34,8 +34,8 @@ describe('powerUps', () => {
   });
 
   it('uses compact inline markers for text rendering', () => {
-    expect(INLINE_POWER_UP_MARKERS.freezeMonster).toBe('•');
-    expect(INLINE_POWER_UP_MARKERS.shield).toBe('∙');
-    expect(INLINE_POWER_UP_MARKERS.slowMo).toBe('·');
+    expect(INLINE_POWER_UP_MARKERS.freezeMonster).toBe('❄️');
+    expect(INLINE_POWER_UP_MARKERS.shield).toBe('🛡️');
+    expect(INLINE_POWER_UP_MARKERS.slowMo).toBe('⏱️');
   });
 });
