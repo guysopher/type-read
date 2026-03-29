@@ -1,5 +1,35 @@
 import { LeaderboardEntry } from './storage';
 
+export async function extractTextFromUrl(url: string): Promise<{
+  title?: string;
+  content?: string;
+  error?: string;
+}> {
+  try {
+    const response = await fetch('/api/extract', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ url }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        error: data.error || 'Failed to extract text from URL',
+      };
+    }
+
+    return data;
+  } catch (error) {
+    return {
+      error: 'Failed to extract text from URL',
+    };
+  }
+}
+
 export async function submitToGlobalLeaderboard(entry: Omit<LeaderboardEntry, 'id'>): Promise<{
   success: boolean;
   rank?: number;

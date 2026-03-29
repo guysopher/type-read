@@ -4,7 +4,9 @@ import { useState, useEffect } from "react";
 import TypingView from "@/components/TypingView";
 import PaperBackground from "@/components/PaperBackground";
 import { SavedText, getSavedTexts, deleteText } from "@/lib/storage";
+import { extractTextFromUrl } from "@/lib/api";
 import { ENGLISH_STORIES, HEBREW_STORIES, Story } from "@/lib/stories";
+import { prepareTextForTyping, sanitizeTypingText } from "@/lib/textProcessing";
 import { colors } from "@/styles/designTokens";
 
 const TUTORIAL_TEXT = `Welcome to TypeRead, the app that transforms reading into an active adventure. Instead of passively scrolling through articles, you will type every single word, engaging both your mind and your fingers in a dance of comprehension and muscle memory.
@@ -25,32 +27,13 @@ const HEBREW_TUTORIAL_TEXT = `ברוכים הבאים למשחק המרדף של
 
 const HEBREW_TUTORIAL_TITLE = "מדריך משחק המרדף";
 
-function cleanTextForTyping(text: string): string {
-  return text
-    .replace(/^#{1,6}\s+/gm, '')
-    .replace(/(\*\*|__)(.*?)\1/g, '$2')
-    .replace(/(\*|_)(.*?)\1/g, '$2')
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
-    .replace(/`([^`]+)`/g, '$1')
-    .replace(/```[\s\S]*?```/g, '')
-    .replace(/^[\s]*[-*•]\s+/gm, '')
-    .replace(/^[\s]*\d+\.\s+/gm, '')
-    .replace(/^>\s*/gm, '')
-    .replace(/^[-*_]{3,}\s*$/gm, '')
-    .replace(/<[^>]+>/g, '')
-    .replace(/\n{3,}/g, '\n\n')
-    .split('\n')
-    .map(line => line.trim())
-    .join('\n')
-    .trim();
-}
-
 export default function Home() {
   const [text, setText] = useState<string | null>(null);
   const [title, setTitle] = useState<string>("");
   const [inputValue, setInputValue] = useState("");
+  const [urlValue, setUrlValue] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [isExtracting, setIsExtracting] = useState(false);
   const [savedTexts, setSavedTexts] = useState<SavedText[]>([]);
   const [activeSaved, setActiveSaved] = useState<SavedText | null>(null);
   const [customTitle, setCustomTitle] = useState("");
@@ -66,22 +49,49 @@ export default function Home() {
     e.preventDefault();
     setError(null);
 
-    if (!inputValue.trim()) {
+    const preparedText = prepareTextForTyping(inputValue);
+
+    if (!preparedText) {
       setError("Please enter some text");
       return;
     }
 
-    setText(cleanTextForTyping(inputValue));
+    setText(preparedText);
     setTitle(customTitle.trim() || "Custom Text");
     setShowAddText(false);
     setInputValue("");
+    setUrlValue("");
     setCustomTitle("");
+  };
+
+  const handleExtractUrl = async () => {
+    setError(null);
+
+    if (!urlValue.trim()) {
+      setError("Please enter a URL");
+      return;
+    }
+
+    setIsExtracting(true);
+    const result = await extractTextFromUrl(urlValue);
+    setIsExtracting(false);
+
+    if (result.error || !result.content) {
+      setError(result.error || "Failed to import text from URL");
+      return;
+    }
+
+    setInputValue(result.content);
+    if (!customTitle.trim() && result.title) {
+      setCustomTitle(result.title);
+    }
   };
 
   const handleReset = () => {
     setText(null);
     setTitle("");
     setInputValue("");
+    setUrlValue("");
     setCustomTitle("");
     setError(null);
     setActiveSaved(null);
@@ -471,7 +481,7 @@ export default function Home() {
                 <input
                   type="text"
                   value={customTitle}
-                  onChange={(e) => setCustomTitle(e.target.value)}
+                  onChange={(e) => setCustomTitle(sanitizeTypingText(e.target.value))}
                   placeholder="Title (optional)"
                   className="w-full px-4 py-2 text-sm border rounded transition-colors"
                   style={{
@@ -480,15 +490,57 @@ export default function Home() {
                   }}
                   autoFocus
                 />
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={urlValue}
+                      onChange={(e) => setUrlValue(e.target.value)}
+                      placeholder="https://example.com/article"
+                      className="flex-1 px-4 py-2 text-sm border rounded transition-colors"
+                      style={{
+                        borderColor: colors.pencilLight,
+                        color: colors.ink
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleExtractUrl}
+                      disabled={isExtracting || !urlValue.trim()}
+                      className="px-4 py-2 rounded text-sm font-medium transition-opacity"
+                      style={{
+                        backgroundColor: colors.accent,
+                        color: '#fff',
+                        opacity: isExtracting || !urlValue.trim() ? 0.5 : 1
+                      }}
+                    >
+                      {isExtracting ? "Importing..." : "Import URL"}
+                    </button>
+                  </div>
+                  <p className="text-xs" style={{ color: colors.pencil }}>
+                    Import a URL with OpenAI, or paste text manually below.
+                  </p>
+                </div>
                 <textarea
                   value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
+                  onChange={(e) => setInputValue(sanitizeTypingText(e.target.value))}
                   placeholder="Paste your text here..."
                   rows={6}
                   className="w-full px-4 py-3 text-base border rounded resize-none transition-colors"
                   style={{
                     borderColor: colors.pencilLight,
                     color: colors.ink
+                  }}
+                  onPaste={(e) => {
+                    e.preventDefault();
+                    const pastedText = e.clipboardData.getData('text');
+                    const sanitizedText = sanitizeTypingText(pastedText);
+                    const target = e.currentTarget;
+                    const start = target.selectionStart;
+                    const end = target.selectionEnd;
+                    setInputValue((currentValue) =>
+                      currentValue.slice(0, start) + sanitizedText + currentValue.slice(end)
+                    );
                   }}
                 />
 
