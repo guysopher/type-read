@@ -207,7 +207,7 @@ async function extractWithOpenAI(input: {
             {
               type: 'input_text',
               text:
-                'You extract the main readable article text from web page source. Return clean prose for typing practice. Remove navigation, ads, cookie notices, related links, captions, menus, forms, and boilerplate. Preserve paragraph breaks and the original language. Do not summarize. Do not add commentary.',
+                'Return JSON matching the requested schema. The content field must contain only paragraphs, with no headings or bullet lists.',
             },
           ],
         },
@@ -216,7 +216,26 @@ async function extractWithOpenAI(input: {
           content: [
             {
               type: 'input_text',
-              text: `URL: ${input.url}\nPage title: ${input.title}\n\nCandidate text:\n${input.content}`,
+              text: `Convert the content at this URL into a readable story in paragraphs only.
+
+Be strict about accuracy:
+- Every factual statement must be supported by the source.
+- Do not infer beyond what the source clearly supports.
+- Do not add context from your own knowledge.
+- Do not use phrases like “the article”, “the docs”, or “the page”.
+- Do not use bullets or headings.
+- Do not omit important caveats, limitations, or architectural trade-offs.
+- Do not simplify to the point of distortion.
+
+Writing goal:
+Rewrite the source so it is easier to read and more natural, while staying fully loyal to the original meaning.
+
+URL: ${input.url}
+
+Source title: ${input.title}
+
+Source content captured from the URL:
+${input.content}`,
             },
           ],
         },
